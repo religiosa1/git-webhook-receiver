@@ -1,0 +1,17 @@
+host: "localhost"
+port: 9090
+log_file: "deploy.log"
+log_level: "info"
+projects:
+  staticus:
+    git_provider: gitea
+    repo: "religiosa/staticus"
+    cwd: "/var/www/staticus"
+    actions:
+      - on: push
+        branch: master
+        user: www-data
+        script: >
+          git fetch && git reset --hard origin/master
+          npm ci
+          npm run build
