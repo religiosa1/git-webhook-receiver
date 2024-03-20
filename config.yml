@@ -1,7 +1,7 @@
 host: "localhost"
 port: 9090
 log_file: "deploy.log"
-log_level: "info"
+log_level: "debug"
 projects:
   staticus:
     git_provider: gitea
