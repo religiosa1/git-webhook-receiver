@@ -6,8 +6,14 @@ import (
 	"github.com/religiosa1/deployer/internal/config"
 )
 
+type WebhookPostInfo struct {
+	Branch string
+	Event  string
+	Hash   string
+}
+
 type Receiver interface {
-	ExtractAction(*http.Request) (action *config.Action, err error)
+	GetWebhookInfo(*http.Request) (postInfo *WebhookPostInfo, err error)
 }
 
 func New(project *config.Project) Receiver {

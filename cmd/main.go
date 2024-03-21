@@ -47,7 +47,7 @@ func runServer(cfg *config.Config, logger *slog.Logger) {
 		logger := logger.With(slog.String("project", projectName))
 		mux.HandleFunc(
 			fmt.Sprintf("POST /%s", projectName),
-			handlers.HandleWebhookPost(logger, cfg, receiver),
+			handlers.HandleWebhookPost(logger, &project, receiver),
 		)
 		logger.Debug("Registered project", slog.String("projectName", projectName), slog.String("type", project.GitProvider), slog.String("repo", project.Repo))
 	}

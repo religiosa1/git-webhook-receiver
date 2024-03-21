@@ -3,6 +3,7 @@ module github.com/religiosa1/deployer
 go 1.22.0
 
 require (
+	github.com/google/uuid v1.6.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/samber/slog-multi v1.0.2
 )
