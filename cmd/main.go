@@ -20,13 +20,9 @@ func main() {
 	configPath := getConfigPath()
 	cfg := config.MustLoad(configPath)
 
-	file, err := os.OpenFile(cfg.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-
-	logger := logger.SetupLogger(cfg.LogLevel, file)
+	closableLogger := logger.SetupLogger(cfg.LogLevel, cfg.LogFile)
+	defer closableLogger.Close()
+	logger := closableLogger.Logger
 	logger.Debug("configuration loaded", slog.Any("config", cfg))
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)

@@ -8,17 +8,37 @@ import (
 	slogmulti "github.com/samber/slog-multi"
 )
 
-func SetupLogger(logLevel string, logFile *os.File) *slog.Logger {
+type ClosableLogger struct {
+	Logger *slog.Logger
+	file   *os.File
+}
+
+func (logger ClosableLogger) Close() {
+	if logger.file != nil {
+		logger.file.Close()
+	}
+}
+
+func SetupLogger(logLevel string, logFileName string) ClosableLogger {
 	var programLevel = new(slog.LevelVar)
 	programLevel.Set(strLogLevelToEnumValue(logLevel))
 	hdlrOpts := &slog.HandlerOptions{Level: programLevel}
 
-	return slog.New(
-		slogmulti.Fanout(
-			slog.NewTextHandler(os.Stdout, hdlrOpts),
-			slog.NewJSONHandler(logFile, hdlrOpts),
-		),
-	)
+	textHandler := slog.NewTextHandler(os.Stdout, hdlrOpts)
+	if logFileName == "" {
+		return ClosableLogger{slog.New(textHandler), nil}
+	}
+
+	file, err := os.OpenFile(logFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		panic(err)
+	}
+
+	return ClosableLogger{
+		slog.New(slogmulti.Fanout(
+			textHandler,
+			slog.NewJSONHandler(file, hdlrOpts),
+		)), file}
 }
 
 func strLogLevelToEnumValue(logLevel string) slog.Level {

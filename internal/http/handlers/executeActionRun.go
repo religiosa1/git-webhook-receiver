@@ -17,12 +17,12 @@ func executeActionRun(logger *slog.Logger, action config.Action, pipeId string, 
 	}
 
 	if actions_output_dir != "" {
-		close, err := redirectCmdOutputStreams(cmd, actions_output_dir, pipeId, logger)
+		closer, err := redirectCmdOutputStreams(cmd, actions_output_dir, pipeId, logger)
 		if err != nil {
 			logger.Error("Error redirecting command IO streams", slog.Any("error", err))
 			return
 		}
-		defer close()
+		defer closer.Close()
 	}
 
 	err := cmd.Run()
@@ -33,17 +33,36 @@ func executeActionRun(logger *slog.Logger, action config.Action, pipeId string, 
 	}
 }
 
+type redirectedStreamCloser struct {
+	logger         *slog.Logger
+	stdoutFile     *os.File
+	stdoutFileName string
+	stderrFile     *os.File
+	stderrFileName string
+}
+
+func (closer redirectedStreamCloser) Close() {
+	if closer.stdoutFile != nil {
+		closer.stdoutFile.Close()
+		removeFileIfEmpty(closer.stdoutFileName, closer.logger)
+	}
+	if closer.stderrFile != nil {
+		closer.stderrFile.Close()
+		removeFileIfEmpty(closer.stderrFileName, closer.logger)
+	}
+}
+
 func redirectCmdOutputStreams(
 	cmd *exec.Cmd,
 	actions_output_dir string,
 	pipeId string,
 	logger *slog.Logger,
-) (func(), error) {
+) (redirectedStreamCloser, error) {
 	stdoutFileName := filepath.Join(actions_output_dir, pipeId+".stdout")
 	stdoutFile, err := os.OpenFile(stdoutFileName, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		logger.Error("Unable to open stdout file for action", slog.Any("error", err))
-		return nil, err
+		return redirectedStreamCloser{}, err
 	}
 
 	stderrFileName := filepath.Join(actions_output_dir, pipeId+".stderr")
@@ -51,19 +70,17 @@ func redirectCmdOutputStreams(
 	if err != nil {
 		stdoutFile.Close()
 		logger.Error("Unable to open stdout file for action", slog.Any("error", err))
-		return nil, err
+		return redirectedStreamCloser{logger, stdoutFile, stdoutFileName, nil, ""}, err
 	}
 	cmd.Stdout = stdoutFile
 	cmd.Stderr = stderrFile
-	logger.Debug("Command IO streams redirected", slog.String("stdout", stdoutFileName), slog.String("stderr", stderrFileName))
+	logger.Debug(
+		"Command IO streams redirected",
+		slog.String("stdout", stdoutFileName),
+		slog.String("stderr", stderrFileName),
+	)
 
-	return func() {
-		stdoutFile.Close()
-		stderrFile.Close()
-
-		removeFileIfEmpty(stdoutFileName, logger)
-		removeFileIfEmpty(stderrFileName, logger)
-	}, nil
+	return redirectedStreamCloser{logger, stdoutFile, stdoutFileName, stderrFile, stderrFileName}, nil
 }
 
 func removeFileIfEmpty(fileName string, logger *slog.Logger) {
