@@ -2,6 +2,7 @@ package config
 
 import (
 	"log"
+	"os"
 	"reflect"
 	"regexp"
 
@@ -9,11 +10,12 @@ import (
 )
 
 type Config struct {
-	LogLevel string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
-	LogFile  string             `yaml:"log_file" env:"LOG_FILE" env-default:"deploy.log"`
-	Host     string             `yaml:"host" env:"HOST" env-default:"localhost"`
-	Port     int16              `yaml:"port" env:"PORT" env-default:"9090"`
-	Projects map[string]Project `yaml:"projects"`
+	LogLevel         string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
+	LogFile          string             `yaml:"log_file" env:"LOG_FILE" env-default:"deploy.log"`
+	Host             string             `yaml:"host" env:"HOST" env-default:"localhost"`
+	Port             int16              `yaml:"port" env:"PORT" env-default:"9090"`
+	ActionsOutputDir string             `yaml:"actions_output_dir"`
+	Projects         map[string]Project `yaml:"projects"`
 }
 
 type Project struct {
@@ -47,6 +49,13 @@ func MustLoad(configPath string) *Config {
 		log.Fatalf("Incorrect LogLevel value '%s'. Possible values are 'debug', 'info', 'warn', and 'error", cfg.LogLevel)
 	}
 
+	if cfg.ActionsOutputDir != "" {
+		err := os.MkdirAll(cfg.ActionsOutputDir, os.ModePerm)
+		if err != nil {
+			log.Fatalf("Error creating actions output directory: %s", err)
+		}
+	}
+
 	projectNameRegex := regexp.MustCompile(`^[a-zA-Z0-9\-_]+$`)
 	for projectName, project := range cfg.Projects {
 		if errField := setDefaultAndCheckRequired(&project); errField != "" {
@@ -76,6 +85,15 @@ func MustLoad(configPath string) *Config {
 					projectName,
 				)
 			}
+			// if runtime.GOOS != "windows" && action.User != "" {
+			// 	_, err := user.Lookup(action.User)
+			// 	if err != nil {
+			// 		log.Fatalf(
+			// 			"Action %d (invoked on %s) of project '%s' has a user field = '%s', but this user can't be found: %s",
+			// 			i+1, action.On, projectName, action.User, err,
+			// 		)
+			// 	}
+			// }
 			project.Actions[i] = action
 		}
 		cfg.Projects[projectName] = project

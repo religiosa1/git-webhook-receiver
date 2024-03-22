@@ -2,15 +2,16 @@ host: "localhost"
 port: 9090
 log_file: "deploy.log"
 log_level: "debug"
+actions_output_dir: "actions_output"
 projects:
   staticus:
     git_provider: gitea
     repo: "username/reponame" # repository full name, as displayed in the URL
-    cwd: "/var/www/staticus" # root dir in which scripts will be run
     actions:
       - on: push
         branch: master
-        user: www-data
+        user: www-data # user from which action will be run
+        cwd: "/var/www/staticus" # root dir in which action will be run, optional
         run: ["node", "--version"]
         # script: >
         #   git fetch && git reset --hard origin/master

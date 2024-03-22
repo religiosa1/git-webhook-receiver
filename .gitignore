@@ -1,2 +1,4 @@
-deploy.log
+actions_output
 config.yml
+deploy.log
+index.js
