@@ -1,11 +1,11 @@
-package wh_receiver
+package whreceiver
 
 import (
 	"encoding/json"
 	"net/http"
 	"strings"
 
-	"github.com/religiosa1/deployer/internal/config"
+	"github.com/religiosa1/webhook-receiver/internal/config"
 )
 
 type GiteaReceiver struct {

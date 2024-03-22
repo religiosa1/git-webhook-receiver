@@ -1,4 +1,4 @@
-module github.com/religiosa1/deployer
+module github.com/religiosa1/webhook-receiver
 
 go 1.22.0
 

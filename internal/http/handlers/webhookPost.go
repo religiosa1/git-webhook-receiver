@@ -9,15 +9,15 @@ import (
 	"os/exec"
 
 	"github.com/google/uuid"
-	"github.com/religiosa1/deployer/internal/config"
-	"github.com/religiosa1/deployer/internal/wh_receiver"
+	"github.com/religiosa1/webhook-receiver/internal/config"
+	"github.com/religiosa1/webhook-receiver/internal/whreceiver"
 )
 
-func HandleWebhookPost(logger *slog.Logger, project *config.Project, receiver wh_receiver.Receiver) http.HandlerFunc {
+func HandleWebhookPost(logger *slog.Logger, project *config.Project, receiver whreceiver.Receiver) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		webhookInfo, err := receiver.GetWebhookInfo(req)
 		if err != nil {
-			if _, ok := err.(wh_receiver.IncorrectRepoError); ok {
+			if _, ok := err.(whreceiver.IncorrectRepoError); ok {
 				logger.Error("Incorrect repo posted in the webhook", slog.Any("error", err))
 				w.WriteHeader(http.StatusUnprocessableEntity)
 				return
@@ -36,7 +36,7 @@ func HandleWebhookPost(logger *slog.Logger, project *config.Project, receiver wh
 	}
 }
 
-func processWebHookPost(logger *slog.Logger, project *config.Project, webhookInfo *wh_receiver.WebhookPostInfo) {
+func processWebHookPost(logger *slog.Logger, project *config.Project, webhookInfo *whreceiver.WebhookPostInfo) {
 	logger.Debug("Recieved a webhook post")
 	actions := filterOutAction(project, webhookInfo)
 	if len(actions) == 0 {
@@ -66,7 +66,7 @@ func executeActionRun(logger *slog.Logger, action config.Action) {
 	}
 }
 
-func filterOutAction(project *config.Project, webhookInfo *wh_receiver.WebhookPostInfo) []config.Action {
+func filterOutAction(project *config.Project, webhookInfo *whreceiver.WebhookPostInfo) []config.Action {
 	actions := make([]config.Action, 0)
 	for _, action := range project.Actions {
 		if action.Branch != webhookInfo.Branch {

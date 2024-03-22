@@ -1,4 +1,4 @@
-package wh_receiver
+package whreceiver
 
 import "fmt"
 

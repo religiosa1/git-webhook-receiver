@@ -10,10 +10,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/religiosa1/deployer/internal/config"
-	"github.com/religiosa1/deployer/internal/http/handlers"
-	"github.com/religiosa1/deployer/internal/logger"
-	"github.com/religiosa1/deployer/internal/wh_receiver"
+	"github.com/religiosa1/webhook-receiver/internal/config"
+	"github.com/religiosa1/webhook-receiver/internal/http/handlers"
+	"github.com/religiosa1/webhook-receiver/internal/logger"
+	"github.com/religiosa1/webhook-receiver/internal/whreceiver"
 )
 
 func main() {
@@ -40,7 +40,7 @@ func main() {
 func runServer(cfg *config.Config, logger *slog.Logger) {
 	mux := http.NewServeMux()
 	for projectName, project := range cfg.Projects {
-		receiver := wh_receiver.New(&project)
+		receiver := whreceiver.New(&project)
 		if receiver == nil {
 			log.Fatalf("Unknown git webhook provider type '%s' in project '%s'", project.GitProvider, projectName)
 		}
