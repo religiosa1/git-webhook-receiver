@@ -11,7 +11,8 @@ projects:
       - on: push
         branch: master
         user: www-data
-        script: >
-          git fetch && git reset --hard origin/master
-          npm ci
-          npm run build
+        run: ["node", "--version"]
+        # script: >
+        #   git fetch && git reset --hard origin/master
+        #   npm ci
+        #   npm run build

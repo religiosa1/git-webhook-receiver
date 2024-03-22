@@ -24,11 +24,11 @@ type Project struct {
 }
 
 type Action struct {
-	On         string `yaml:"on" env-default:"push"`
-	Branch     string `yaml:"branch" env-default:"master"`
-	User       string `yaml:"user"`
-	Script     string `yaml:"script"`
-	ScriptPath string `yaml:"script_path"`
+	On     string   `yaml:"on" env-default:"push"`
+	Branch string   `yaml:"branch" env-default:"master"`
+	User   string   `yaml:"user"`
+	Script string   `yaml:"script"`
+	Run    []string `yaml:"run"`
 }
 
 func MustLoad(configPath string) *Config {
@@ -69,9 +69,9 @@ func MustLoad(configPath string) *Config {
 				log.Fatalf("Action %d (invoked on %s) of project '%s' doesn't have a value for field '%s' and it's a required field", i+1, action.On,
 					projectName, errField)
 			}
-			if action.Script == "" && action.ScriptPath == "" {
+			if action.Script == "" && len(action.Run) == 00 {
 				log.Fatalf(
-					"Action %d (invoked on %s) of project '%s' has neither 'script' nor 'script_path' fields "+
+					"Action %d (invoked on %s) of project '%s' has neither 'script' nor 'run' fields "+
 						"and can not be executed", i+1, action.On,
 					projectName,
 				)

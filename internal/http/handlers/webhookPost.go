@@ -3,9 +3,10 @@ package handlers
 import (
 	"errors"
 	"io"
-	"log"
 	"log/slog"
 	"net/http"
+	"os"
+	"os/exec"
 
 	"github.com/google/uuid"
 	"github.com/religiosa1/deployer/internal/config"
@@ -17,7 +18,7 @@ func HandleWebhookPost(logger *slog.Logger, project *config.Project, receiver wh
 		webhookInfo, err := receiver.GetWebhookInfo(req)
 		if err != nil {
 			if _, ok := err.(wh_receiver.IncorrectRepoError); ok {
-				logger.Error("Incorrect repo posted in the webhook", err)
+				logger.Error("Incorrect repo posted in the webhook", slog.Any("error", err))
 				w.WriteHeader(http.StatusUnprocessableEntity)
 				return
 			}
@@ -26,12 +27,12 @@ func HandleWebhookPost(logger *slog.Logger, project *config.Project, receiver wh
 				w.WriteHeader(http.StatusUnprocessableEntity)
 				return
 			}
-			logger.Error("Error while parsing the webhook request payload", err)
+			logger.Error("Error while parsing the webhook request payload", slog.Any("error", err))
 		}
 		w.WriteHeader(http.StatusOK)
 
-		pipeLogger := logger.With(slog.String("pipeId", uuid.NewString())).With(slog.Any("webhookInfo", webhookInfo))
-		go processWebHookPost(pipeLogger, project, webhookInfo)
+		hookLogger := logger.With(slog.Any("webhookInfo", webhookInfo))
+		go processWebHookPost(hookLogger, project, webhookInfo)
 	}
 }
 
@@ -42,8 +43,26 @@ func processWebHookPost(logger *slog.Logger, project *config.Project, webhookInf
 		logger.Info("No applicable actions found in webhook post")
 	}
 	for _, action := range actions {
-		log.Printf("%+v", action)
-		// TODO
+		pipeLogger := logger.With(slog.String("pipeId", uuid.NewString()))
+		if len(action.Run) > 0 {
+			executeActionRun(pipeLogger.With(slog.Any("command", action.Run)), action)
+		} else {
+			logger.Error("Script tag isn't supported yet")
+			// TODO
+		}
+	}
+}
+
+func executeActionRun(logger *slog.Logger, action config.Action) {
+	logger.Info("Running the command")
+	cmd := exec.Command(action.Run[0], action.Run[1:]...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	if err != nil {
+		logger.Error("Command execution ended with an error", slog.Any("error", err))
+	} else {
+		logger.Error("Command successfully finished")
 	}
 }
 
