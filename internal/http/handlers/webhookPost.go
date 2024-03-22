@@ -43,7 +43,8 @@ func processWebHookPost(logger *slog.Logger, project *config.Project, webhookInf
 		logger.Info("No applicable actions found in webhook post")
 	}
 	for _, action := range actions {
-		pipeLogger := logger.With(slog.String("pipeId", uuid.NewString()))
+		pipeId := uuid.NewString()
+		pipeLogger := logger.With(slog.String("pipeId", pipeId))
 		if len(action.Run) > 0 {
 			executeActionRun(pipeLogger.With(slog.Any("command", action.Run)), action)
 		} else {
@@ -56,6 +57,9 @@ func processWebHookPost(logger *slog.Logger, project *config.Project, webhookInf
 func executeActionRun(logger *slog.Logger, action config.Action) {
 	logger.Info("Running the command")
 	cmd := exec.Command(action.Run[0], action.Run[1:]...)
+	if action.Cwd != "" {
+		cmd.Dir = action.Cwd
+	}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err := cmd.Run()

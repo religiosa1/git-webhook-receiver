@@ -6,10 +6,10 @@ projects:
   staticus:
     git_provider: gitea
     repo: "religiosa/staticus"
-    cwd: "/var/www/staticus"
     actions:
       - on: push
         branch: master
+        cwd: "/var/www/staticus"
         user: www-data
         run: ["node", "--version"]
         # script: >
