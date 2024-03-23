@@ -2,3 +2,5 @@ actions_output
 config.yml
 deploy.log
 index.js
+webhook-receiver.exe
+webhook-receiver
