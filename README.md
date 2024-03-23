@@ -7,8 +7,8 @@ a script/program on a matching webhook event.
 In a nutshell:
 
 - you [deploy](#installation) it to your server
-- (optional but recommended) wrap it with a [reverse proxy](#reverse-proxy),
-  such as nginx or caddy, to have SSL
+- (optional but recommended) install an SSL cert or wrap it with
+  a [reverse proxy](#reverse-proxy) such as nginx or caddy, to have encryption
 - add your git repos and corresponding build scripts/actions in the
   [config file](#config-file)
 - set webhooks for those repo in their git services (github, gitea, etc.)
@@ -40,13 +40,14 @@ Or you can clone the repo, and run the following command in its root dir:
 go build
 ```
 
-## Reverse proxy
+## SSL
 
-It's recomended to use some kind of reverse proxy and SSL, to provide
-encryption.
+It's recomended to use SSL, so your requests are encrypted.
+If you have a http-server such as Nginx or Caddy, you can leverage
+it to provide you a reverse proxy with SSL support.
 
-Example of nginx + [certbot](https://certbot.eff.org/) configuration can be find
-[here](./docs/nginx-setup.md).
+Infortmation on how to configure nginx + [certbot](https://certbot.eff.org/)
+can be find [here](./docs/nginx-setup.md).
 
 ## Config file
 

@@ -14,8 +14,14 @@ type Config struct {
 	Port             int16              `yaml:"port" env:"PORT" env-default:"9090"`
 	LogLevel         string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
 	LogFile          string             `yaml:"log_file" env:"LOG_FILE"`
+	Ssl              SslConfig          `yaml:"ssl"`
 	ActionsOutputDir string             `yaml:"actions_output_dir"`
 	Projects         map[string]Project `yaml:"projects" env-required:"true"`
+}
+
+type SslConfig struct {
+	CertFilePath string `yaml:"cert_file_path" env:"CERT_FILE_PATH"`
+	KeyFilePath  string `yaml:"key_file_path" env:"KEY_FILE_PATH"`
 }
 
 type Project struct {

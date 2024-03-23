@@ -45,13 +45,36 @@ func runServer(cfg *config.Config, logger *slog.Logger) {
 			fmt.Sprintf("POST /%s", projectName),
 			handlers.HandleWebhookPost(logger, cfg, &project, receiver),
 		)
-		logger.Debug("Registered project", slog.String("projectName", projectName), slog.String("type", project.GitProvider), slog.String("repo", project.Repo))
+		logger.Debug("Registered project",
+			slog.String("projectName", projectName),
+			slog.String("type", project.GitProvider),
+			slog.String("repo", project.Repo),
+		)
 	}
 
-	logger.Info("Running the server", slog.String("host", cfg.Host), slog.Int("port", int(cfg.Port)))
-	if err := http.ListenAndServe(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), mux); err != nil {
-		logger.Error("Error starting the server", err)
-		os.Exit(1)
+	if cfg.Ssl.CertFilePath != "" && cfg.Ssl.KeyFilePath != "" {
+		logger.Info("Running the server with SSL",
+			slog.String("host", cfg.Host),
+			slog.Int("port", int(cfg.Port)),
+			slog.String("cert file", cfg.Ssl.CertFilePath),
+			slog.String("key file", cfg.Ssl.KeyFilePath),
+		)
+		err := http.ListenAndServeTLS(
+			fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+			cfg.Ssl.CertFilePath,
+			cfg.Ssl.KeyFilePath,
+			mux,
+		)
+		if err != nil {
+			logger.Error("Error starting the server", err)
+			os.Exit(1)
+		}
+	} else {
+		logger.Info("Running the server", slog.String("host", cfg.Host), slog.Int("port", int(cfg.Port)))
+		if err := http.ListenAndServe(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), mux); err != nil {
+			logger.Error("Error starting the server", err)
+			os.Exit(1)
+		}
 	}
 }
 
