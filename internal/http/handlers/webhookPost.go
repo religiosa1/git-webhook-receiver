@@ -53,11 +53,16 @@ func processWebHookPost(
 	for _, action := range actions {
 		pipeId := uuid.NewString()
 		pipeLogger := logger.With(slog.String("pipeId", pipeId))
+		streams, err := GetActionIoStreams(actions_output_dir, pipeId, logger)
+		if err != nil {
+			logger.Error("Error creating action's IO streams", slog.Any("error", err))
+			continue
+		}
+		defer streams.Close()
 		if len(action.Run) > 0 {
-			executeActionRun(pipeLogger.With(slog.Any("command", action.Run)), action, pipeId, actions_output_dir)
+			executeActionRun(pipeLogger.With(slog.Any("command", action.Run)), action, streams)
 		} else {
-			logger.Error("Script tag isn't supported yet")
-			// TODO
+			executeActionScript(logger, action, streams)
 		}
 	}
 }

@@ -49,6 +49,10 @@ it to provide you a reverse proxy with SSL support.
 Infortmation on how to configure nginx + [certbot](https://certbot.eff.org/)
 can be find [here](./docs/nginx-setup.md).
 
+If you don't have an HTTP-server available, you can use internal
+SSL functionality by passing cert and key files in the corresponding config
+fields.
+
 ## Config file
 
 App requires a config file to start. By default, config file is read from

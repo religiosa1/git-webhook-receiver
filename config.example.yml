@@ -12,8 +12,10 @@ projects:
         branch: master
         user: www-data # user from which action will be run
         cwd: "/var/www/staticus" # root dir in which action will be run, optional
-        run: ["node", "--version"]
-        # script: >
-        #   git fetch && git reset --hard origin/master
-        #   npm ci
-        #   npm run build
+        # To run a script:
+        script: |
+          git fetch && git reset --hard origin/master
+          npm ci
+          npm run build
+        # Or to execute a script or program:
+        # run: ["node", "--version"]
