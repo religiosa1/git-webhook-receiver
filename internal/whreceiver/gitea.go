@@ -25,8 +25,9 @@ func (receiver GiteaReceiver) GetWebhookInfo(req *http.Request) (*WebhookPostInf
 	hash := payload.After
 	event := req.Header.Get("x-gitea-event")
 	authorizationHeader := req.Header.Get("Authorization")
+	deliveryID := req.Header.Get("X-Gitea-Delivery")
 
-	return &WebhookPostInfo{branch, event, hash, authorizationHeader}, nil
+	return &WebhookPostInfo{deliveryID, branch, event, hash, authorizationHeader}, nil
 }
 
 func getBranchFromRefName(ref string) string {

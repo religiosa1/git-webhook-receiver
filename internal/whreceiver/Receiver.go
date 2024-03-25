@@ -7,10 +7,11 @@ import (
 )
 
 type WebhookPostInfo struct {
-	Branch string
-	Event  string
-	Hash   string
-	Auth   string
+	DeliveryID string
+	Branch     string
+	Event      string
+	Hash       string
+	Auth       string
 }
 
 type Receiver interface {

@@ -26,11 +26,12 @@ func HandleWebhookPost(
 			w.WriteHeader(errInfo.StatusCode)
 			return
 		}
-		logger.Debug("Recieved a webhook post", slog.Any("webhookInfo", webhookInfo))
+		deliveryLogger := logger.With(slog.String("delivery", webhookInfo.DeliveryID))
+		deliveryLogger.Debug("Recieved a webhook post", slog.Any("webhookInfo", webhookInfo))
 
 		actions := filterOutAction(project, webhookInfo)
 		if len(actions) == 0 {
-			logger.Info("No applicable actions found in webhook post")
+			deliveryLogger.Info("No applicable actions found in webhook post")
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
@@ -45,14 +46,13 @@ func HandleWebhookPost(
 			w.WriteHeader(http.StatusMultiStatus)
 		}
 		if len(authorizationResult.Forbidden) > 0 {
-			logger.Warn("Incorrect authorization information passed for actions",
+			deliveryLogger.Warn("Incorrect authorization information passed for actions",
 				slog.String("auth", webhookInfo.Auth),
 				slog.Any("actions", getActionIds(authorizationResult.Forbidden)),
 			)
 		}
 		if len(authorizationResult.Ok) > 0 {
-			hookLogger := logger.With(slog.Any("webhookInfo", webhookInfo))
-			go processWebHookPost(hookLogger, authorizationResult.Ok, cfg.ActionsOutputDir)
+			go processWebHookPost(deliveryLogger, authorizationResult.Ok, cfg.ActionsOutputDir)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(authorizationResultToWebhookPostResult(authorizationResult))
