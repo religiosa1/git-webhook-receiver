@@ -40,10 +40,10 @@ func runServer(cfg *config.Config, logger *slog.Logger) {
 		if receiver == nil {
 			log.Fatalf("Unknown git webhook provider type '%s' in project '%s'", project.GitProvider, projectName)
 		}
-		logger := logger.With(slog.String("project", projectName))
+		projectLogger := logger.With(slog.String("project", projectName))
 		mux.HandleFunc(
 			fmt.Sprintf("POST /%s", projectName),
-			handlers.HandleWebhookPost(logger, cfg, &project, receiver),
+			handlers.HandleWebhookPost(projectLogger, cfg, &project, receiver),
 		)
 		logger.Debug("Registered project",
 			slog.String("projectName", projectName),

@@ -1,6 +1,8 @@
 package whreceiver
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type IncorrectRepoError struct {
 	Expected string
@@ -12,5 +14,16 @@ func (err IncorrectRepoError) Error() string {
 		"Incorrect repo receieved in the webhook payload, expected '%s' but received '%s'",
 		err.Expected,
 		err.Actual,
+	)
+}
+
+type AuthorizationError struct {
+	info string
+}
+
+func (err AuthorizationError) Error() string {
+	return fmt.Sprintf(
+		"Incorrect authorization information passed to action: '%s'",
+		err.info,
 	)
 }

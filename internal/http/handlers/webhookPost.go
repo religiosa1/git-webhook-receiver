@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -20,63 +21,150 @@ func HandleWebhookPost(
 	return func(w http.ResponseWriter, req *http.Request) {
 		webhookInfo, err := receiver.GetWebhookInfo(req)
 		if err != nil {
-			if _, ok := err.(whreceiver.IncorrectRepoError); ok {
-				logger.Error("Incorrect repo posted in the webhook", slog.Any("error", err))
-				w.WriteHeader(http.StatusUnprocessableEntity)
-				return
-			}
-			if errors.Is(err, io.EOF) {
-				logger.Error("Empty body supplied in the webhook request")
-				w.WriteHeader(http.StatusUnprocessableEntity)
-				return
-			}
-			logger.Error("Error while parsing the webhook request payload", slog.Any("error", err))
+			errInfo := getWebhookErrorCode(err)
+			logger.Error("Error while parsing the webhook request", slog.String("error", errInfo.Message))
+			w.WriteHeader(errInfo.StatusCode)
+			return
 		}
-		w.WriteHeader(http.StatusOK)
+		logger.Debug("Recieved a webhook post", slog.Any("webhookInfo", webhookInfo))
 
-		hookLogger := logger.With(slog.Any("webhookInfo", webhookInfo))
-		go processWebHookPost(hookLogger, cfg.ActionsOutputDir, project, webhookInfo)
+		actions := filterOutAction(project, webhookInfo)
+		if len(actions) == 0 {
+			logger.Info("No applicable actions found in webhook post")
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		authorizationResult := authorizeActions(*webhookInfo, actions)
+		switch len(authorizationResult.Ok) {
+		case len(actions):
+			w.WriteHeader(http.StatusOK)
+		case 0:
+			w.WriteHeader(http.StatusForbidden)
+		default:
+			w.WriteHeader(http.StatusMultiStatus)
+		}
+		if len(authorizationResult.Forbidden) > 0 {
+			logger.Warn("Incorrect authorization information passed for actions",
+				slog.String("auth", webhookInfo.Auth),
+				slog.Any("actions", getActionIds(authorizationResult.Forbidden)),
+			)
+		}
+		if len(authorizationResult.Ok) > 0 {
+			hookLogger := logger.With(slog.Any("webhookInfo", webhookInfo))
+			go processWebHookPost(hookLogger, authorizationResult.Ok, cfg.ActionsOutputDir)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(authorizationResultToWebhookPostResult(authorizationResult))
 	}
 }
 
-func processWebHookPost(
-	logger *slog.Logger,
-	actions_output_dir string,
-	project *config.Project,
-	webhookInfo *whreceiver.WebhookPostInfo,
-) {
-	logger.Debug("Recieved a webhook post")
-	actions := filterOutAction(project, webhookInfo)
-	if len(actions) == 0 {
-		logger.Info("No applicable actions found in webhook post")
+type WebhookPostResult struct {
+	Ok        []string `json:"ok,omitempty"`
+	Forbidden []string `json:"forbidden,omitempty"`
+}
+
+func authorizationResultToWebhookPostResult(authResult ActionAuthorizationResult) WebhookPostResult {
+	result := WebhookPostResult{
+		Ok:        make([]string, len(authResult.Ok)),
+		Forbidden: make([]string, len(authResult.Forbidden)),
 	}
-	for _, action := range actions {
-		pipeId := uuid.NewString()
-		pipeLogger := logger.With(slog.String("pipeId", pipeId))
-		streams, err := GetActionIoStreams(actions_output_dir, pipeId, logger)
-		if err != nil {
-			logger.Error("Error creating action's IO streams", slog.Any("error", err))
+	for i := 0; i < len(authResult.Ok); i++ {
+		result.Ok[i] = authResult.Ok[i].PipeId
+	}
+	for i := 0; i < len(authResult.Forbidden); i++ {
+		result.Forbidden[i] = authResult.Forbidden[i].PipeId
+	}
+	return result
+}
+
+type ActionAuthorizationResult struct {
+	Ok        []ActionDescriptor
+	Forbidden []ActionDescriptor
+}
+
+func authorizeActions(
+	webhookInfo whreceiver.WebhookPostInfo,
+	actions []ActionDescriptor,
+) ActionAuthorizationResult {
+	result := ActionAuthorizationResult{}
+	for _, actionDesc := range actions {
+		if actionDesc.Action.Authorization != "" && actionDesc.Action.Authorization != webhookInfo.Auth {
+			result.Forbidden = append(result.Forbidden, actionDesc)
 			continue
 		}
-		defer streams.Close()
-		if len(action.Run) > 0 {
-			executeActionRun(pipeLogger.With(slog.Any("command", action.Run)), action, streams)
-		} else {
-			executeActionScript(logger, action, streams)
-		}
+		result.Ok = append(result.Ok, actionDesc)
 	}
+	return result
 }
 
-func filterOutAction(project *config.Project, webhookInfo *whreceiver.WebhookPostInfo) []config.Action {
-	actions := make([]config.Action, 0)
-	for _, action := range project.Actions {
+type ErrorInfo struct {
+	StatusCode int
+	Message    string
+}
+
+func getWebhookErrorCode(err error) ErrorInfo {
+	if terr, ok := err.(whreceiver.IncorrectRepoError); ok {
+		return ErrorInfo{http.StatusUnprocessableEntity, terr.Error()}
+	}
+	if terr, ok := err.(whreceiver.AuthorizationError); ok {
+		return ErrorInfo{http.StatusForbidden, terr.Error()}
+	}
+	if errors.Is(err, io.EOF) {
+		return ErrorInfo{http.StatusUnprocessableEntity, "Empty body supplied in the webhook request"}
+	}
+	return ErrorInfo{http.StatusBadRequest, err.Error()}
+}
+
+type ActionIdentifier struct {
+	Index  int
+	PipeId string
+}
+type ActionDescriptor struct {
+	ActionIdentifier
+	Action config.Action
+}
+
+func filterOutAction(project *config.Project, webhookInfo *whreceiver.WebhookPostInfo) []ActionDescriptor {
+	actions := make([]ActionDescriptor, 0)
+	for index, action := range project.Actions {
 		if action.Branch != webhookInfo.Branch {
 			continue
 		}
 		if action.On != "*" && action.On != webhookInfo.Event {
 			continue
 		}
-		actions = append(actions, action)
+		actions = append(actions, ActionDescriptor{ActionIdentifier{index, uuid.NewString()}, action})
 	}
 	return actions
+}
+
+func getActionIds(descs []ActionDescriptor) []ActionIdentifier {
+	result := make([]ActionIdentifier, len(descs))
+	for i := 0; i < len(descs); i++ {
+		result[i] = descs[i].ActionIdentifier
+	}
+	return result
+}
+
+func processWebHookPost(
+	logger *slog.Logger,
+	actionDescriptors []ActionDescriptor,
+	actions_output_dir string,
+) {
+	for _, actionDescriptor := range actionDescriptors {
+		pipeLogger := logger.With(slog.String("pipeId", actionDescriptor.PipeId))
+		pipeLogger.Info("Running action", slog.Int("action_index", actionDescriptor.Index))
+		streams, err := GetActionIoStreams(actions_output_dir, actionDescriptor.PipeId, logger)
+		if err != nil {
+			logger.Error("Error creating action's IO streams", slog.Any("error", err))
+			continue
+		}
+		defer streams.Close()
+		if len(actionDescriptor.Action.Run) > 0 {
+			executeActionRun(pipeLogger.With(slog.Any("command", actionDescriptor.Action.Run)), actionDescriptor.Action, streams)
+		} else {
+			executeActionScript(logger, actionDescriptor.Action, streams)
+		}
+	}
 }

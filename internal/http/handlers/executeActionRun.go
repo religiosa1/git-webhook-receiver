@@ -8,7 +8,7 @@ import (
 )
 
 func executeActionRun(logger *slog.Logger, action config.Action, streams ActionIoStreams) {
-	logger.Info("Running the command")
+	logger.Debug("Running the command", slog.Any("command", action.Run))
 	cmd := exec.Command(action.Run[0], action.Run[1:]...)
 	if action.Cwd != "" {
 		cmd.Dir = action.Cwd

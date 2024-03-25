@@ -31,12 +31,13 @@ type Project struct {
 }
 
 type Action struct {
-	On     string   `yaml:"on" env-default:"push"`
-	Branch string   `yaml:"branch" env-default:"master"`
-	Cwd    string   `yaml:"cwd"`
-	User   string   `yaml:"user"`
-	Script string   `yaml:"script"`
-	Run    []string `yaml:"run"`
+	On            string   `yaml:"on" env-default:"push"`
+	Branch        string   `yaml:"branch" env-default:"master"`
+	Authorization string   `yaml:"authorization"`
+	Cwd           string   `yaml:"cwd"`
+	User          string   `yaml:"user"`
+	Script        string   `yaml:"script"`
+	Run           []string `yaml:"run"`
 }
 
 func MustLoad(configPath string) *Config {

@@ -10,6 +10,7 @@ type WebhookPostInfo struct {
 	Branch string
 	Event  string
 	Hash   string
+	Auth   string
 }
 
 type Receiver interface {

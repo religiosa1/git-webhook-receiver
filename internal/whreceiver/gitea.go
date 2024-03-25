@@ -13,7 +13,6 @@ type GiteaReceiver struct {
 }
 
 func (receiver GiteaReceiver) GetWebhookInfo(req *http.Request) (*WebhookPostInfo, error) {
-	// TODO check authorization headers
 	var payload GiteaWebhookPayload
 	err := json.NewDecoder(req.Body).Decode(&payload)
 	if err != nil {
@@ -25,8 +24,9 @@ func (receiver GiteaReceiver) GetWebhookInfo(req *http.Request) (*WebhookPostInf
 	branch := getBranchFromRefName(payload.Ref)
 	hash := payload.After
 	event := req.Header.Get("x-gitea-event")
+	authorizationHeader := req.Header.Get("Authorization")
 
-	return &WebhookPostInfo{branch, event, hash}, nil
+	return &WebhookPostInfo{branch, event, hash, authorizationHeader}, nil
 }
 
 func getBranchFromRefName(ref string) string {
