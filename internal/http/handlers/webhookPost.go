@@ -155,16 +155,16 @@ func processWebHookPost(
 	for _, actionDescriptor := range actionDescriptors {
 		pipeLogger := logger.With(slog.String("pipeId", actionDescriptor.PipeId))
 		pipeLogger.Info("Running action", slog.Int("action_index", actionDescriptor.Index))
-		streams, err := GetActionIoStreams(actions_output_dir, actionDescriptor.PipeId, logger)
+		streams, err := GetActionIoStreams(actions_output_dir, actionDescriptor.PipeId, pipeLogger)
 		if err != nil {
-			logger.Error("Error creating action's IO streams", slog.Any("error", err))
+			pipeLogger.Error("Error creating action's IO streams", slog.Any("error", err))
 			continue
 		}
 		defer streams.Close()
 		if len(actionDescriptor.Action.Run) > 0 {
 			executeActionRun(pipeLogger.With(slog.Any("command", actionDescriptor.Action.Run)), actionDescriptor.Action, streams)
 		} else {
-			executeActionScript(logger, actionDescriptor.Action, streams)
+			executeActionScript(pipeLogger, actionDescriptor.Action, streams)
 		}
 	}
 }
