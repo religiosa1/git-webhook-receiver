@@ -16,6 +16,7 @@ type Config struct {
 	LogFile          string             `yaml:"log_file" env:"LOG_FILE"`
 	Ssl              SslConfig          `yaml:"ssl"`
 	ActionsOutputDir string             `yaml:"actions_output_dir"`
+	MaxOutputFiles   int                `yaml:"max_output_files" env-default:"10000"`
 	Projects         map[string]Project `yaml:"projects" env-required:"true"`
 }
 

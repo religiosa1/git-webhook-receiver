@@ -1,18 +1,19 @@
 package action_runner
 
-import (
-	"log/slog"
-)
+import "log/slog"
 
 func ExecuteActions(
 	logger *slog.Logger,
 	actionDescriptors []ActionDescriptor,
-	actions_output_dir string,
+	actionsOutputDir string,
+	maxOutputFiles int,
 ) {
+	// Defering this first, so it's called after all of the redundant output files in defer streams.close() are removed
+	defer removeOldOutputFiles(logger, actionsOutputDir, maxOutputFiles)
 	for _, actionDescriptor := range actionDescriptors {
 		pipeLogger := logger.With(slog.String("pipeId", actionDescriptor.PipeId))
 		pipeLogger.Info("Running action", slog.Int("action_index", actionDescriptor.Index))
-		streams, err := getActionIoStreams(actions_output_dir, actionDescriptor.PipeId, pipeLogger)
+		streams, err := getActionIoStreams(actionsOutputDir, actionDescriptor.PipeId, pipeLogger)
 		if err != nil {
 			pipeLogger.Error("Error creating action's IO streams", slog.Any("error", err))
 			continue

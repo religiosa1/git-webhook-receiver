@@ -3,6 +3,7 @@ port: 9090
 log_file: "deploy.log"
 log_level: "debug"
 actions_output_dir: "actions_output"
+max_output_files: 10_000
 projects:
   staticus:
     git_provider: gitea

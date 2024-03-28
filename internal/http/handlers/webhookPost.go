@@ -53,7 +53,7 @@ func HandleWebhookPost(
 			)
 		}
 		if len(authorizationResult.Ok) > 0 {
-			go action_runner.ExecuteActions(deliveryLogger, authorizationResult.Ok, cfg.ActionsOutputDir)
+			go action_runner.ExecuteActions(deliveryLogger, authorizationResult.Ok, cfg.ActionsOutputDir, cfg.MaxOutputFiles)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(authorizationResultToWebhookPostResult(authorizationResult))

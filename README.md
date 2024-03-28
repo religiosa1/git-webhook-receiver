@@ -61,6 +61,20 @@ variable or by using `--config` flag while launching the app (flag takes precede
 
 TODO config file format description.
 
+## Logging
+
+Actions' output is stored in the directory specified in the config file.
+If no directory is specified, the default value of `./actions_output` will be used.
+
+If the directory is explicitely set to be empty, then storing of actions' output
+will be disabled.
+
+Only N latest actions are stored in the directory, with N specified in the config
+as `max_output_files` field. When number of output files exceeds this number,
+the oldest actions (by their file LastModified date) are removed.
+`max_output_files` defaults to 10000, setting it as 0 or negative value turns off
+this functionality.
+
 ## Contribution
 
 If you have any ideas or suggestions or want to report a bug, feel free to
