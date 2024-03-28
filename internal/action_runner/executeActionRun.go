@@ -1,4 +1,4 @@
-package handlers
+package action_runner
 
 import (
 	"log/slog"
@@ -7,7 +7,7 @@ import (
 	"github.com/religiosa1/webhook-receiver/internal/config"
 )
 
-func executeActionRun(logger *slog.Logger, action config.Action, streams ActionIoStreams) {
+func executeActionRun(logger *slog.Logger, action config.Action, streams actionIoStreams) {
 	logger.Debug("Running the command", slog.Any("command", action.Run))
 	cmd := exec.Command(action.Run[0], action.Run[1:]...)
 	if action.Cwd != "" {

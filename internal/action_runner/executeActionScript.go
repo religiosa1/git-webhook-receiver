@@ -1,4 +1,4 @@
-package handlers
+package action_runner
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"mvdan.cc/sh/v3/syntax"
 )
 
-func executeActionScript(logger *slog.Logger, action config.Action, streams ActionIoStreams) {
+func executeActionScript(logger *slog.Logger, action config.Action, streams actionIoStreams) {
 	logger.Debug("Running script", slog.String("script", action.Script))
 	script, err := syntax.NewParser().Parse(strings.NewReader(action.Script), "")
 	if err != nil {

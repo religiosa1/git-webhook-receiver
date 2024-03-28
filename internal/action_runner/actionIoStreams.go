@@ -1,4 +1,4 @@
-package handlers
+package action_runner
 
 import (
 	"log/slog"
@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-type ActionIoStreams struct {
+type actionIoStreams struct {
 	logger         *slog.Logger
 	Stdout         *os.File
 	stdoutFileName string
@@ -14,7 +14,7 @@ type ActionIoStreams struct {
 	stderrFileName string
 }
 
-func (closer ActionIoStreams) Close() {
+func (closer actionIoStreams) Close() {
 	if closer.Stdout != nil {
 		closer.Stdout.Close()
 		removeFileIfEmpty(closer.stdoutFileName, closer.logger)
@@ -25,24 +25,24 @@ func (closer ActionIoStreams) Close() {
 	}
 }
 
-func GetActionIoStreams(actions_output_dir string, pipeId string, logger *slog.Logger) (ActionIoStreams, error) {
+func getActionIoStreams(actions_output_dir string, pipeId string, logger *slog.Logger) (actionIoStreams, error) {
 	if actions_output_dir == "" {
-		return ActionIoStreams{}, nil
+		return actionIoStreams{}, nil
 	}
 	stdoutFileName := filepath.Join(actions_output_dir, pipeId+".stdout")
 	stdoutFile, err := os.OpenFile(stdoutFileName, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return ActionIoStreams{}, err
+		return actionIoStreams{}, err
 	}
 
 	stderrFileName := filepath.Join(actions_output_dir, pipeId+".stderr")
 	stderrFile, err := os.OpenFile(stderrFileName, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		stdoutFile.Close()
-		return ActionIoStreams{logger, stdoutFile, stdoutFileName, nil, ""}, err
+		return actionIoStreams{logger, stdoutFile, stdoutFileName, nil, ""}, err
 	}
 
-	return ActionIoStreams{logger, stdoutFile, stdoutFileName, stderrFile, stderrFileName}, nil
+	return actionIoStreams{logger, stdoutFile, stdoutFileName, stderrFile, stderrFileName}, nil
 }
 
 func removeFileIfEmpty(fileName string, logger *slog.Logger) {

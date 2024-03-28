@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/religiosa1/webhook-receiver/internal/action_runner"
 	"github.com/religiosa1/webhook-receiver/internal/config"
 	"github.com/religiosa1/webhook-receiver/internal/whreceiver"
 )
@@ -48,11 +49,11 @@ func HandleWebhookPost(
 		if len(authorizationResult.Forbidden) > 0 {
 			deliveryLogger.Warn("Incorrect authorization information passed for actions",
 				slog.String("auth", webhookInfo.Auth),
-				slog.Any("actions", getActionIds(authorizationResult.Forbidden)),
+				slog.Any("actions", action_runner.GetActionIds(authorizationResult.Forbidden)),
 			)
 		}
 		if len(authorizationResult.Ok) > 0 {
-			go processWebHookPost(deliveryLogger, authorizationResult.Ok, cfg.ActionsOutputDir)
+			go action_runner.ExecuteActions(deliveryLogger, authorizationResult.Ok, cfg.ActionsOutputDir)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(authorizationResultToWebhookPostResult(authorizationResult))
@@ -79,13 +80,13 @@ func authorizationResultToWebhookPostResult(authResult ActionAuthorizationResult
 }
 
 type ActionAuthorizationResult struct {
-	Ok        []ActionDescriptor
-	Forbidden []ActionDescriptor
+	Ok        []action_runner.ActionDescriptor
+	Forbidden []action_runner.ActionDescriptor
 }
 
 func authorizeActions(
 	webhookInfo whreceiver.WebhookPostInfo,
-	actions []ActionDescriptor,
+	actions []action_runner.ActionDescriptor,
 ) ActionAuthorizationResult {
 	result := ActionAuthorizationResult{}
 	for _, actionDesc := range actions {
@@ -116,17 +117,8 @@ func getWebhookErrorCode(err error) ErrorInfo {
 	return ErrorInfo{http.StatusBadRequest, err.Error()}
 }
 
-type ActionIdentifier struct {
-	Index  int
-	PipeId string
-}
-type ActionDescriptor struct {
-	ActionIdentifier
-	Action config.Action
-}
-
-func filterOutAction(project *config.Project, webhookInfo *whreceiver.WebhookPostInfo) []ActionDescriptor {
-	actions := make([]ActionDescriptor, 0)
+func filterOutAction(project *config.Project, webhookInfo *whreceiver.WebhookPostInfo) []action_runner.ActionDescriptor {
+	actions := make([]action_runner.ActionDescriptor, 0)
 	for index, action := range project.Actions {
 		if action.Branch != webhookInfo.Branch {
 			continue
@@ -134,37 +126,10 @@ func filterOutAction(project *config.Project, webhookInfo *whreceiver.WebhookPos
 		if action.On != "*" && action.On != webhookInfo.Event {
 			continue
 		}
-		actions = append(actions, ActionDescriptor{ActionIdentifier{index, uuid.NewString()}, action})
+		actions = append(actions, action_runner.ActionDescriptor{
+			ActionIdentifier: action_runner.ActionIdentifier{Index: index, PipeId: uuid.NewString()},
+			Action:           action,
+		})
 	}
 	return actions
-}
-
-func getActionIds(descs []ActionDescriptor) []ActionIdentifier {
-	result := make([]ActionIdentifier, len(descs))
-	for i := 0; i < len(descs); i++ {
-		result[i] = descs[i].ActionIdentifier
-	}
-	return result
-}
-
-func processWebHookPost(
-	logger *slog.Logger,
-	actionDescriptors []ActionDescriptor,
-	actions_output_dir string,
-) {
-	for _, actionDescriptor := range actionDescriptors {
-		pipeLogger := logger.With(slog.String("pipeId", actionDescriptor.PipeId))
-		pipeLogger.Info("Running action", slog.Int("action_index", actionDescriptor.Index))
-		streams, err := GetActionIoStreams(actions_output_dir, actionDescriptor.PipeId, pipeLogger)
-		if err != nil {
-			pipeLogger.Error("Error creating action's IO streams", slog.Any("error", err))
-			continue
-		}
-		defer streams.Close()
-		if len(actionDescriptor.Action.Run) > 0 {
-			executeActionRun(pipeLogger.With(slog.Any("command", actionDescriptor.Action.Run)), actionDescriptor.Action, streams)
-		} else {
-			executeActionScript(pipeLogger, actionDescriptor.Action, streams)
-		}
-	}
 }
