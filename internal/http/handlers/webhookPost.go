@@ -30,7 +30,7 @@ func HandleWebhookPost(
 		deliveryLogger := logger.With(slog.String("delivery", webhookInfo.DeliveryID))
 		deliveryLogger.Debug("Recieved a webhook post", slog.Any("webhookInfo", webhookInfo))
 
-		actions := filterOutAction(project, webhookInfo)
+		actions := getProjectsActionsForWebhookPost(project, webhookInfo)
 		if len(actions) == 0 {
 			deliveryLogger.Info("No applicable actions found in webhook post")
 			w.WriteHeader(http.StatusNoContent)
@@ -117,7 +117,7 @@ func getWebhookErrorCode(err error) ErrorInfo {
 	return ErrorInfo{http.StatusBadRequest, err.Error()}
 }
 
-func filterOutAction(project *config.Project, webhookInfo *whreceiver.WebhookPostInfo) []action_runner.ActionDescriptor {
+func getProjectsActionsForWebhookPost(project *config.Project, webhookInfo *whreceiver.WebhookPostInfo) []action_runner.ActionDescriptor {
 	actions := make([]action_runner.ActionDescriptor, 0)
 	for index, action := range project.Actions {
 		if action.Branch != webhookInfo.Branch {

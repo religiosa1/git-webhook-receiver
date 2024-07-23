@@ -66,13 +66,13 @@ func runServer(cfg *config.Config, logger *slog.Logger) {
 			mux,
 		)
 		if err != nil {
-			logger.Error("Error starting the server", err)
+			logger.Error("Error starting the server", slog.Any("error", err))
 			os.Exit(1)
 		}
 	} else {
 		logger.Info("Running the server", slog.String("host", cfg.Host), slog.Int("port", int(cfg.Port)))
 		if err := http.ListenAndServe(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), mux); err != nil {
-			logger.Error("Error starting the server", err)
+			logger.Error("Error starting the server", slog.Any("error", err))
 			os.Exit(1)
 		}
 	}

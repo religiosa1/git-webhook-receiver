@@ -1,18 +1,19 @@
-host: "localhost"
-port: 9090
-log_file: "deploy.log"
-log_level: "debug"
-actions_output_dir: "actions_output"
-max_output_files: 10_000
+host: example.com # defaults to localhost
+port: 9090 # OPTIONAL, defaults to 9090
+# Optional (but recommended, unless you're using a reverse proxy): SSL config:
+ssl:
+  cert_file_path: "./your/certfile/path/fullchain.pem"
+  key_file_path: "/your/keyfile/path/privkey.pem"
 projects:
-  staticus:
+  your_project_name:
     git_provider: gitea
     repo: "username/reponame" # repository full name, as displayed in the URL
     actions:
       - on: push
-        branch: master
-        user: www-data # user from which action will be run
-        cwd: "/var/www/staticus" # root dir in which action will be run, optional
+        branch: master # OPTIONAL  defaults to master
+        user: www-data # OPTIONAL user from which action will be run
+        authorization: "JghYTd" # OPTIONAL post authorization header contents, to authorize the incoming request
+        cwd: "/var/www/yourproject" # OPTIONAL root dir in which action will be run
         # To run a script:
         script: |
           git fetch && git reset --hard origin/master
@@ -20,3 +21,8 @@ projects:
           npm run build
         # Or to execute a script or program:
         # run: ["node", "--version"]
+# TODO remove all that and log directly into SQLite instance instead of a file
+log_file: "deploy.log"
+log_level: "debug"
+actions_output_dir: "actions_output"
+max_output_files: 10_000
