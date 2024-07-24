@@ -12,6 +12,9 @@ projects:
       - on: push
         branch: master # OPTIONAL  defaults to master
         user: www-data # OPTIONAL user from which action will be run
+        # please notice, it may be safer to keep secret and authorization tokens 
+        # in env variables, depending on your application
+        secret: "YourSecretGoesHere" # OPTIONAL your secret, used to sign the payload and validate it
         authorization: "JghYTd" # OPTIONAL post authorization header contents, to authorize the incoming request
         cwd: "/var/www/yourproject" # OPTIONAL root dir in which action will be run
         # To run a script:

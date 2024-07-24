@@ -12,7 +12,8 @@ In a nutshell:
 - create a [config file](#config-file) and add your projects and their 
   corresponding build scripts/actions (either as a standalone script 
   or [crossplatform inline scripts](#inline-scripts))
-- set webhooks for those repo in their git services (github, gitea, etc.)
+- set webhooks for those repo in their git services (github, gitea, etc.) to post
+  to {YOUR_HOST}/{PROJECT_NAME}
 - start the service, it will listen for the webhook posts and runs the actions
   you described in the config (building your projects or whatever) when those 
   webhooks are fired from git
@@ -56,6 +57,10 @@ precedence).
 Please refer to the [config file example](./config.example.yml) in this repo, to
 see a list of all available configuration fields.
 
+For security reason, it's recommended to always provide `secret` or at least
+`authorization` param for every action. `secret` can also protect against 
+MiM attacks, ensuring the payload wasn't tampered.
+
 
 ## SSL
 
@@ -89,8 +94,8 @@ script: |
 If you need something more complicated, it's probably better to use `run` field
 instead of `script` in action config, allowing you to run a standalone script
 (bash, python, whatever you like and whatever is supported by your system).
-It accepts its parameters in exec form, as an array of argv strings, in the same way as 
-docker's `CMD` [does](https://docs.docker.com/reference/dockerfile/#exec-form):
+It accepts its parameters in exec form, as an array of argv strings, in the same
+way as docker's `CMD` [does](https://docs.docker.com/reference/dockerfile/#exec-form):
 
 Example:
 

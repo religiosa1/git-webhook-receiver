@@ -34,7 +34,8 @@ type Project struct {
 type Action struct {
 	On            string   `yaml:"on" env-default:"push"`
 	Branch        string   `yaml:"branch" env-default:"master"`
-	Authorization string   `yaml:"authorization"`
+	Authorization string   `yaml:"authorization" env:"AUTH"`
+	Secret        string   `yaml:"secret" env:"SECRET"`
 	Cwd           string   `yaml:"cwd"`
 	User          string   `yaml:"user"`
 	Script        string   `yaml:"script"`
