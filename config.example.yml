@@ -11,6 +11,7 @@ projects:
     actions:
       - on: push
         branch: master # OPTIONAL  defaults to master
+        # currently only supported for `run` action, and not inline `script`
         user: www-data # OPTIONAL user from which action will be run
         # please notice, it may be safer to keep secret and authorization tokens 
         # in env variables, depending on your application

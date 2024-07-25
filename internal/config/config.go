@@ -3,8 +3,10 @@ package config
 import (
 	"log"
 	"os"
+	"os/user"
 	"reflect"
 	"regexp"
+	"runtime"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
@@ -94,15 +96,15 @@ func MustLoad(configPath string) *Config {
 					projectName,
 				)
 			}
-			// if runtime.GOOS != "windows" && action.User != "" {
-			// 	_, err := user.Lookup(action.User)
-			// 	if err != nil {
-			// 		log.Fatalf(
-			// 			"Action %d (invoked on %s) of project '%s' has a user field = '%s', but this user can't be found: %s",
-			// 			i+1, action.On, projectName, action.User, err,
-			// 		)
-			// 	}
-			// }
+			if runtime.GOOS != "windows" && action.User != "" {
+				_, err := user.Lookup(action.User)
+				if err != nil {
+					log.Fatalf(
+						"Action %d (invoked on %s) of project '%s' has a user field = '%s', but this user can't be found: %s",
+						i+1, action.On, projectName, action.User, err,
+					)
+				}
+			}
 			project.Actions[i] = action
 		}
 		cfg.Projects[projectName] = project
