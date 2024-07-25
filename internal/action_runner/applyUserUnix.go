@@ -3,20 +3,19 @@
 package action_runner
 
 import (
-	"os/exec"
 	"os/user"
 	"strconv"
 	"syscall"
 )
 
-func applyUser(username string, cmd *exec.Cmd) error {
+func applyUser(username string) (*syscall.SysProcAttr, error) {
 	usr, err := getUnixUserInfo(username)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	cmd.SysProcAttr = &syscall.SysProcAttr{}
-	cmd.SysProcAttr.Credential = &syscall.Credential{Uid: usr.Uid, Gid: usr.Gid}
-	return nil
+	sysProcAttr := &syscall.SysProcAttr{}
+	sysProcAttr.Credential = &syscall.Credential{Uid: usr.Uid, Gid: usr.Gid}
+	return sysProcAttr, nil
 }
 
 type UnixUserInfo struct {

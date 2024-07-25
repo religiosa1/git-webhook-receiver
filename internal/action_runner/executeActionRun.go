@@ -16,7 +16,7 @@ func executeActionRun(logger *slog.Logger, action config.Action, streams actionI
 	}
 
 	if runtime.GOOS != "windows" && action.User != "" {
-		if err := applyUser(action.User, cmd); err != nil {
+		if sysProcAttr, err := applyUser(action.User); err != nil {
 			logger.Error(
 				"Unable to run action from the specified user:",
 				slog.String("username", action.User),
@@ -24,6 +24,7 @@ func executeActionRun(logger *slog.Logger, action config.Action, streams actionI
 			)
 		} else {
 			logger.Debug("Running the command from a user", slog.String("user", action.User))
+			cmd.SysProcAttr = sysProcAttr
 		}
 	}
 
