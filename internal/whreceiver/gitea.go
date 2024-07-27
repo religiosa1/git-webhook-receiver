@@ -2,8 +2,6 @@ package whreceiver
 
 import (
 	"bytes"
-	"crypto/hmac"
-	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
@@ -18,8 +16,7 @@ type GiteaReceiver struct {
 
 func (receiver GiteaReceiver) GetWebhookInfo(req WebhookPostRequest) (*WebhookPostInfo, error) {
 	var whPayload GiteaWebhookPayload
-	err := json.NewDecoder(bytes.NewBuffer(req.Payload)).Decode(&whPayload)
-	if err != nil {
+	if err := json.NewDecoder(bytes.NewBuffer(req.Payload)).Decode(&whPayload); err != nil {
 		return nil, err
 	}
 	if whPayload.Repository.FullName != receiver.project.Repo {
@@ -27,7 +24,7 @@ func (receiver GiteaReceiver) GetWebhookInfo(req WebhookPostRequest) (*WebhookPo
 	}
 	branch := getBranchFromRefName(whPayload.Ref)
 	hash := whPayload.After
-	event := req.Headers.Get("x-gitea-event")
+	event := req.Headers.Get("X-Gitea-Event")
 	deliveryID := req.Headers.Get("X-Gitea-Delivery")
 
 	return &WebhookPostInfo{
@@ -45,9 +42,7 @@ func (receiver GiteaReceiver) Authorize(req WebhookPostRequest, auth string) (bo
 }
 
 func (receiver GiteaReceiver) ValidateSignature(req WebhookPostRequest, secret string) (bool, error) {
-	h := hmac.New(sha256.New, []byte(secret))
-	h.Write(req.Payload)
-	payloadSignature := h.Sum(nil)
+	payloadSignature := GetPayloadSignature(secret, req.Payload)
 	headerSignatureString := req.Headers.Get("X-Gitea-Signature")
 	if headerSignatureString == "" {
 		return false, nil
