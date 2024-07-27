@@ -9,6 +9,19 @@ import (
 	"os"
 )
 
+/*
+Go [doesn't preserve](https://github.com/golang/go/issues/27179) the order of
+the json fields. This makes the actual payload to change, and those the HMAC
+signature values will be different.
+
+For now, I inserted the signature values as they will appear after golang's
+alphabetical sorting, but this defeats the purpose of testing on a real git
+provider response.
+
+We can switch to storing the response body as a string, but it will be much
+less convenient to edit. Preferrably.
+*/
+
 type RequestDump struct {
 	Secret  string                 `json:"secret"`
 	Body    map[string]interface{} `json:"body"`

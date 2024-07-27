@@ -13,6 +13,20 @@ import (
 	"github.com/religiosa1/webhook-receiver/internal/whreceiver"
 )
 
+type ResponseStats struct {
+	Ok           int
+	Forbidden    int
+	BadSignature int
+}
+
+func responseStatsFrom(res *handlers.WebhookPostResult) ResponseStats {
+	return ResponseStats{
+		Ok:           len(res.Ok),
+		Forbidden:    len(res.Forbidden),
+		BadSignature: len(res.BadSignature),
+	}
+}
+
 func makeActionsList(actions ...config.Action) []config.Action {
 	defaultAction := config.Action{
 		On:     "push",
@@ -90,21 +104,32 @@ func TestProjectMatching(t *testing.T) {
 		}
 	})
 
-	authTests := []struct {
-		name          string
-		auth          string
-		wantStatus    int
-		wantOk        int
-		wantForbidden int
+	secretAndAuthTests := []struct {
+		name       string
+		auth       string
+		secret     string
+		wantStatus int
+		wantResp   ResponseStats
 	}{
-		{"correct auth", "123456", 200, 1, 0},
-		{"bad auth", "bad pass", 403, 0, 1},
+		{"correct signature", "", requestDump.Secret, 200, ResponseStats{1, 0, 0}},
+		{"bad signature", "", "bad key", 403, ResponseStats{0, 0, 1}},
+		{"correct auth", "123456", "", 200, ResponseStats{1, 0, 0}},
+		{"bad auth", "bad pass", "", 403, ResponseStats{0, 1, 0}},
+		{"bad auth precedes bad sign", "bad pass", "bad key", 403, ResponseStats{0, 1, 0}},
 	}
 
-	for _, tt := range authTests {
+	for _, tt := range secretAndAuthTests {
 		t.Run(tt.name, func(t *testing.T) {
+			actn := config.Action{}
+			if tt.auth != "" {
+				actn.Authorization = tt.auth
+			}
+			if tt.secret != "" {
+				actn.Secret = tt.secret
+			}
+
 			prj2 := prj
-			prj2.Actions = makeActionsList(config.Action{Authorization: tt.auth})
+			prj2.Actions = makeActionsList(actn)
 
 			request, _ := requestDump.ToHttpRequest(projectEndPoint)
 			response := httptest.NewRecorder()
@@ -121,15 +146,10 @@ func TestProjectMatching(t *testing.T) {
 			if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
 				t.Errorf("Unable to retrieve response body json %e", err)
 			}
+			got := responseStatsFrom(&body)
 
-			if got := len(body.BadSignature); got != 0 {
-				t.Errorf("Bad number of BadSignature items in response, got %d, want %d", got, 0)
-			}
-			if got := len(body.Ok); got != tt.wantOk {
-				t.Errorf("Bad number of Ok items in response, got %d, want %d", got, tt.wantOk)
-			}
-			if got := len(body.Forbidden); got != tt.wantForbidden {
-				t.Errorf("Bad number of Ok items in response, got %d, want %d", got, tt.wantForbidden)
+			if got != tt.wantResp {
+				t.Errorf("Unexpected response, got %v, want %v", got, tt.wantResp)
 			}
 		})
 	}
