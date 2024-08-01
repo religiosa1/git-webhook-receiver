@@ -144,7 +144,7 @@ func TestProjectMatching(t *testing.T) {
 
 			var body handlers.WebhookPostResult
 			if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
-				t.Errorf("Unable to retrieve response body json %e", err)
+				t.Errorf("Unable to retrieve response body json: %s", err)
 			}
 			got := responseStatsFrom(&body)
 

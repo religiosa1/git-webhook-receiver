@@ -9,7 +9,7 @@ projects:
     git_provider: gitea
     repo: "username/reponame" # repository full name, as displayed in the URL
     actions:
-      - on: push
+      - on: push # OPTIONAL defaults to "push", use "*" to handle any incoming event
         branch: master # OPTIONAL  defaults to master
         user: www-data # OPTIONAL user from which action will be run
         # please notice, it may be safer to keep secret and authorization tokens 

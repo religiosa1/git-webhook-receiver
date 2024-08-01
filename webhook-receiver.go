@@ -18,7 +18,10 @@ import (
 
 func main() {
 	configPath := getConfigPath()
-	cfg := config.MustLoad(configPath)
+	cfg, err := config.Load(configPath)
+	if err != nil {
+		log.Fatalf("Unable to load configuration file, aborting: %s", err)
+	}
 
 	closableLogger := logger.SetupLogger(cfg.LogLevel, cfg.LogFile)
 	defer closableLogger.Close()

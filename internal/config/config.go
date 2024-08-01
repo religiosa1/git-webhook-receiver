@@ -1,12 +1,12 @@
 package config
 
 import (
-	"log"
+	"fmt"
 	"os"
 	"os/user"
 	"reflect"
-	"regexp"
 	"runtime"
+	"unicode"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
@@ -19,7 +19,7 @@ type Config struct {
 	Ssl              SslConfig          `yaml:"ssl"`
 	ActionsOutputDir string             `yaml:"actions_output_dir"`
 	MaxOutputFiles   int                `yaml:"max_output_files" env-default:"10000"`
-	Projects         map[string]Project `yaml:"projects" env-required:"true"`
+	Projects         map[string]Project `yaml:"projects" env-prefix:"projects__" env-required:"true"`
 }
 
 type SslConfig struct {
@@ -44,11 +44,18 @@ type Action struct {
 	Run           []string `yaml:"run"`
 }
 
-func MustLoad(configPath string) *Config {
+func Load(configPath string) (*Config, error) {
 	var cfg Config
 
 	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
-		log.Fatalf("Error loading configuration %s: %s", configPath, err)
+		return nil, fmt.Errorf("error loading configuration %s: %w", configPath, err)
+	}
+
+	if cfg.ActionsOutputDir != "" {
+		err := os.MkdirAll(cfg.ActionsOutputDir, os.ModePerm)
+		if err != nil {
+			return nil, fmt.Errorf("error creating actions output directory: %w", err)
+		}
 	}
 
 	switch cfg.LogLevel {
@@ -57,60 +64,17 @@ func MustLoad(configPath string) *Config {
 	case "info", "debug", "warn", "error":
 		// everything is ok, no action needed
 	default:
-		log.Fatalf("Incorrect LogLevel value '%s'. Possible values are 'debug', 'info', 'warn', and 'error", cfg.LogLevel)
+		return nil, fmt.Errorf("incorrect LogLevel value '%s'. Possible values are 'debug', 'info', 'warn', and 'error", cfg.LogLevel)
 	}
 
-	if cfg.ActionsOutputDir != "" {
-		err := os.MkdirAll(cfg.ActionsOutputDir, os.ModePerm)
-		if err != nil {
-			log.Fatalf("Error creating actions output directory: %s", err)
-		}
+	projectsWithDefaults, err := validateAndSetDefaultsConfigProjects(cfg.Projects)
+	if err != nil {
+		return nil, fmt.Errorf("config's projects validation failed: %w", err)
 	}
 
-	projectNameRegex := regexp.MustCompile(`^[a-zA-Z0-9\-_]+$`)
-	for projectName, project := range cfg.Projects {
-		if errField := setDefaultAndCheckRequired(&project); errField != "" {
-			log.Fatalf("Project '%s' doesn't have a value for field '%s' and it's a required field", projectName, errField)
-		}
+	cfg.Projects = projectsWithDefaults
 
-		if !projectNameRegex.MatchString(projectName) {
-			log.Fatalf("'%s' is not a valid project name. Project can consist only of alphanumeric characters and symbols '_' and '-'", projectName)
-		}
-
-		if len(project.Actions) == 0 {
-			log.Fatalf(
-				"Project '%s' has no associated actions and can not be executed.\n"+
-					"Either add 'actions' list to the project or comment the project out.",
-				projectName,
-			)
-		}
-		for i, action := range project.Actions {
-			if errField := setDefaultAndCheckRequired(&action); errField != "" {
-				log.Fatalf("Action %d (invoked on %s) of project '%s' doesn't have a value for field '%s' and it's a required field", i+1, action.On,
-					projectName, errField)
-			}
-			if action.Script == "" && len(action.Run) == 00 {
-				log.Fatalf(
-					"Action %d (invoked on %s) of project '%s' has neither 'script' nor 'run' fields "+
-						"and can not be executed", i+1, action.On,
-					projectName,
-				)
-			}
-			if runtime.GOOS != "windows" && action.User != "" {
-				_, err := user.Lookup(action.User)
-				if err != nil {
-					log.Fatalf(
-						"Action %d (invoked on %s) of project '%s' has a user field = '%s', but this user can't be found: %s",
-						i+1, action.On, projectName, action.User, err,
-					)
-				}
-			}
-			project.Actions[i] = action
-		}
-		cfg.Projects[projectName] = project
-	}
-
-	return &cfg
+	return &cfg, nil
 }
 
 // cleanenv doesn't seem to respect its struct tags for map values, so we're setting them ourself
@@ -131,4 +95,87 @@ func setDefaultAndCheckRequired[T Project | Action](item *T) string {
 		}
 	}
 	return ""
+}
+
+func validateAndSetDefaultsConfigProjects(projects map[string]Project) (map[string]Project, error) {
+	for projectName, project := range projects {
+		if errField := setDefaultAndCheckRequired(&project); errField != "" {
+			return nil, fmt.Errorf("project '%s' doesn't have a value for field '%s' and it's a required field", projectName, errField)
+		}
+
+		if err := isValidProjectName(projectName); err != nil {
+			return nil, fmt.Errorf("bad project name '%s': %w", projectName, err)
+		}
+
+		if len(project.Actions) == 0 {
+			return nil, fmt.Errorf(
+				"project '%s' has no associated actions and can not be executed; "+
+					"either add 'actions' list to the project or comment the project out",
+				projectName,
+			)
+		}
+
+		actionsWithDefaults, err := validateAndSetDefaultConfigActions(projectName, project.Actions)
+		if err != nil {
+			return nil, fmt.Errorf("action validation failed: %w", err)
+		}
+		project.Actions = actionsWithDefaults
+		projects[projectName] = project
+	}
+	return projects, nil
+}
+
+func validateAndSetDefaultConfigActions(projectName string, actions []Action) ([]Action, error) {
+	for i, action := range actions {
+		wrapActionErr := func(err error) error {
+			return fmt.Errorf(
+				"bad action %d (invoked on %s) of project '%s': %w",
+				i+1,
+				action.On,
+				projectName,
+				err,
+			)
+		}
+
+		if errField := setDefaultAndCheckRequired(&action); errField != "" {
+			return nil, wrapActionErr(fmt.Errorf("doesn't have a value for field '%s' and it's a required field", errField))
+		}
+		if action.Script == "" && len(action.Run) == 0 {
+			return nil, wrapActionErr(fmt.Errorf("has neither 'script' nor 'run' fields and can not be executed"))
+		}
+		if action.Script != "" && len(action.Run) > 0 {
+			return nil, wrapActionErr(fmt.Errorf("has both 'script' and 'run' simultaneously, you must use one"))
+		}
+
+		if runtime.GOOS != "windows" && action.User != "" {
+			if _, err := user.Lookup(action.User); err != nil {
+				return nil, wrapActionErr(fmt.Errorf("has a user field = '%s', but this user can't be found: %w", action.User, err))
+			}
+		}
+		actions[i] = action
+	}
+	return actions, nil
+}
+
+func isValidProjectName(s string) error {
+	if len(s) == 0 {
+		return fmt.Errorf("project name can't be empty")
+	}
+
+	if s[0] == '_' {
+		return fmt.Errorf("name can't start with '_' symbol")
+	}
+
+	var lastRune rune
+	for _, r := range s {
+		if r == '_' && lastRune == '_' {
+			return fmt.Errorf("name can't contain two or more consecutive '_' chars")
+		}
+		if !(unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_') {
+			return fmt.Errorf("name can only contain chars from range [a-Z0-9_-]")
+		}
+		lastRune = r
+	}
+
+	return nil
 }

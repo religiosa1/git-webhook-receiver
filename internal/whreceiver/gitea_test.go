@@ -97,7 +97,7 @@ func TestValidateSignature(t *testing.T) {
 
 			got, err := rcvr.ValidateSignature(req, tt.secret)
 			if err != nil {
-				t.Errorf("Error during secret test %s", err)
+				t.Errorf("Error during secret test: %s", err)
 			}
 			if got != tt.want {
 				t.Errorf("Secret validatoin failed, got %t, want %t", got, tt.want)

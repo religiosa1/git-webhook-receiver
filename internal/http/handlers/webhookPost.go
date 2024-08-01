@@ -35,7 +35,7 @@ func HandleWebhookPost(
 			return
 		}
 		deliveryLogger := logger.With(slog.String("delivery", webhookInfo.DeliveryID))
-		deliveryLogger.Debug("Recieved a webhook post", slog.Any("webhookInfo", webhookInfo))
+		deliveryLogger.Info("Recieved a webhook post", slog.Any("webhookInfo", webhookInfo))
 
 		actions := getProjectsActionsForWebhookPost(project, webhookInfo)
 		if len(actions) == 0 {
