@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/user"
-	"reflect"
 	"runtime"
 	"unicode"
 
@@ -16,16 +15,19 @@ type Config struct {
 	Port             int16              `yaml:"port" env:"PORT" env-default:"9090"`
 	LogLevel         string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
 	LogFile          string             `yaml:"log_file" env:"LOG_FILE"`
-	Ssl              SslConfig          `yaml:"ssl"`
+	Ssl              SslConfig          `yaml:"ssl" env-prefix:"SSL__"`
 	ActionsOutputDir string             `yaml:"actions_output_dir"`
 	MaxOutputFiles   int                `yaml:"max_output_files" env-default:"10000"`
-	Projects         map[string]Project `yaml:"projects" env-prefix:"projects__" env-required:"true"`
+	Projects         map[string]Project `yaml:"projects" env-required:"true"`
 }
 
 type SslConfig struct {
 	CertFilePath string `yaml:"cert_file_path" env:"CERT_FILE_PATH"`
 	KeyFilePath  string `yaml:"key_file_path" env:"KEY_FILE_PATH"`
 }
+
+// For both Projects and Actions only the fileds marked with env:"..." struct
+// tag can be set through the env variables. See [applyEnvToProjectAndActions]
 
 type Project struct {
 	GitProvider string   `yaml:"git_provider" env-default:"gitea"`
@@ -50,6 +52,7 @@ func Load(configPath string) (*Config, error) {
 	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
 		return nil, fmt.Errorf("error loading configuration %s: %w", configPath, err)
 	}
+	applyEnvToProjectAndActions(&cfg)
 
 	if cfg.ActionsOutputDir != "" {
 		err := os.MkdirAll(cfg.ActionsOutputDir, os.ModePerm)
@@ -77,30 +80,10 @@ func Load(configPath string) (*Config, error) {
 	return &cfg, nil
 }
 
-// cleanenv doesn't seem to respect its struct tags for map values, so we're setting them ourself
-func setDefaultAndCheckRequired[T Project | Action](item *T) string {
-	typesType := reflect.TypeOf(*item)
-	typesValue := reflect.ValueOf(item).Elem()
-	for i := 0; i < typesType.NumField(); i++ {
-		field := typesType.Field(i)
-		fieldValue := typesValue.Field(i)
-		isRequired := field.Tag.Get("env-required") == "true"
-		if fieldValue.Type().Kind() == reflect.String && fieldValue.String() == "" {
-			defaultValue := field.Tag.Get("env-default")
-			if defaultValue != "" {
-				fieldValue.SetString(defaultValue)
-			} else if isRequired {
-				return field.Name
-			}
-		}
-	}
-	return ""
-}
-
 func validateAndSetDefaultsConfigProjects(projects map[string]Project) (map[string]Project, error) {
 	for projectName, project := range projects {
-		if errField := setDefaultAndCheckRequired(&project); errField != "" {
-			return nil, fmt.Errorf("project '%s' doesn't have a value for field '%s' and it's a required field", projectName, errField)
+		if err := setDefaultAndCheckRequired(&project); err != nil {
+			return nil, fmt.Errorf("project '%s' has issue with its fields: %w", projectName, err)
 		}
 
 		if err := isValidProjectName(projectName); err != nil {
@@ -137,8 +120,8 @@ func validateAndSetDefaultConfigActions(projectName string, actions []Action) ([
 			)
 		}
 
-		if errField := setDefaultAndCheckRequired(&action); errField != "" {
-			return nil, wrapActionErr(fmt.Errorf("doesn't have a value for field '%s' and it's a required field", errField))
+		if err := setDefaultAndCheckRequired(&action); err != nil {
+			return nil, wrapActionErr(fmt.Errorf("action  has issue with its fields: %w", err))
 		}
 		if action.Script == "" && len(action.Run) == 0 {
 			return nil, wrapActionErr(fmt.Errorf("has neither 'script' nor 'run' fields and can not be executed"))

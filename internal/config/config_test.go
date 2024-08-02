@@ -127,11 +127,11 @@ projects:
 		}
 	})
 
-	// FIXME: 73045411 environmental variables do not apply to maps and slices
 	t.Run("allows to override project values with env", func(t *testing.T) {
-		t.Skip()
-		overridenRepo := "othername/repo2"
-		t.Setenv("projects__test-project__1__repo", overridenRepo)
+		secret := "test secret"
+		auth := "test auth"
+		t.Setenv("PROJECTS__test-proj__ACTIONS__1__SECRET", secret)
+		t.Setenv("PROJECTS__test-proj__ACTIONS__1__AUTH", auth)
 
 		configFileName := tmpConfigFile(t, configContents)
 		config, err := config.Load(configFileName)
@@ -139,16 +139,38 @@ projects:
 			t.Error(err)
 		}
 
-		var project = config.Projects["test-proj"]
+		project := config.Projects["test-proj"]
+		action := project.Actions[0]
 
-		if project.Repo != overridenRepo {
-			t.Errorf("incorrect repo value read from config, want %s, got %s", overridenRepo, project.Repo)
+		if want, got := secret, action.Secret; want != got {
+			t.Errorf("incorrect secret value read from config, want '%s', got '%s'", want, got)
+		}
+
+		if want, got := auth, action.Authorization; want != got {
+			t.Errorf("incorrect auth value read from config, want '%s', got '%s'", want, got)
 		}
 	})
 
-	// TODO: overriden actions test
+	t.Run("allows to set SSL CERT values with env", func(t *testing.T) {
+		certFilePath := "testcertfile"
+		keyFilePath := "testkeyfile"
+		t.Setenv("SSL__CERT_FILE_PATH", certFilePath)
+		t.Setenv("SSL__KEY_FILE_PATH", keyFilePath)
 
-	// TODO: test to verify you can't create new projects with env variables, only override them
+		configFileName := tmpConfigFile(t, configContents)
+		config, err := config.Load(configFileName)
+		if err != nil {
+			t.Error(err)
+		}
+
+		if want, got := certFilePath, config.Ssl.CertFilePath; want != got {
+			t.Errorf("incorrect Cert file path value read from config, want '%s', got '%s'", want, got)
+		}
+
+		if want, got := keyFilePath, config.Ssl.KeyFilePath; want != got {
+			t.Errorf("incorrect Key file path value read from config, want '%s', got '%s'", want, got)
+		}
+	})
 }
 
 func TestConfigRunScriptValidation(t *testing.T) {
