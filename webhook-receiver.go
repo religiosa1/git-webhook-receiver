@@ -56,9 +56,12 @@ func main() {
 		cancel()
 	}()
 	if err := runServer(ctx, srv, cfg.Ssl, logger); err != nil {
-		// TODO differentiate between run and shutdown errors
-		logger.Error("Error starting the server", slog.Any("error", err))
-		os.Exit(errCodeRun)
+		logger.Error("Error running the server", slog.Any("error", err))
+		if _, ok := err.(ErrShutdown); ok {
+			os.Exit(errCodeShutdown)
+		} else {
+			os.Exit(errCodeRun)
+		}
 	}
 
 	logger.Info("Server closed")
@@ -88,9 +91,7 @@ func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig
 	defer cancel()
 
 	if err = srv.Shutdown(ctxShutDown); err != nil {
-		// TODO custom error
-		logger.Error("server Shutdown Failed", slog.Any("error", err))
-		os.Exit(errCodeShutdown)
+		err = ErrShutdown{err}
 	}
 
 	return err
@@ -133,4 +134,12 @@ func getConfigPath() string {
 		configPath = "config.yml"
 	}
 	return configPath
+}
+
+type ErrShutdown struct {
+	err error
+}
+
+func (e ErrShutdown) Error() string {
+	return fmt.Sprintf("error shutting down the server: %s", e.err)
 }
