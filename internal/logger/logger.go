@@ -19,26 +19,26 @@ func (logger ClosableLogger) Close() {
 	}
 }
 
-func SetupLogger(logLevel string, logFileName string) ClosableLogger {
+func SetupLogger(logLevel string, logFileName string) (ClosableLogger, error) {
 	var programLevel = new(slog.LevelVar)
 	programLevel.Set(strLogLevelToEnumValue(logLevel))
 	hdlrOpts := &slog.HandlerOptions{Level: programLevel}
 
 	textHandler := slog.NewTextHandler(os.Stdout, hdlrOpts)
 	if logFileName == "" {
-		return ClosableLogger{slog.New(textHandler), nil}
+		return ClosableLogger{slog.New(textHandler), nil}, nil
 	}
 
 	file, err := os.OpenFile(logFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		panic(err)
+		return ClosableLogger{}, err
 	}
 
 	return ClosableLogger{
 		slog.New(slogmulti.Fanout(
 			textHandler,
 			slog.NewJSONHandler(file, hdlrOpts),
-		)), file}
+		)), file}, nil
 }
 
 func strLogLevelToEnumValue(logLevel string) slog.Level {

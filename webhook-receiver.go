@@ -19,8 +19,9 @@ import (
 )
 
 const errCodeCreate int = 2
-const errCodeRun int = 3
-const errCodeShutdown int = 4
+const errCodeLogger = 3
+const errCodeRun int = 4
+const errCodeShutdown int = 5
 
 func main() {
 	configPath := getConfigPath()
@@ -33,7 +34,11 @@ func main() {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
-	closableLogger := logger.SetupLogger(cfg.LogLevel, cfg.LogFile)
+	closableLogger, err := logger.SetupLogger(cfg.LogLevel, cfg.LogFile)
+	if err != nil {
+		log.Printf("Error setting up the logger: %s", err)
+		os.Exit(errCodeLogger)
+	}
 	defer closableLogger.Close()
 	logger := closableLogger.Logger
 	logger.Debug("configuration loaded", slog.Any("config", cfg))
@@ -44,38 +49,51 @@ func main() {
 		os.Exit(errCodeCreate)
 	}
 
-	go runServer(srv, cfg.Ssl, logger)
-
-	<-interrupt
-
-	ctxShutDown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	if err = srv.Shutdown(ctxShutDown); err != nil {
-		logger.Error("server Shutdown Failed", slog.Any("error", err))
-		os.Exit(errCodeShutdown)
+	go func() {
+		<-interrupt
+		cancel()
+	}()
+	if err := runServer(ctx, srv, cfg.Ssl, logger); err != nil {
+		// TODO differentiate between run and shutdown errors
+		logger.Error("Error starting the server", slog.Any("error", err))
+		os.Exit(errCodeRun)
 	}
 
 	logger.Info("Server closed")
 }
 
-func runServer(srv *http.Server, sslConfig config.SslConfig, logger *slog.Logger) {
-	var err error
-	if sslConfig.CertFilePath != "" && sslConfig.KeyFilePath != "" {
-		logger.Info("Running the server with SSL",
-			slog.String("addr", srv.Addr),
-			slog.String("cert file", sslConfig.CertFilePath),
-			slog.String("key file", sslConfig.KeyFilePath),
-		)
-		err = srv.ListenAndServeTLS(sslConfig.CertFilePath, sslConfig.KeyFilePath)
-	} else {
-		logger.Info("Running the server", slog.String("addr", srv.Addr))
-		err = srv.ListenAndServe()
+func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig, logger *slog.Logger) (err error) {
+	go func() {
+		if sslConfig.CertFilePath != "" && sslConfig.KeyFilePath != "" {
+			logger.Info("Running the server with SSL",
+				slog.String("addr", srv.Addr),
+				slog.String("cert file", sslConfig.CertFilePath),
+				slog.String("key file", sslConfig.KeyFilePath),
+			)
+			err = srv.ListenAndServeTLS(sslConfig.CertFilePath, sslConfig.KeyFilePath)
+		} else {
+			logger.Info("Running the server", slog.String("addr", srv.Addr))
+			err = srv.ListenAndServe()
+		}
+		if err == http.ErrServerClosed {
+			err = nil
+		}
+	}()
+
+	<-ctx.Done()
+
+	ctxShutDown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err = srv.Shutdown(ctxShutDown); err != nil {
+		// TODO custom error
+		logger.Error("server Shutdown Failed", slog.Any("error", err))
+		os.Exit(errCodeShutdown)
 	}
-	if err != nil && err != http.ErrServerClosed {
-		logger.Error("Error starting the server", slog.Any("error", err))
-		os.Exit(errCodeRun)
-	}
+
+	return err
 }
 
 func createServer(cfg *config.Config, logger *slog.Logger) (*http.Server, error) {
