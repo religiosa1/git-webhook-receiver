@@ -39,7 +39,7 @@ func executeActionScript(logger *slog.Logger, action config.Action, streams acti
 	}
 
 	runner, _ := interp.New(
-		interp.ExecHandler(execHandler(30, sysProcAttr)),
+		interp.ExecHandler(execHandler(30*time.Second, sysProcAttr)),
 		interp.StdIO(nil, streams.Stdout, streams.Stderr),
 		interp.Dir(action.Cwd),
 	)
