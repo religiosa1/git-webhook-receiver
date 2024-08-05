@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/religiosa1/webhook-receiver/internal/config"
 	"github.com/religiosa1/webhook-receiver/internal/http/handlers"
@@ -16,32 +18,72 @@ import (
 	"github.com/religiosa1/webhook-receiver/internal/whreceiver"
 )
 
+const errCodeCreate int = 2
+const errCodeRun int = 3
+const errCodeShutdown int = 4
+
 func main() {
 	configPath := getConfigPath()
 	cfg, err := config.Load(configPath)
 	if err != nil {
-		log.Fatalf("Unable to load configuration file, aborting: %s", err)
+		log.Printf("Unable to load configuration file, aborting: %s", err)
+		os.Exit(errCodeCreate)
 	}
+
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
 	closableLogger := logger.SetupLogger(cfg.LogLevel, cfg.LogFile)
 	defer closableLogger.Close()
 	logger := closableLogger.Logger
 	logger.Debug("configuration loaded", slog.Any("config", cfg))
-	done := make(chan os.Signal, 1)
-	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
-	go runServer(cfg, logger)
+	srv, err := createServer(cfg, logger)
+	if err != nil {
+		logger.Error("Error creating the server", slog.Any("error", err))
+		os.Exit(errCodeCreate)
+	}
 
-	<-done
+	go runServer(srv, cfg.Ssl, logger)
+
+	<-interrupt
+
+	ctxShutDown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err = srv.Shutdown(ctxShutDown); err != nil {
+		logger.Error("server Shutdown Failed", slog.Any("error", err))
+		os.Exit(errCodeShutdown)
+	}
+
 	logger.Info("Server closed")
 }
 
-func runServer(cfg *config.Config, logger *slog.Logger) {
+func runServer(srv *http.Server, sslConfig config.SslConfig, logger *slog.Logger) {
+	var err error
+	if sslConfig.CertFilePath != "" && sslConfig.KeyFilePath != "" {
+		logger.Info("Running the server with SSL",
+			slog.String("addr", srv.Addr),
+			slog.String("cert file", sslConfig.CertFilePath),
+			slog.String("key file", sslConfig.KeyFilePath),
+		)
+		err = srv.ListenAndServeTLS(sslConfig.CertFilePath, sslConfig.KeyFilePath)
+	} else {
+		logger.Info("Running the server", slog.String("addr", srv.Addr))
+		err = srv.ListenAndServe()
+	}
+	if err != nil && err != http.ErrServerClosed {
+		logger.Error("Error starting the server", slog.Any("error", err))
+		os.Exit(errCodeRun)
+	}
+}
+
+func createServer(cfg *config.Config, logger *slog.Logger) (*http.Server, error) {
 	mux := http.NewServeMux()
 	for projectName, project := range cfg.Projects {
 		receiver := whreceiver.New(&project)
 		if receiver == nil {
-			log.Fatalf("Unknown git webhook provider type '%s' in project '%s'", project.GitProvider, projectName)
+			return nil, fmt.Errorf("unknown git webhook provider type '%s' in project '%s'", project.GitProvider, projectName)
 		}
 		projectLogger := logger.With(slog.String("project", projectName))
 		mux.HandleFunc(
@@ -54,31 +96,11 @@ func runServer(cfg *config.Config, logger *slog.Logger) {
 			slog.String("repo", project.Repo),
 		)
 	}
-
-	if cfg.Ssl.CertFilePath != "" && cfg.Ssl.KeyFilePath != "" {
-		logger.Info("Running the server with SSL",
-			slog.String("host", cfg.Host),
-			slog.Int("port", int(cfg.Port)),
-			slog.String("cert file", cfg.Ssl.CertFilePath),
-			slog.String("key file", cfg.Ssl.KeyFilePath),
-		)
-		err := http.ListenAndServeTLS(
-			fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
-			cfg.Ssl.CertFilePath,
-			cfg.Ssl.KeyFilePath,
-			mux,
-		)
-		if err != nil {
-			logger.Error("Error starting the server", slog.Any("error", err))
-			os.Exit(1)
-		}
-	} else {
-		logger.Info("Running the server", slog.String("host", cfg.Host), slog.Int("port", int(cfg.Port)))
-		if err := http.ListenAndServe(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), mux); err != nil {
-			logger.Error("Error starting the server", slog.Any("error", err))
-			os.Exit(1)
-		}
+	srv := &http.Server{
+		Addr:    fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+		Handler: mux,
 	}
+	return srv, nil
 }
 
 func getConfigPath() string {
