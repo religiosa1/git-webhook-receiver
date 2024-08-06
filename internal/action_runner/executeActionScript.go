@@ -24,18 +24,13 @@ func executeActionScript(logger *slog.Logger, action config.Action, streams acti
 		return
 	}
 
-	var sysProcAttr *syscall.SysProcAttr
-	if runtime.GOOS != "windows" && action.User != "" {
-		if spa, err := applyUser(action.User); err != nil {
-			logger.Error(
-				"Unable to run action from the specified user:",
-				slog.String("username", action.User),
-				slog.Any("error", err),
-			)
-		} else {
-			logger.Debug("Running the command from a user", slog.String("user", action.User))
-			sysProcAttr = spa
-		}
+	sysProcAttr, err := getSysProcAttr(action.User)
+	if err != nil {
+		logger.Error("Error creating process attributes for action", slog.Any("error", err))
+		return
+	}
+	if action.User != "" {
+		logger.Debug("Running the command from a user", slog.String("user", action.User))
 	}
 
 	runner, _ := interp.New(
@@ -43,7 +38,7 @@ func executeActionScript(logger *slog.Logger, action config.Action, streams acti
 		interp.StdIO(nil, streams.Stdout, streams.Stderr),
 		interp.Dir(action.Cwd),
 	)
-	if err := runner.Run(context.TODO(), script); err != nil {
+	if err := runner.Run(context.Background(), script); err != nil {
 		logger.Error("Script execution ended with an error", slog.Any("error", err))
 	} else {
 		logger.Info("Script successfully finished")

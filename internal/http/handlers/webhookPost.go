@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/religiosa1/webhook-receiver/internal/action_runner"
@@ -14,6 +15,7 @@ import (
 )
 
 func HandleWebhookPost(
+	actionsWg *sync.WaitGroup,
 	logger *slog.Logger,
 	cfg *config.Config,
 	project *config.Project,
@@ -53,8 +55,12 @@ func HandleWebhookPost(
 		default:
 			w.WriteHeader(http.StatusMultiStatus)
 		}
-		if len(authorizationResult.Ok) > 0 {
-			go action_runner.ExecuteActions(deliveryLogger, authorizationResult.Ok, cfg.ActionsOutputDir, cfg.MaxOutputFiles)
+		actionsWg.Add(len(authorizationResult.Ok))
+		for _, actionDescriptor := range authorizationResult.Ok {
+			go func() {
+				defer actionsWg.Done()
+				action_runner.ExecuteAction(deliveryLogger, actionDescriptor, cfg.ActionsOutputDir)
+			}()
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(authorizationResultToWebhookPostResult(authorizationResult))

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -43,7 +44,8 @@ func main() {
 	logger := closableLogger.Logger
 	logger.Debug("configuration loaded", slog.Any("config", cfg))
 
-	srv, err := createServer(cfg, logger)
+	var actionsWg sync.WaitGroup
+	srv, err := createServer(&actionsWg, cfg, logger)
 	if err != nil {
 		logger.Error("Error creating the server", slog.Any("error", err))
 		os.Exit(errCodeCreate)
@@ -55,6 +57,7 @@ func main() {
 		<-interrupt
 		cancel()
 	}()
+
 	if err := runServer(ctx, srv, cfg.Ssl, logger); err != nil {
 		logger.Error("Error running the server", slog.Any("error", err))
 		if _, ok := err.(ErrShutdown); ok {
@@ -63,6 +66,9 @@ func main() {
 			os.Exit(errCodeRun)
 		}
 	}
+	logger.Info("Waiting for actions to complete...")
+	actionsWg.Wait()
+	logger.Info("Done")
 
 	logger.Info("Server closed")
 }
@@ -97,7 +103,7 @@ func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig
 	return err
 }
 
-func createServer(cfg *config.Config, logger *slog.Logger) (*http.Server, error) {
+func createServer(actionsWg *sync.WaitGroup, cfg *config.Config, logger *slog.Logger) (*http.Server, error) {
 	mux := http.NewServeMux()
 	for projectName, project := range cfg.Projects {
 		receiver := whreceiver.New(&project)
@@ -107,7 +113,7 @@ func createServer(cfg *config.Config, logger *slog.Logger) (*http.Server, error)
 		projectLogger := logger.With(slog.String("project", projectName))
 		mux.HandleFunc(
 			fmt.Sprintf("POST /%s", projectName),
-			handlers.HandleWebhookPost(projectLogger, cfg, &project, receiver),
+			handlers.HandleWebhookPost(actionsWg, projectLogger, cfg, &project, receiver),
 		)
 		logger.Debug("Registered project",
 			slog.String("projectName", projectName),

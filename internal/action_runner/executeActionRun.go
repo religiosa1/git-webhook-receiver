@@ -3,7 +3,6 @@ package action_runner
 import (
 	"log/slog"
 	"os/exec"
-	"runtime"
 
 	"github.com/religiosa1/webhook-receiver/internal/config"
 )
@@ -15,18 +14,15 @@ func executeActionRun(logger *slog.Logger, action config.Action, streams actionI
 		cmd.Dir = action.Cwd
 	}
 
-	if runtime.GOOS != "windows" && action.User != "" {
-		if sysProcAttr, err := applyUser(action.User); err != nil {
-			logger.Error(
-				"Unable to run action from the specified user:",
-				slog.String("username", action.User),
-				slog.Any("error", err),
-			)
-		} else {
-			logger.Debug("Running the command from a user", slog.String("user", action.User))
-			cmd.SysProcAttr = sysProcAttr
-		}
+	sysProcAttr, err := getSysProcAttr(action.User)
+	if err != nil {
+		logger.Error("Error creating process attributes for action", slog.Any("error", err))
+
 	}
+	if action.User != "" {
+		logger.Debug("Running the command from a user", slog.String("user", action.User))
+	}
+	cmd.SysProcAttr = sysProcAttr
 
 	cmd.Stdout = streams.Stdout
 	cmd.Stderr = streams.Stderr

@@ -1,5 +1,6 @@
 host: example.com # defaults to localhost
 port: 9090 # OPTIONAL, defaults to 9090
+log_level: "debug" # OPTIONAL, defaults to 'info', other options are 'warn' and 'error'
 # Optional (but recommended, unless you're using a reverse proxy): SSL config:
 ssl:
   cert_file_path: "./your/certfile/path/fullchain.pem"
@@ -26,6 +27,4 @@ projects:
         # run: ["node", "--version"]
 # TODO remove all that and log directly into SQLite instance instead of a file
 log_file: "deploy.log"
-log_level: "debug"
 actions_output_dir: "actions_output"
-max_output_files: 10_000

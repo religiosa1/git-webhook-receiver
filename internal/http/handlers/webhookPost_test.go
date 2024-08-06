@@ -6,6 +6,7 @@ import (
 	"log"
 	"log/slog"
 	"net/http/httptest"
+	"sync"
 	"testing"
 
 	"github.com/religiosa1/webhook-receiver/internal/config"
@@ -71,8 +72,8 @@ func TestProjectMatching(t *testing.T) {
 	t.Run("returns a list of successfull actions", func(t *testing.T) {
 		request, _ := requestDump.ToHttpRequest(projectEndPoint)
 		response := httptest.NewRecorder()
-
-		handlers.HandleWebhookPost(logger, cfg, prj, rcvr)(response, request)
+		var wg sync.WaitGroup
+		handlers.HandleWebhookPost(&wg, logger, cfg, prj, rcvr)(response, request)
 
 		got := response.Result().StatusCode
 		want := 200
@@ -88,8 +89,9 @@ func TestProjectMatching(t *testing.T) {
 
 		request, _ := requestDump.ToHttpRequest(projectEndPoint)
 		response := httptest.NewRecorder()
+		var wg sync.WaitGroup
 
-		handlers.HandleWebhookPost(logger, cfg, prj2, rcvr)(response, request)
+		handlers.HandleWebhookPost(&wg, logger, cfg, prj2, rcvr)(response, request)
 
 		got := response.Result().StatusCode
 		want := 204
@@ -133,8 +135,9 @@ func TestProjectMatching(t *testing.T) {
 
 			request, _ := requestDump.ToHttpRequest(projectEndPoint)
 			response := httptest.NewRecorder()
+			var wg sync.WaitGroup
 
-			handlers.HandleWebhookPost(logger, cfg, prj2, rcvr)(response, request)
+			handlers.HandleWebhookPost(&wg, logger, cfg, prj2, rcvr)(response, request)
 
 			gotStatus := response.Result().StatusCode
 
