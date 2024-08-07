@@ -29,7 +29,7 @@ type SslConfig struct {
 // tag can be set through the env variables. See [applyEnvToProjectAndActions]
 
 type Project struct {
-	GitProvider string   `yaml:"git_provider" env-default:"gitea"`
+	GitProvider string   `yaml:"git_provider" env-default:"github"`
 	Repo        string   `yaml:"repo" env-required:"true"`
 	Actions     []Action `yaml:"actions" env-required:"true"`
 }

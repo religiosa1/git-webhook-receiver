@@ -7,7 +7,7 @@ ssl:
   key_file_path: "/your/keyfile/path/privkey.pem"
 projects:
   your_project_name:
-    git_provider: gitea
+    git_provider: gitea # OPTIONAL, defaults to "github"
     repo: "username/reponame" # repository full name, as displayed in the URL
     actions:
       - on: push # OPTIONAL defaults to "push", use "*" to handle any incoming event

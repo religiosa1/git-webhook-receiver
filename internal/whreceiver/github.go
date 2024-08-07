@@ -26,6 +26,7 @@ func (rcvr GithubReceiver) VerifySignature(req WebhookPostRequest, secret string
 	if !strings.HasPrefix(signature, signaturePrefix) {
 		return false, fmt.Errorf("malformed GitHub signature: it must start with '"+signaturePrefix+"', got %s instead", signature)
 	}
+	signature = signature[len(signaturePrefix):]
 	return verifyPayloadSignature(req.Payload, signature, secret)
 }
 
