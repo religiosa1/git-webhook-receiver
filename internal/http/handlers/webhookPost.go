@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -15,6 +16,7 @@ import (
 )
 
 func HandleWebhookPost(
+	actionsCtx context.Context,
 	actionsWg *sync.WaitGroup,
 	logger *slog.Logger,
 	cfg *config.Config,
@@ -59,7 +61,7 @@ func HandleWebhookPost(
 		for _, actionDescriptor := range authorizationResult.Ok {
 			go func() {
 				defer actionsWg.Done()
-				action_runner.ExecuteAction(deliveryLogger, actionDescriptor, cfg.ActionsOutputDir)
+				action_runner.ExecuteAction(actionsCtx, deliveryLogger, actionDescriptor, cfg.ActionsOutputDir)
 			}()
 		}
 		w.Header().Set("Content-Type", "application/json")

@@ -16,7 +16,7 @@ import (
 	"mvdan.cc/sh/v3/syntax"
 )
 
-func executeActionScript(logger *slog.Logger, action config.Action, streams actionIoStreams) {
+func executeActionScript(ctx context.Context, logger *slog.Logger, action config.Action, streams actionIoStreams) {
 	logger.Debug("Running script", slog.String("script", action.Script))
 	script, err := syntax.NewParser().Parse(strings.NewReader(action.Script), "")
 	if err != nil {
@@ -38,7 +38,7 @@ func executeActionScript(logger *slog.Logger, action config.Action, streams acti
 		interp.StdIO(nil, streams.Stdout, streams.Stderr),
 		interp.Dir(action.Cwd),
 	)
-	if err := runner.Run(context.Background(), script); err != nil {
+	if err := runner.Run(ctx, script); err != nil {
 		logger.Error("Script execution ended with an error", slog.Any("error", err))
 	} else {
 		logger.Info("Script successfully finished")

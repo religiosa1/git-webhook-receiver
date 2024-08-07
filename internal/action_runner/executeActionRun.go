@@ -1,13 +1,15 @@
 package action_runner
 
 import (
+	"context"
 	"log/slog"
+	"os"
 	"os/exec"
 
 	"github.com/religiosa1/webhook-receiver/internal/config"
 )
 
-func executeActionRun(logger *slog.Logger, action config.Action, streams actionIoStreams) {
+func executeActionRun(ctx context.Context, logger *slog.Logger, action config.Action, streams actionIoStreams) {
 	logger.Debug("Running the command", slog.Any("command", action.Run))
 	cmd := exec.Command(action.Run[0], action.Run[1:]...)
 	if action.Cwd != "" {
@@ -26,6 +28,13 @@ func executeActionRun(logger *slog.Logger, action config.Action, streams actionI
 
 	cmd.Stdout = streams.Stdout
 	cmd.Stderr = streams.Stderr
+
+	if done := ctx.Done(); done != nil {
+		go func() {
+			<-done
+			_ = cmd.Process.Signal(os.Interrupt)
+		}()
+	}
 
 	if err := cmd.Run(); err != nil {
 		logger.Error("Command execution ended with an error", slog.Any("error", err))

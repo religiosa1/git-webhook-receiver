@@ -1,6 +1,7 @@
 package handlers_test
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"log"
@@ -73,7 +74,7 @@ func TestProjectMatching(t *testing.T) {
 		request, _ := requestDump.ToHttpRequest(projectEndPoint)
 		response := httptest.NewRecorder()
 		var wg sync.WaitGroup
-		handlers.HandleWebhookPost(&wg, logger, cfg, prj, rcvr)(response, request)
+		handlers.HandleWebhookPost(context.Background(), &wg, logger, cfg, prj, rcvr)(response, request)
 
 		got := response.Result().StatusCode
 		want := 200
@@ -91,7 +92,7 @@ func TestProjectMatching(t *testing.T) {
 		response := httptest.NewRecorder()
 		var wg sync.WaitGroup
 
-		handlers.HandleWebhookPost(&wg, logger, cfg, prj2, rcvr)(response, request)
+		handlers.HandleWebhookPost(context.Background(), &wg, logger, cfg, prj2, rcvr)(response, request)
 
 		got := response.Result().StatusCode
 		want := 204
@@ -137,7 +138,7 @@ func TestProjectMatching(t *testing.T) {
 			response := httptest.NewRecorder()
 			var wg sync.WaitGroup
 
-			handlers.HandleWebhookPost(&wg, logger, cfg, prj2, rcvr)(response, request)
+			handlers.HandleWebhookPost(context.Background(), &wg, logger, cfg, prj2, rcvr)(response, request)
 
 			gotStatus := response.Result().StatusCode
 

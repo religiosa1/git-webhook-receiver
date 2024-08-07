@@ -44,8 +44,11 @@ func main() {
 	logger := closableLogger.Logger
 	logger.Debug("configuration loaded", slog.Any("config", cfg))
 
+	actionsCtx, actionsCancel := context.WithCancel(context.Background())
+	defer actionsCancel()
+
 	var actionsWg sync.WaitGroup
-	srv, err := createServer(&actionsWg, cfg, logger)
+	srv, err := createServer(actionsCtx, &actionsWg, cfg, logger)
 	if err != nil {
 		logger.Error("Error creating the server", slog.Any("error", err))
 		os.Exit(errCodeCreate)
@@ -66,11 +69,22 @@ func main() {
 			os.Exit(errCodeRun)
 		}
 	}
-	logger.Info("Waiting for actions to complete...")
-	actionsWg.Wait()
-	logger.Info("Done")
-
 	logger.Info("Server closed")
+
+	logger.Info("Waiting for actions to complete... Press ctrl+c again to forcefully close")
+	go func() {
+		select {
+		case <-actionsCtx.Done():
+			fmt.Println("Action completed")
+		case <-interrupt:
+			actionsCancel()
+			fmt.Println("Action interrupted")
+		}
+	}()
+	actionsWg.Wait()
+	actionsCancel()
+
+	logger.Info("Done")
 }
 
 func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig, logger *slog.Logger) (err error) {
@@ -103,7 +117,7 @@ func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig
 	return err
 }
 
-func createServer(actionsWg *sync.WaitGroup, cfg *config.Config, logger *slog.Logger) (*http.Server, error) {
+func createServer(actionsCtx context.Context, actionsWg *sync.WaitGroup, cfg *config.Config, logger *slog.Logger) (*http.Server, error) {
 	mux := http.NewServeMux()
 	for projectName, project := range cfg.Projects {
 		receiver := whreceiver.New(&project)
@@ -113,7 +127,7 @@ func createServer(actionsWg *sync.WaitGroup, cfg *config.Config, logger *slog.Lo
 		projectLogger := logger.With(slog.String("project", projectName))
 		mux.HandleFunc(
 			fmt.Sprintf("POST /%s", projectName),
-			handlers.HandleWebhookPost(actionsWg, projectLogger, cfg, &project, receiver),
+			handlers.HandleWebhookPost(actionsCtx, actionsWg, projectLogger, cfg, &project, receiver),
 		)
 		logger.Debug("Registered project",
 			slog.String("projectName", projectName),
