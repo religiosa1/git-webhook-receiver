@@ -20,9 +20,9 @@ type WebhookPostInfo struct {
 }
 
 type Receiver interface {
-	GetWebhookInfo(WebhookPostRequest) (postInfo *WebhookPostInfo, err error)
-	ValidateSignature(req WebhookPostRequest, secret string) (bool, error)
 	Authorize(req WebhookPostRequest, auth string) (bool, error)
+	VerifySignature(req WebhookPostRequest, secret string) (bool, error)
+	GetWebhookInfo(WebhookPostRequest) (postInfo *WebhookPostInfo, err error)
 }
 
 func New(project *config.Project) Receiver {
@@ -30,6 +30,8 @@ func New(project *config.Project) Receiver {
 	switch project.GitProvider {
 	case "gitea":
 		receiver = GiteaReceiver{project}
+	case "github":
+		receiver = GithubReceiver{project}
 	}
 	return receiver
 }

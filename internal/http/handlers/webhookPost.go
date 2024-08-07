@@ -123,7 +123,7 @@ func authorizeActions(
 			}
 		}
 		if secret := actionDesc.Action.Secret; secret != "" {
-			valid, err := receiver.ValidateSignature(req, secret)
+			valid, err := receiver.VerifySignature(req, secret)
 			if err != nil || !valid {
 				if err != nil {
 					logger.Error("Error during the signature validation", slog.Any("error", err))

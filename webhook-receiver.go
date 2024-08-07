@@ -54,14 +54,14 @@ func main() {
 		os.Exit(errCodeCreate)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	srvCtx, srcCancel := context.WithCancel(context.Background())
+	defer srcCancel()
 	go func() {
 		<-interrupt
-		cancel()
+		srcCancel()
 	}()
 
-	if err := runServer(ctx, srv, cfg.Ssl, logger); err != nil {
+	if err := runServer(srvCtx, srv, cfg.Ssl, logger); err != nil {
 		logger.Error("Error running the server", slog.Any("error", err))
 		if _, ok := err.(ErrShutdown); ok {
 			os.Exit(errCodeShutdown)

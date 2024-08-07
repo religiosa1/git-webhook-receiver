@@ -76,7 +76,7 @@ func TestAuthorization(t *testing.T) {
 	}
 }
 
-func TestValidateSignature(t *testing.T) {
+func TestVerifySignature(t *testing.T) {
 	secret := "123456"
 	signature := hex.EncodeToString(whreceiver.GetPayloadSignature(secret, testRequest.Payload))
 	secretTests := []struct {
@@ -95,7 +95,7 @@ func TestValidateSignature(t *testing.T) {
 			req.Headers = testRequest.Headers.Clone()
 			req.Headers.Add("X-Gitea-Signature", signature)
 
-			got, err := rcvr.ValidateSignature(req, tt.secret)
+			got, err := rcvr.VerifySignature(req, tt.secret)
 			if err != nil {
 				t.Errorf("Error during secret test: %s", err)
 			}
