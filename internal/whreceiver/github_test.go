@@ -9,7 +9,8 @@ import (
 	"github.com/religiosa1/webhook-receiver/internal/whreceiver"
 )
 
-func TestGitea(t *testing.T) {
+func TestGithub(t *testing.T) {
+
 	makeRequest := func() (req whreceiver.WebhookPostRequest) {
 		req.Payload = []byte(
 			`{"ref":"master","after":"aa1a2860561471a17b3b49b4216390d61b196c78",` +
@@ -17,25 +18,24 @@ func TestGitea(t *testing.T) {
 		)
 		req.Headers = http.Header{}
 		req.Headers.Set("Content-Type", "application/json")
-		req.Headers.Set("X-Gitea-Event", "push")
-		req.Headers.Set("X-Gitea-Delivery", "test-delivery-id")
-		req.Headers.Set("Authorization", "pass1")
+		req.Headers.Set("X-GitHub-Event", "push")
+		req.Headers.Set("X-GitHub-Delivery", "test-delivery-id")
 		return
 	}
 
-	var giteaProject = config.Project{
-		GitProvider: "gitea",
+	var githubProject = config.Project{
+		GitProvider: "github",
 		Repo:        "test/repo",
 		Actions: []config.Action{
 			{
-				On:            "push",
-				Branch:        "master",
-				Authorization: "pass1",
+				On:     "push",
+				Branch: "master",
 			},
 		},
 	}
+
 	t.Run("GetWebhookInfo", func(t *testing.T) {
-		rcvr := whreceiver.New(&giteaProject)
+		rcvr := whreceiver.New(&githubProject)
 		got, err := rcvr.GetWebhookInfo(makeRequest())
 		if err != nil {
 			t.Errorf("Error during auth test %s", err)
@@ -52,27 +52,11 @@ func TestGitea(t *testing.T) {
 		}
 	})
 
-	t.Run("autthorization", func(t *testing.T) {
-		authTests := []struct {
-			name  string
-			token string
-			want  bool
-		}{
-			{"good password token", "pass1", true},
-			{"bad password token", "bad pass", false},
-		}
-		for _, tt := range authTests {
-			t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
-				rcvr := whreceiver.New(&giteaProject)
-				got, err := rcvr.Authorize(makeRequest(), tt.token)
-				if err != nil {
-					t.Errorf("Error during auth test %s", err)
-				}
-				if got != tt.want {
-					t.Errorf("Authorization test failed, got %t, want %t", got, tt.want)
-				}
-			})
+	t.Run("Authorization returns an error", func(t *testing.T) {
+		rcvr := whreceiver.New(&githubProject)
+		_, err := rcvr.Authorize(makeRequest(), "asdfasdf")
+		if err == nil {
+			t.Error("Exepcted authorization to throw but it didn't")
 		}
 	})
 
@@ -90,9 +74,9 @@ func TestGitea(t *testing.T) {
 		for _, tt := range secretTests {
 			t.Run(tt.name, func(t *testing.T) {
 				t.Parallel()
-				rcvr := whreceiver.New(&giteaProject)
+				rcvr := whreceiver.New(&githubProject)
 				req := makeRequest()
-				req.Headers.Add("X-Gitea-Signature", signature)
+				req.Headers.Add("X-Hub-Signature-256", "sha256="+signature)
 
 				got, err := rcvr.VerifySignature(req, tt.secret)
 				if err != nil {
