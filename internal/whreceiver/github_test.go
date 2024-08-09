@@ -10,7 +10,6 @@ import (
 )
 
 func TestGithub(t *testing.T) {
-
 	makeRequest := func() (req whreceiver.WebhookPostRequest) {
 		req.Payload = []byte(
 			`{"ref":"master","after":"aa1a2860561471a17b3b49b4216390d61b196c78",` +

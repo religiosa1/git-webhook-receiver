@@ -34,6 +34,7 @@ func TestGitea(t *testing.T) {
 			},
 		},
 	}
+
 	t.Run("GetWebhookInfo", func(t *testing.T) {
 		rcvr := whreceiver.New(&giteaProject)
 		got, err := rcvr.GetWebhookInfo(makeRequest())

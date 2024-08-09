@@ -1,15 +1,14 @@
 package handlers_test
 
 import (
-	"context"
 	"encoding/json"
 	"io"
 	"log"
 	"log/slog"
 	"net/http/httptest"
-	"sync"
 	"testing"
 
+	"github.com/religiosa1/webhook-receiver/internal/action_runner"
 	"github.com/religiosa1/webhook-receiver/internal/config"
 	"github.com/religiosa1/webhook-receiver/internal/http/handlers"
 	"github.com/religiosa1/webhook-receiver/internal/whreceiver"
@@ -54,6 +53,7 @@ func makeActionsList(actions ...config.Action) []config.Action {
 }
 
 func TestProjectMatching(t *testing.T) {
+	ch := make(chan action_runner.ActionArgs)
 	requestDump, err := LoadRequestMock("./requests_test/gitea.json")
 	if err != nil {
 		log.Fatalf("Unable to load request dump: %e", err)
@@ -73,8 +73,7 @@ func TestProjectMatching(t *testing.T) {
 	t.Run("returns a list of successfull actions", func(t *testing.T) {
 		request, _ := requestDump.ToHttpRequest(projectEndPoint)
 		response := httptest.NewRecorder()
-		var wg sync.WaitGroup
-		handlers.HandleWebhookPost(context.Background(), &wg, logger, cfg, prj, rcvr)(response, request)
+		handlers.HandleWebhookPost(ch, logger, cfg, prj, rcvr)(response, request)
 
 		got := response.Result().StatusCode
 		want := 200
@@ -90,9 +89,8 @@ func TestProjectMatching(t *testing.T) {
 
 		request, _ := requestDump.ToHttpRequest(projectEndPoint)
 		response := httptest.NewRecorder()
-		var wg sync.WaitGroup
 
-		handlers.HandleWebhookPost(context.Background(), &wg, logger, cfg, prj2, rcvr)(response, request)
+		handlers.HandleWebhookPost(ch, logger, cfg, prj2, rcvr)(response, request)
 
 		got := response.Result().StatusCode
 		want := 204
@@ -136,9 +134,8 @@ func TestProjectMatching(t *testing.T) {
 
 			request, _ := requestDump.ToHttpRequest(projectEndPoint)
 			response := httptest.NewRecorder()
-			var wg sync.WaitGroup
 
-			handlers.HandleWebhookPost(context.Background(), &wg, logger, cfg, prj2, rcvr)(response, request)
+			handlers.HandleWebhookPost(ch, logger, cfg, prj2, rcvr)(response, request)
 
 			gotStatus := response.Result().StatusCode
 

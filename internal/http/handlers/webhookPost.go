@@ -1,13 +1,11 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
 	"net/http"
-	"sync"
 
 	"github.com/google/uuid"
 	"github.com/religiosa1/webhook-receiver/internal/action_runner"
@@ -16,8 +14,7 @@ import (
 )
 
 func HandleWebhookPost(
-	actionsCtx context.Context,
-	actionsWg *sync.WaitGroup,
+	actionsCh chan action_runner.ActionArgs,
 	logger *slog.Logger,
 	cfg *config.Config,
 	project *config.Project,
@@ -57,12 +54,8 @@ func HandleWebhookPost(
 		default:
 			w.WriteHeader(http.StatusMultiStatus)
 		}
-		actionsWg.Add(len(authorizationResult.Ok))
 		for _, actionDescriptor := range authorizationResult.Ok {
-			go func() {
-				defer actionsWg.Done()
-				action_runner.ExecuteAction(actionsCtx, deliveryLogger, actionDescriptor, cfg.ActionsOutputDir)
-			}()
+			actionsCh <- action_runner.ActionArgs{Logger: deliveryLogger, Action: actionDescriptor}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(authorizationResultToWebhookPostResult(authorizationResult))

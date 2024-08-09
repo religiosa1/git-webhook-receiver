@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/religiosa1/webhook-receiver/internal/action_runner"
 	"github.com/religiosa1/webhook-receiver/internal/config"
 	"github.com/religiosa1/webhook-receiver/internal/http/handlers"
 	"github.com/religiosa1/webhook-receiver/internal/logger"
@@ -35,6 +36,9 @@ func main() {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
+	//==========================================================================
+	// Logger
+
 	closableLogger, err := logger.SetupLogger(cfg.LogLevel, cfg.LogFile)
 	if err != nil {
 		log.Printf("Error setting up the logger: %s", err)
@@ -44,11 +48,16 @@ func main() {
 	logger := closableLogger.Logger
 	logger.Debug("configuration loaded", slog.Any("config", cfg))
 
+	//==========================================================================
+	// Action runner
+	actionsCh := make(chan action_runner.ActionArgs)
 	actionsCtx, actionsCancel := context.WithCancel(context.Background())
-	defer actionsCancel()
-
 	var actionsWg sync.WaitGroup
-	srv, err := createServer(actionsCtx, &actionsWg, cfg, logger)
+	go action_runner.Listen(actionsCtx, actionsCh, &actionsWg, cfg.ActionsOutputDir)
+
+	//==========================================================================
+	// HTTP-Server
+	srv, err := createServer(actionsCh, cfg, logger)
 	if err != nil {
 		logger.Error("Error creating the server", slog.Any("error", err))
 		os.Exit(errCodeCreate)
@@ -117,7 +126,7 @@ func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig
 	return err
 }
 
-func createServer(actionsCtx context.Context, actionsWg *sync.WaitGroup, cfg *config.Config, logger *slog.Logger) (*http.Server, error) {
+func createServer(actionsCh chan action_runner.ActionArgs, cfg *config.Config, logger *slog.Logger) (*http.Server, error) {
 	mux := http.NewServeMux()
 	for projectName, project := range cfg.Projects {
 		receiver := whreceiver.New(&project)
@@ -127,7 +136,7 @@ func createServer(actionsCtx context.Context, actionsWg *sync.WaitGroup, cfg *co
 		projectLogger := logger.With(slog.String("project", projectName))
 		mux.HandleFunc(
 			fmt.Sprintf("POST /%s", projectName),
-			handlers.HandleWebhookPost(actionsCtx, actionsWg, projectLogger, cfg, &project, receiver),
+			handlers.HandleWebhookPost(actionsCh, projectLogger, cfg, &project, receiver),
 		)
 		logger.Debug("Registered project",
 			slog.String("projectName", projectName),
