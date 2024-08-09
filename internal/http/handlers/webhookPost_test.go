@@ -54,6 +54,13 @@ func makeActionsList(actions ...config.Action) []config.Action {
 
 func TestProjectMatching(t *testing.T) {
 	ch := make(chan action_runner.ActionArgs)
+
+	go func() {
+		for range ch {
+			// Do nothing, just drain the channel
+		}
+	}()
+
 	requestDump, err := LoadRequestMock("./requests_test/gitea.json")
 	if err != nil {
 		log.Fatalf("Unable to load request dump: %e", err)
