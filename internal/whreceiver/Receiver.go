@@ -22,6 +22,7 @@ type WebhookPostInfo struct {
 type Receiver interface {
 	Authorize(req WebhookPostRequest, auth string) (bool, error)
 	VerifySignature(req WebhookPostRequest, secret string) (bool, error)
+	IsPingRequest(req WebhookPostRequest) bool
 	GetWebhookInfo(WebhookPostRequest) (postInfo *WebhookPostInfo, err error)
 }
 

@@ -34,3 +34,7 @@ func (rcvr GiteaReceiver) GetWebhookInfo(req WebhookPostRequest) (*WebhookPostIn
 
 	return postInfo, nil
 }
+
+func (rcvr GiteaReceiver) IsPingRequest(req WebhookPostRequest) bool {
+	return false
+}

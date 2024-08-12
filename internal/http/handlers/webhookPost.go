@@ -55,6 +55,11 @@ func HandleWebhookPost(
 			}
 		}
 
+		if receiver.IsPingRequest(whReq) {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		actions := getProjectsActionsForWebhookPost(project, webhookInfo)
 		if len(actions) == 0 {
 			deliveryLogger.Info("No applicable actions found in webhook post")

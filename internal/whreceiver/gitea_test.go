@@ -104,4 +104,24 @@ func TestGitea(t *testing.T) {
 			})
 		}
 	})
+
+	pingRequestsTest := []struct {
+		name      string
+		eventType string
+		want      bool
+	}{
+		{"Gitea doesn't have ping requests", "ping", false},
+		{"Returns false on non-ping requests", "push", false},
+	}
+	for _, tt := range pingRequestsTest {
+		t.Run(tt.name, func(t *testing.T) {
+			rcvr := whreceiver.New(&giteaProject)
+			rqst := makeRequest()
+			rqst.Headers.Set("X-Gitea-Event", tt.eventType)
+			got := rcvr.IsPingRequest(rqst)
+			if got != tt.want {
+				t.Errorf("Unexpected result, got %t want %t", got, tt.want)
+			}
+		})
+	}
 }

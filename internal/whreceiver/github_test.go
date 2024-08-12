@@ -87,4 +87,24 @@ func TestGithub(t *testing.T) {
 			})
 		}
 	})
+
+	pingRequestsTest := []struct {
+		name      string
+		eventType string
+		want      bool
+	}{
+		{"Returns true on ping requests", "ping", true},
+		{"Returns false on non-ping requests", "push", false},
+	}
+	for _, tt := range pingRequestsTest {
+		t.Run(tt.name, func(t *testing.T) {
+			rcvr := whreceiver.New(&githubProject)
+			rqst := makeRequest()
+			rqst.Headers.Set("X-GitHub-Event", tt.eventType)
+			got := rcvr.IsPingRequest(rqst)
+			if got != tt.want {
+				t.Errorf("Unexpected result, got %t want %t", got, tt.want)
+			}
+		})
+	}
 }

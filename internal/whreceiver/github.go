@@ -39,3 +39,8 @@ func (rcvr GithubReceiver) GetWebhookInfo(req WebhookPostRequest) (*WebhookPostI
 	postInfo.DeliveryID = req.Headers.Get("X-GitHub-Delivery")
 	return postInfo, nil
 }
+
+func (rcvr GithubReceiver) IsPingRequest(req WebhookPostRequest) bool {
+	event := req.Headers.Get("X-GitHub-Event")
+	return event == "ping"
+}
