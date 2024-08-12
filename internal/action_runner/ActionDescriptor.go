@@ -3,12 +3,12 @@ package action_runner
 import "github.com/religiosa1/webhook-receiver/internal/config"
 
 type ActionIdentifier struct {
-	Index  int
-	PipeId string
+	Index  int    `json:"actionIdx"`
+	PipeId string `json:"pipeId"`
 }
 type ActionDescriptor struct {
 	ActionIdentifier
-	Action config.Action
+	Action config.Action `json:"-"`
 }
 
 func GetActionIds(descs []ActionDescriptor) []ActionIdentifier {

@@ -130,8 +130,8 @@ projects:
 	t.Run("allows to override project values with env", func(t *testing.T) {
 		secret := "test secret"
 		auth := "test auth"
-		t.Setenv("PROJECTS__test-proj__ACTIONS__1__SECRET", secret)
-		t.Setenv("PROJECTS__test-proj__ACTIONS__1__AUTH", auth)
+		t.Setenv("PROJECTS__test-proj__SECRET", secret)
+		t.Setenv("PROJECTS__test-proj__AUTH", auth)
 
 		configFileName := tmpConfigFile(t, configContents)
 		config, err := config.Load(configFileName)
@@ -140,13 +140,12 @@ projects:
 		}
 
 		project := config.Projects["test-proj"]
-		action := project.Actions[0]
 
-		if want, got := secret, action.Secret; want != got {
+		if want, got := secret, project.Secret; want != got {
 			t.Errorf("incorrect secret value read from config, want '%s', got '%s'", want, got)
 		}
 
-		if want, got := auth, action.Authorization; want != got {
+		if want, got := auth, project.Authorization; want != got {
 			t.Errorf("incorrect auth value read from config, want '%s', got '%s'", want, got)
 		}
 	})

@@ -33,105 +33,45 @@ func HandleWebhookPost(
 			errInfo := getWebhookErrorCode(err)
 			logger.Error("Error while parsing the webhook request", slog.String("error", errInfo.Message))
 			w.WriteHeader(errInfo.StatusCode)
+			w.Write([]byte("{err}"))
 			return
 		}
 		deliveryLogger := logger.With(slog.String("delivery", webhookInfo.DeliveryID))
 		deliveryLogger.Info("Recieved a webhook post", slog.Any("webhookInfo", webhookInfo))
 
+		if project.Authorization != "" {
+			if authed, err := receiver.Authorize(whReq, project.Authorization); err != nil || !authed {
+				deliveryLogger.Warn("Request authentications failed", slog.Any("error", err))
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+		}
+
+		if project.Secret != "" {
+			if verified, err := receiver.VerifySignature(whReq, project.Secret); err != nil || !verified {
+				deliveryLogger.Warn("Request signature is not valid", slog.Any("error", err))
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
+		}
+
 		actions := getProjectsActionsForWebhookPost(project, webhookInfo)
 		if len(actions) == 0 {
 			deliveryLogger.Info("No applicable actions found in webhook post")
-			w.WriteHeader(http.StatusNoContent)
+			w.WriteHeader(http.StatusOK)
 			return
 		}
 
-		authorizationResult := authorizeActions(deliveryLogger, receiver, whReq, actions)
-		switch len(authorizationResult.Ok) {
-		case len(actions):
-			w.WriteHeader(http.StatusOK)
-		case 0:
-			w.WriteHeader(http.StatusForbidden)
-		default:
-			w.WriteHeader(http.StatusMultiStatus)
-		}
-		for _, actionDescriptor := range authorizationResult.Ok {
+		for _, actionDescriptor := range actions {
 			actionsCh <- action_runner.ActionArgs{Logger: deliveryLogger, Action: actionDescriptor}
 		}
+
+		deliveryLogger.Info("Launched actions", slog.Any("actions", actions))
+
+		w.WriteHeader(http.StatusCreated)
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(authorizationResultToWebhookPostResult(authorizationResult))
+		json.NewEncoder(w).Encode(actions)
 	}
-}
-
-type WebhookPostResult struct {
-	Ok           []string `json:"ok,omitempty"`
-	Forbidden    []string `json:"forbidden,omitempty"`
-	BadSignature []string `json:"badSignature,omitempty"`
-}
-
-func authorizationResultToWebhookPostResult(authResult ActionAuthorizationResult) WebhookPostResult {
-	result := WebhookPostResult{
-		Ok:           make([]string, len(authResult.Ok)),
-		Forbidden:    make([]string, len(authResult.Forbidden)),
-		BadSignature: make([]string, len(authResult.BadSignature)),
-	}
-	for i := 0; i < len(authResult.Ok); i++ {
-		result.Ok[i] = authResult.Ok[i].PipeId
-	}
-	for i := 0; i < len(authResult.Forbidden); i++ {
-		result.Forbidden[i] = authResult.Forbidden[i].PipeId
-	}
-	for i := 0; i < len(authResult.BadSignature); i++ {
-		result.BadSignature[i] = authResult.BadSignature[i].PipeId
-	}
-	return result
-}
-
-type ActionAuthorizationResult struct {
-	Ok           []action_runner.ActionDescriptor
-	Forbidden    []action_runner.ActionDescriptor
-	BadSignature []action_runner.ActionDescriptor
-}
-
-func authorizeActions(
-	logger *slog.Logger,
-	receiver whreceiver.Receiver,
-	req whreceiver.WebhookPostRequest,
-	actions []action_runner.ActionDescriptor,
-) ActionAuthorizationResult {
-	result := ActionAuthorizationResult{}
-	for _, actionDesc := range actions {
-		if auth := actionDesc.Action.Authorization; auth != "" {
-			authed, err := receiver.Authorize(req, auth)
-			// We're not logging secrets or auth data for security reasons.
-			if err != nil || !authed {
-				if err != nil {
-					logger.Error("Error during the signature validation", slog.Any("error", err))
-				} else {
-					logger.Warn("Incorrect authorization information passed for action",
-						slog.Any("action", actionDesc.ActionIdentifier),
-					)
-				}
-				result.Forbidden = append(result.Forbidden, actionDesc)
-				continue
-			}
-		}
-		if secret := actionDesc.Action.Secret; secret != "" {
-			valid, err := receiver.VerifySignature(req, secret)
-			if err != nil || !valid {
-				if err != nil {
-					logger.Error("Error during the signature validation", slog.Any("error", err))
-				} else {
-					logger.Warn("Incorrect secret signature provided for actions",
-						slog.Any("action", actionDesc.ActionIdentifier),
-					)
-				}
-				result.BadSignature = append(result.BadSignature, actionDesc)
-				continue
-			}
-		}
-		result.Ok = append(result.Ok, actionDesc)
-	}
-	return result
 }
 
 type ErrorInfo struct {

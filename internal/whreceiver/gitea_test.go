@@ -28,9 +28,8 @@ func TestGitea(t *testing.T) {
 		Repo:        "test/repo",
 		Actions: []config.Action{
 			{
-				On:            "push",
-				Branch:        "master",
-				Authorization: "pass1",
+				On:     "push",
+				Branch: "master",
 			},
 		},
 	}

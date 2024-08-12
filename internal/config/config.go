@@ -29,20 +29,20 @@ type SslConfig struct {
 // tag can be set through the env variables. See [applyEnvToProjectAndActions]
 
 type Project struct {
-	GitProvider string   `yaml:"git_provider" env-default:"github"`
-	Repo        string   `yaml:"repo" env-required:"true"`
-	Actions     []Action `yaml:"actions" env-required:"true"`
+	GitProvider   string   `yaml:"git_provider" env-default:"github"`
+	Repo          string   `yaml:"repo" env-required:"true"`
+	Authorization string   `yaml:"authorization" env:"AUTH"`
+	Secret        string   `yaml:"secret" env:"SECRET"`
+	Actions       []Action `yaml:"actions" env-required:"true"`
 }
 
 type Action struct {
-	On            string   `yaml:"on" env-default:"push"`
-	Branch        string   `yaml:"branch" env-default:"master"`
-	Authorization string   `yaml:"authorization" env:"AUTH"`
-	Secret        string   `yaml:"secret" env:"SECRET"`
-	Cwd           string   `yaml:"cwd"`
-	User          string   `yaml:"user"`
-	Script        string   `yaml:"script"`
-	Run           []string `yaml:"run"`
+	On     string   `yaml:"on" env-default:"push"`
+	Branch string   `yaml:"branch" env-default:"master"`
+	Cwd    string   `yaml:"cwd"`
+	User   string   `yaml:"user"`
+	Script string   `yaml:"script"`
+	Run    []string `yaml:"run"`
 }
 
 func Load(configPath string) (*Config, error) {
