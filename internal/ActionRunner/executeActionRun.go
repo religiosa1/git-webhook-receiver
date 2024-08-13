@@ -1,4 +1,4 @@
-package action_runner
+package ActionRunner
 
 import (
 	"context"

@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/religiosa1/webhook-receiver/internal/action_runner"
+	"github.com/religiosa1/webhook-receiver/internal/ActionRunner"
 	"github.com/religiosa1/webhook-receiver/internal/config"
 	"github.com/religiosa1/webhook-receiver/internal/http/handlers"
 	"github.com/religiosa1/webhook-receiver/internal/whreceiver"
@@ -44,7 +44,7 @@ func makeActionsList(actions ...config.Action) []config.Action {
 }
 
 func TestProjectMatching(t *testing.T) {
-	ch := make(chan action_runner.ActionArgs)
+	ch := make(chan ActionRunner.ActionArgs)
 
 	go func() {
 		for range ch {
@@ -58,8 +58,8 @@ func TestProjectMatching(t *testing.T) {
 	}
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	cfg := &config.Config{}
-	prj := &config.Project{
+	cfg := config.Config{}
+	prj := config.Project{
 		GitProvider: "gitea",
 		Repo:        "baruser/foorepo",
 		Actions:     makeActionsList(config.Action{}),

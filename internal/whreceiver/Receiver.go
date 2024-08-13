@@ -26,7 +26,7 @@ type Receiver interface {
 	GetWebhookInfo(WebhookPostRequest) (postInfo *WebhookPostInfo, err error)
 }
 
-func New(project *config.Project) Receiver {
+func New(project config.Project) Receiver {
 	var receiver Receiver
 	switch project.GitProvider {
 	case "gitea":

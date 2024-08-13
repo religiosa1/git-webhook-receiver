@@ -9,7 +9,7 @@ import (
 )
 
 type GithubReceiver struct {
-	project *config.Project
+	project config.Project
 }
 
 func (rcvr GithubReceiver) Authorize(req WebhookPostRequest, auth string) (bool, error) {

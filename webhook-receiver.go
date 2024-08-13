@@ -9,11 +9,10 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
-	"github.com/religiosa1/webhook-receiver/internal/action_runner"
+	"github.com/religiosa1/webhook-receiver/internal/ActionRunner"
 	"github.com/religiosa1/webhook-receiver/internal/config"
 	"github.com/religiosa1/webhook-receiver/internal/http/handlers"
 	"github.com/religiosa1/webhook-receiver/internal/logger"
@@ -48,16 +47,11 @@ func main() {
 	logger := closableLogger.Logger
 	logger.Debug("configuration loaded", slog.Any("config", cfg))
 
-	//==========================================================================
-	// Action runner
-	actionsCh := make(chan action_runner.ActionArgs)
-	actionsCtx, actionsCancel := context.WithCancel(context.Background())
-	var actionsWg sync.WaitGroup
-	go action_runner.Listen(actionsCtx, actionsCh, &actionsWg, cfg.ActionsOutputDir)
+	actionRunner := ActionRunner.New(context.Background())
 
 	//==========================================================================
 	// HTTP-Server
-	srv, err := createServer(actionsCh, cfg, logger)
+	srv, err := createServer(actionRunner.Chan(), cfg, logger)
 	if err != nil {
 		logger.Error("Error creating the server", slog.Any("error", err))
 		os.Exit(errCodeCreate)
@@ -83,15 +77,14 @@ func main() {
 	logger.Info("Waiting for actions to complete... Press ctrl+c again to forcefully close")
 	go func() {
 		select {
-		case <-actionsCtx.Done():
+		case <-actionRunner.Done():
 			fmt.Println("Action completed")
 		case <-interrupt:
-			actionsCancel()
+			actionRunner.Cancel()
 			fmt.Println("Action interrupted")
 		}
 	}()
-	actionsWg.Wait()
-	actionsCancel()
+	actionRunner.Wait()
 
 	logger.Info("Done")
 }
@@ -126,17 +119,17 @@ func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig
 	return err
 }
 
-func createServer(actionsCh chan action_runner.ActionArgs, cfg *config.Config, logger *slog.Logger) (*http.Server, error) {
+func createServer(actionsCh chan ActionRunner.ActionArgs, cfg config.Config, logger *slog.Logger) (*http.Server, error) {
 	mux := http.NewServeMux()
 	for projectName, project := range cfg.Projects {
-		receiver := whreceiver.New(&project)
+		receiver := whreceiver.New(project)
 		if receiver == nil {
 			return nil, fmt.Errorf("unknown git webhook provider type '%s' in project '%s'", project.GitProvider, projectName)
 		}
 		projectLogger := logger.With(slog.String("project", projectName))
 		mux.HandleFunc(
 			fmt.Sprintf("POST /%s", projectName),
-			handlers.HandleWebhookPost(actionsCh, projectLogger, cfg, &project, receiver),
+			handlers.HandleWebhookPost(actionsCh, projectLogger, cfg, project, receiver),
 		)
 		logger.Debug("Registered project",
 			slog.String("projectName", projectName),

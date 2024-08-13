@@ -1,11 +1,11 @@
-package action_runner
+package ActionRunner
 
 import (
 	"context"
 	"log/slog"
 )
 
-func ExecuteAction(
+func executeAction(
 	ctx context.Context,
 	logger *slog.Logger,
 	actionDescriptor ActionDescriptor,

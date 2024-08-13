@@ -8,16 +8,16 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/religiosa1/webhook-receiver/internal/action_runner"
+	"github.com/religiosa1/webhook-receiver/internal/ActionRunner"
 	"github.com/religiosa1/webhook-receiver/internal/config"
 	"github.com/religiosa1/webhook-receiver/internal/whreceiver"
 )
 
 func HandleWebhookPost(
-	actionsCh chan action_runner.ActionArgs,
+	actionsCh chan ActionRunner.ActionArgs,
 	logger *slog.Logger,
-	cfg *config.Config,
-	project *config.Project,
+	cfg config.Config,
+	project config.Project,
 	receiver whreceiver.Receiver,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
@@ -68,7 +68,7 @@ func HandleWebhookPost(
 		}
 
 		for _, actionDescriptor := range actions {
-			actionsCh <- action_runner.ActionArgs{Logger: deliveryLogger, Action: actionDescriptor}
+			actionsCh <- ActionRunner.ActionArgs{Logger: deliveryLogger, Action: actionDescriptor}
 		}
 
 		deliveryLogger.Info("Launched actions", slog.Any("actions", actions))
@@ -97,8 +97,8 @@ func getWebhookErrorCode(err error) ErrorInfo {
 	return ErrorInfo{http.StatusBadRequest, err.Error()}
 }
 
-func getProjectsActionsForWebhookPost(project *config.Project, webhookInfo *whreceiver.WebhookPostInfo) []action_runner.ActionDescriptor {
-	actions := make([]action_runner.ActionDescriptor, 0)
+func getProjectsActionsForWebhookPost(project config.Project, webhookInfo *whreceiver.WebhookPostInfo) []ActionRunner.ActionDescriptor {
+	actions := make([]ActionRunner.ActionDescriptor, 0)
 	for index, action := range project.Actions {
 		if action.Branch != webhookInfo.Branch {
 			continue
@@ -106,8 +106,8 @@ func getProjectsActionsForWebhookPost(project *config.Project, webhookInfo *whre
 		if action.On != "*" && action.On != webhookInfo.Event {
 			continue
 		}
-		actions = append(actions, action_runner.ActionDescriptor{
-			ActionIdentifier: action_runner.ActionIdentifier{Index: index, PipeId: uuid.NewString()},
+		actions = append(actions, ActionRunner.ActionDescriptor{
+			ActionIdentifier: ActionRunner.ActionIdentifier{Index: index, PipeId: uuid.NewString()},
 			Action:           action,
 		})
 	}

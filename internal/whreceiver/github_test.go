@@ -34,7 +34,7 @@ func TestGithub(t *testing.T) {
 	}
 
 	t.Run("GetWebhookInfo", func(t *testing.T) {
-		rcvr := whreceiver.New(&githubProject)
+		rcvr := whreceiver.New(githubProject)
 		got, err := rcvr.GetWebhookInfo(makeRequest())
 		if err != nil {
 			t.Errorf("Error during auth test %s", err)
@@ -52,7 +52,7 @@ func TestGithub(t *testing.T) {
 	})
 
 	t.Run("Authorization returns an error", func(t *testing.T) {
-		rcvr := whreceiver.New(&githubProject)
+		rcvr := whreceiver.New(githubProject)
 		_, err := rcvr.Authorize(makeRequest(), "asdfasdf")
 		if err == nil {
 			t.Error("Exepcted authorization to throw but it didn't")
@@ -73,7 +73,7 @@ func TestGithub(t *testing.T) {
 		for _, tt := range secretTests {
 			t.Run(tt.name, func(t *testing.T) {
 				t.Parallel()
-				rcvr := whreceiver.New(&githubProject)
+				rcvr := whreceiver.New(githubProject)
 				req := makeRequest()
 				req.Headers.Add("X-Hub-Signature-256", "sha256="+signature)
 
@@ -98,7 +98,7 @@ func TestGithub(t *testing.T) {
 	}
 	for _, tt := range pingRequestsTest {
 		t.Run(tt.name, func(t *testing.T) {
-			rcvr := whreceiver.New(&githubProject)
+			rcvr := whreceiver.New(githubProject)
 			rqst := makeRequest()
 			rqst.Headers.Set("X-GitHub-Event", tt.eventType)
 			got := rcvr.IsPingRequest(rqst)

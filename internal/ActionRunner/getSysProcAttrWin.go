@@ -1,6 +1,6 @@
 //go:build !unix
 
-package action_runner
+package ActionRunner
 
 import (
 	"errors"

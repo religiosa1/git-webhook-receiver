@@ -35,7 +35,7 @@ func TestGitea(t *testing.T) {
 	}
 
 	t.Run("GetWebhookInfo", func(t *testing.T) {
-		rcvr := whreceiver.New(&giteaProject)
+		rcvr := whreceiver.New(giteaProject)
 		got, err := rcvr.GetWebhookInfo(makeRequest())
 		if err != nil {
 			t.Errorf("Error during auth test %s", err)
@@ -64,7 +64,7 @@ func TestGitea(t *testing.T) {
 		for _, tt := range authTests {
 			t.Run(tt.name, func(t *testing.T) {
 				t.Parallel()
-				rcvr := whreceiver.New(&giteaProject)
+				rcvr := whreceiver.New(giteaProject)
 				got, err := rcvr.Authorize(makeRequest(), tt.token)
 				if err != nil {
 					t.Errorf("Error during auth test %s", err)
@@ -90,7 +90,7 @@ func TestGitea(t *testing.T) {
 		for _, tt := range secretTests {
 			t.Run(tt.name, func(t *testing.T) {
 				t.Parallel()
-				rcvr := whreceiver.New(&giteaProject)
+				rcvr := whreceiver.New(giteaProject)
 				req := makeRequest()
 				req.Headers.Add("X-Gitea-Signature", signature)
 
@@ -115,7 +115,7 @@ func TestGitea(t *testing.T) {
 	}
 	for _, tt := range pingRequestsTest {
 		t.Run(tt.name, func(t *testing.T) {
-			rcvr := whreceiver.New(&giteaProject)
+			rcvr := whreceiver.New(giteaProject)
 			rqst := makeRequest()
 			rqst.Headers.Set("X-Gitea-Event", tt.eventType)
 			got := rcvr.IsPingRequest(rqst)

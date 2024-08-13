@@ -45,18 +45,18 @@ type Action struct {
 	Run    []string `yaml:"run"`
 }
 
-func Load(configPath string) (*Config, error) {
+func Load(configPath string) (Config, error) {
 	var cfg Config
 
 	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
-		return nil, fmt.Errorf("error loading configuration %s: %w", configPath, err)
+		return cfg, fmt.Errorf("error loading configuration %s: %w", configPath, err)
 	}
 	applyEnvToProjectAndActions(&cfg)
 
 	if cfg.ActionsOutputDir != "" {
 		err := os.MkdirAll(cfg.ActionsOutputDir, os.ModePerm)
 		if err != nil {
-			return nil, fmt.Errorf("error creating actions output directory: %w", err)
+			return cfg, fmt.Errorf("error creating actions output directory: %w", err)
 		}
 	}
 
@@ -66,17 +66,17 @@ func Load(configPath string) (*Config, error) {
 	case "info", "debug", "warn", "error":
 		// everything is ok, no action needed
 	default:
-		return nil, fmt.Errorf("incorrect LogLevel value '%s'. Possible values are 'debug', 'info', 'warn', and 'error", cfg.LogLevel)
+		return cfg, fmt.Errorf("incorrect LogLevel value '%s'. Possible values are 'debug', 'info', 'warn', and 'error", cfg.LogLevel)
 	}
 
 	projectsWithDefaults, err := validateAndSetDefaultsConfigProjects(cfg.Projects)
 	if err != nil {
-		return nil, fmt.Errorf("config's projects validation failed: %w", err)
+		return cfg, fmt.Errorf("config's projects validation failed: %w", err)
 	}
 
 	cfg.Projects = projectsWithDefaults
 
-	return &cfg, nil
+	return cfg, nil
 }
 
 func validateAndSetDefaultsConfigProjects(projects map[string]Project) (map[string]Project, error) {

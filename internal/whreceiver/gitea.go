@@ -7,7 +7,7 @@ import (
 )
 
 type GiteaReceiver struct {
-	project *config.Project
+	project config.Project
 }
 
 func (rcvr GiteaReceiver) Authorize(req WebhookPostRequest, auth string) (bool, error) {
