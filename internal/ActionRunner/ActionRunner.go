@@ -4,6 +4,8 @@ import (
 	"context"
 	"log/slog"
 	"sync"
+
+	actiondb "github.com/religiosa1/webhook-receiver/internal/actionDb"
 )
 
 type ActionArgs struct {
@@ -14,15 +16,16 @@ type ActionArgs struct {
 type ActionRunner struct {
 	ch        chan ActionArgs
 	wg        *sync.WaitGroup
-	outputDir string
 	ctx       context.Context
 	cancel    func()
+	actionsDb *actiondb.ActionDb
 }
 
-func New(ctx context.Context) (runner ActionRunner) {
+func New(ctx context.Context, actionsDb *actiondb.ActionDb) (runner ActionRunner) {
 	runner.ch = make(chan ActionArgs)
 	runner.ctx, runner.cancel = context.WithCancel(ctx)
 	runner.wg = &sync.WaitGroup{}
+	runner.actionsDb = actionsDb
 	go runner.listen()
 	return runner
 }
@@ -53,7 +56,7 @@ func (runner ActionRunner) listen() {
 			runner.wg.Add(1)
 			go func() {
 				defer runner.wg.Done()
-				executeAction(runner.ctx, args.Logger, args.Action, runner.outputDir)
+				runner.executeAction(args.Logger, args.Action)
 			}()
 		}
 	}

@@ -1,27 +1,71 @@
 package ActionRunner
 
 import (
-	"context"
+	"fmt"
+	"io"
 	"log/slog"
+	"os"
 )
 
-func executeAction(
-	ctx context.Context,
+func (runner ActionRunner) executeAction(
 	logger *slog.Logger,
 	actionDescriptor ActionDescriptor,
-	actionsOutputDir string,
 ) {
+	action := actionDescriptor.Action
 	pipeLogger := logger.With(slog.String("pipeId", actionDescriptor.PipeId))
 	pipeLogger.Info("Running action", slog.Int("action_index", actionDescriptor.Index))
-	streams, err := getActionIoStreams(actionsOutputDir, actionDescriptor.PipeId, pipeLogger)
+
+	err := runner.actionsDb.CreateRecord(actionDescriptor.PipeId, actionDescriptor.DeliveryId, action)
 	if err != nil {
-		pipeLogger.Error("Error creating action's IO streams", slog.Any("error", err))
+		pipeLogger.Error("Error creating pipeline recor din the db", slog.Any("error", err))
 		return
 	}
-	defer streams.Close()
-	if len(actionDescriptor.Action.Run) > 0 {
-		executeActionRun(ctx, pipeLogger.With(slog.Any("command", actionDescriptor.Action.Run)), actionDescriptor.Action, streams)
-	} else {
-		executeActionScript(ctx, pipeLogger, actionDescriptor.Action, streams)
+
+	output, err := os.CreateTemp("", actionDescriptor.PipeId+"-*.output.tmp")
+	if err != nil {
+		pipeLogger.Error("Error creating temporary file to capture action's output", slog.Any("error", err))
+		return
 	}
+	defer output.Close()
+
+	sysProcAttr, err := getSysProcAttr(action.User)
+	if err != nil {
+		logger.Error("Error creating process attributes for action", slog.Any("error", err))
+		return
+	}
+
+	if action.User != "" {
+		logger.Debug("Running from a user", slog.String("user", action.User))
+	}
+
+	var actionErr error
+	if len(action.Run) > 0 {
+		logger.Debug("Running the script", slog.String("script", action.Script))
+		actionErr = executeActionRun(runner.ctx, action, sysProcAttr, output)
+	} else {
+		logger.Debug("Running the command", slog.Any("command", action.Run))
+		actionErr = executeActionScript(runner.ctx, action, sysProcAttr, output)
+	}
+
+	if actionErr != nil {
+		logger.Error("Error while running the action", slog.Any("error", err))
+	} else {
+		logger.Info("Action successfully finished")
+	}
+
+	content, err := readOutputFile(output)
+	if err != nil {
+		logger.Error("Error while reading output file's content", slog.Any("error", err))
+	}
+
+	runner.actionsDb.CloseRecord(actionDescriptor.PipeId, actionErr, content)
+}
+
+func readOutputFile(output *os.File) (string, error) {
+	_, err := output.Seek(0, io.SeekStart)
+	if err != nil {
+		return "", fmt.Errorf("seeking error: %w", err)
+	}
+	content, err := io.ReadAll(output)
+	return string(content), err
 }

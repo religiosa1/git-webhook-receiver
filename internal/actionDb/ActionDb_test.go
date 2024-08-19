@@ -43,7 +43,6 @@ func TestActionDb(t *testing.T) {
 			t.Error((err))
 		}
 	})
-
 	t.Run("creates a record", func(t *testing.T) {
 		db, err := actiondb.New(":memory:")
 		if err != nil {
@@ -81,7 +80,12 @@ func TestActionDb(t *testing.T) {
 		CompareAction(t, action, record)
 	})
 
-	t.Run("updates a record on close", func(t *testing.T) {
+	// TODO
+	t.Run("Successfull actions", func(t *testing.T) {
+		t.Skip()
+	})
+
+	t.Run("updates a record on close with error", func(t *testing.T) {
 		actionErr := errors.New("some error blah blah")
 		actionOutput := "test output"
 		db, err := actiondb.New(":memory:")
@@ -140,6 +144,11 @@ func TestActionDb(t *testing.T) {
 		err = db.CreateRecord(pipeId, deliveryId, action)
 		if err != nil {
 			t.Fatalf("Unable to create a record: %s", err)
+		}
+
+		err = db.Close()
+		if err != nil {
+			t.Fatalf("Unable to close the db: %s", err)
 		}
 
 		db2, err := actiondb.New(tmpfile.Name())

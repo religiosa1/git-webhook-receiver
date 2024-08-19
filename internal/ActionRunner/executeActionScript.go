@@ -3,7 +3,7 @@ package ActionRunner
 import (
 	"context"
 	"fmt"
-	"log/slog"
+	"io"
 	"os"
 	"os/exec"
 	"runtime"
@@ -16,33 +16,18 @@ import (
 	"mvdan.cc/sh/v3/syntax"
 )
 
-func executeActionScript(ctx context.Context, logger *slog.Logger, action config.Action, streams actionIoStreams) {
-	logger.Debug("Running script", slog.String("script", action.Script))
+func executeActionScript(ctx context.Context, action config.Action, sysProcAttr *syscall.SysProcAttr, output io.Writer) error {
 	script, err := syntax.NewParser().Parse(strings.NewReader(action.Script), "")
 	if err != nil {
-		logger.Error("Error parsing action's script", slog.Any("error", err))
-		return
-	}
-
-	sysProcAttr, err := getSysProcAttr(action.User)
-	if err != nil {
-		logger.Error("Error creating process attributes for action", slog.Any("error", err))
-		return
-	}
-	if action.User != "" {
-		logger.Debug("Running the command from a user", slog.String("user", action.User))
+		return fmt.Errorf("error parsing actions's script: %w", err)
 	}
 
 	runner, _ := interp.New(
 		interp.ExecHandler(execHandler(30*time.Second, sysProcAttr)),
-		interp.StdIO(nil, streams.Stdout, streams.Stderr),
+		interp.StdIO(nil, output, output),
 		interp.Dir(action.Cwd),
 	)
-	if err := runner.Run(ctx, script); err != nil {
-		logger.Error("Script execution ended with an error", slog.Any("error", err))
-	} else {
-		logger.Info("Script successfully finished")
-	}
+	return runner.Run(ctx, script)
 }
 
 // TODO investigate the possibility of integrating it in interp itself (fork or PRS)

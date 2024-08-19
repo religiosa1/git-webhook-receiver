@@ -1,23 +1,25 @@
+# All fields are optional, unless stated otherwise
 host: example.com # defaults to localhost
-port: 9090 # OPTIONAL, defaults to 9090
-log_level: "debug" # OPTIONAL, defaults to 'info', other options are 'warn' and 'error'
-# Optional (but recommended, unless you're using a reverse proxy): SSL config:
+port: 9090 # defaults to 9090
+log_level: "debug" # defaults to 'info', other options are 'warn' and 'error'
+# SSL config: (optional, but recommended, unless you're using a reverse proxy)
 ssl:
   cert_file_path: "./your/certfile/path/fullchain.pem"
   key_file_path: "/your/keyfile/path/privkey.pem"
 projects:
   your_project_name:
-    git_provider: gitea # OPTIONAL, defaults to "github"
-    repo: "username/reponame" # repository full name, as displayed in the URL
+    git_provider: gitea # defaults to "github"
+    repo: "username/reponame" # REQUIRED repository full name, as displayed in the URL
     # please notice, it may be safer to keep secret and authorization tokens 
     # in env variables, depending on your application deployment and setup
-    secret: "YourSecretGoesHere" # OPTIONAL your secret, used to sign the payload and validate it
-    authorization: "JghYTd" # OPTIONAL post authorization header contents, to authorize the incoming request
+    secret: "YourSecretGoesHere" # your secret, used to sign the payload and validate it
+    authorization: "JghYTd" # post authorization header contents, to authorize the incoming request
     actions:
-      - on: push # OPTIONAL defaults to "push", use "*" to handle any incoming event
-        branch: master # OPTIONAL  defaults to master
-        user: www-data # OPTIONAL user from which action will be run
-        cwd: "/var/www/yourproject" # OPTIONAL root dir in which action will be run
+      - on: push # defaults to "push", use "*" to handle any incoming event
+        branch: master # defaults to master
+        user: www-data # user from which action will be run
+        cwd: "/var/www/yourproject" # root dir in which action will be run
+        # each action MUST have either a script or run field (but not both):
         # To run a script:
         script: |
           git fetch && git reset --hard origin/master
@@ -25,6 +27,6 @@ projects:
           npm run build
         # Or to execute a script or program:
         # run: ["node", "--version"]
+actions_db_file: "actions.sqlite3" # 
 # TODO remove all that and log directly into SQLite instance instead of a file
 log_file: "deploy.log"
-actions_output_dir: "actions_output"

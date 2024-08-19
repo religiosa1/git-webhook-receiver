@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"os"
 	"os/user"
 	"runtime"
 	"unicode"
@@ -11,13 +10,13 @@ import (
 )
 
 type Config struct {
-	Host             string             `yaml:"host" env:"HOST" env-default:"localhost"`
-	Port             int16              `yaml:"port" env:"PORT" env-default:"9090"`
-	LogLevel         string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
-	LogFile          string             `yaml:"log_file" env:"LOG_FILE"`
-	Ssl              SslConfig          `yaml:"ssl" env-prefix:"SSL__"`
-	ActionsOutputDir string             `yaml:"actions_output_dir"`
-	Projects         map[string]Project `yaml:"projects" env-required:"true"`
+	Host          string             `yaml:"host" env:"HOST" env-default:"localhost"`
+	Port          int16              `yaml:"port" env:"PORT" env-default:"9090"`
+	LogLevel      string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
+	LogFile       string             `yaml:"log_file" env:"LOG_FILE"`
+	ActionsDbFile string             `yaml:"actions_db_file" env:"ACTIONS_DB_FILE" env-default:"actions.sqlite3"`
+	Ssl           SslConfig          `yaml:"ssl" env-prefix:"SSL__"`
+	Projects      map[string]Project `yaml:"projects" env-required:"true"`
 }
 
 type SslConfig struct {
@@ -52,13 +51,6 @@ func Load(configPath string) (Config, error) {
 		return cfg, fmt.Errorf("error loading configuration %s: %w", configPath, err)
 	}
 	applyEnvToProjectAndActions(&cfg)
-
-	if cfg.ActionsOutputDir != "" {
-		err := os.MkdirAll(cfg.ActionsOutputDir, os.ModePerm)
-		if err != nil {
-			return cfg, fmt.Errorf("error creating actions output directory: %w", err)
-		}
-	}
 
 	switch cfg.LogLevel {
 	case "":

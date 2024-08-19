@@ -107,7 +107,7 @@ func getProjectsActionsForWebhookPost(project config.Project, webhookInfo *whrec
 			continue
 		}
 		actions = append(actions, ActionRunner.ActionDescriptor{
-			ActionIdentifier: ActionRunner.ActionIdentifier{Index: index, PipeId: uuid.NewString()},
+			ActionIdentifier: ActionRunner.ActionIdentifier{Index: index, PipeId: uuid.NewString(), DeliveryId: webhookInfo.DeliveryID},
 			Action:           action,
 		})
 	}

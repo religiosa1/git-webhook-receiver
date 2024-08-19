@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/religiosa1/webhook-receiver/internal/ActionRunner"
+	actiondb "github.com/religiosa1/webhook-receiver/internal/actionDb"
 	"github.com/religiosa1/webhook-receiver/internal/config"
 	"github.com/religiosa1/webhook-receiver/internal/http/handlers"
 	"github.com/religiosa1/webhook-receiver/internal/logger"
@@ -38,6 +39,12 @@ func main() {
 	//==========================================================================
 	// Logger
 
+	actionsDb, err := actiondb.New(cfg.ActionsDbFile)
+	if err != nil {
+		log.Printf("Error opening actions db: %s", err)
+		os.Exit(errCodeLogger)
+	}
+
 	closableLogger, err := logger.SetupLogger(cfg.LogLevel, cfg.LogFile)
 	if err != nil {
 		log.Printf("Error setting up the logger: %s", err)
@@ -47,7 +54,7 @@ func main() {
 	logger := closableLogger.Logger
 	logger.Debug("configuration loaded", slog.Any("config", cfg))
 
-	actionRunner := ActionRunner.New(context.Background())
+	actionRunner := ActionRunner.New(context.Background(), &actionsDb)
 
 	//==========================================================================
 	// HTTP-Server
@@ -85,6 +92,7 @@ func main() {
 		}
 	}()
 	actionRunner.Wait()
+	actionsDb.Close()
 
 	logger.Info("Done")
 }
