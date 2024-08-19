@@ -37,12 +37,12 @@ type Project struct {
 }
 
 type Action struct {
-	On     string   `yaml:"on" env-default:"push"`
-	Branch string   `yaml:"branch" env-default:"master"`
-	Cwd    string   `yaml:"cwd"`
-	User   string   `yaml:"user"`
-	Script string   `yaml:"script"`
-	Run    []string `yaml:"run"`
+	On     string   `yaml:"on" env-default:"push" json:"on,omitempty"`
+	Branch string   `yaml:"branch" env-default:"master" json:"branch,omitempty"`
+	Cwd    string   `yaml:"cwd" json:"cwd,omitempty"`
+	User   string   `yaml:"user" json:"user,omitempty"`
+	Script string   `yaml:"script" json:"script,omitempty"`
+	Run    []string `yaml:"run" json:"run,omitempty"`
 }
 
 func Load(configPath string) (Config, error) {
