@@ -8,10 +8,10 @@ In a nutshell:
 
 - you [deploy](#installation) it to your server
 - (optional but recommended) install an SSL cert or wrap it with
-  a [reverse proxy](#reverse-proxy) such as nginx or caddy, to have encryption
+  a [reverse proxy](./docs/nginx-setup.md) such as nginx or caddy, to have encryption
 - create a [config file](#config-file) and add your projects and their 
   corresponding build scripts/actions (either as a standalone script 
-  or [crossplatform inline scripts](#inline-scripts))
+  or [crossplatform inline scripts](#inline-scripts-and-standalone-scripts))
 - set webhooks for those repo in their git services (github, gitea, etc.) to post
   to {YOUR_HOST}/{PROJECT_NAME}
 - start the service, it will listen for the webhook posts and runs the actions
@@ -21,7 +21,8 @@ In a nutshell:
 It's intended usage is to run CI/CD scripts on a server, but you can use it for
 running arbitraty actions on git events.
 
-Early WIP, currently only gitea is supported as a git provider.
+WIP, but operational. Some planned MVP functionality is still missing and there
+will be breaking changes before version 1.0 release.
 
 ## Installation
 
@@ -105,17 +106,20 @@ run: ["python", "./path/to/your/script", "--some-arg"]
 
 ## Logging
 
-Actions' output is stored in the directory specified in the config file.
-If no directory is specified, the default value of `./actions_output` will be used.
+Actions' output is stored in the sqlite db specified in the config file 
+(`actions.sqlite3` by default) once completed. While the action is still going,
+data is stored in a temp file.
 
-If the directory is explicitely set to be empty, then storing of actions' output
-will be disabled.
+<!-- TODO: CLI access for the db entries -->
+
+<!-- 
+TODO implement this functionality for actionsDb:
 
 Only N latest actions are stored in the directory, with N specified in the config
 as `max_output_files` field. When number of output files exceeds this number,
 the oldest actions (by their file LastModified date) are removed.
 `max_output_files` defaults to 10000, setting it as 0 or negative value turns off
-this functionality.
+this functionality. -->
 
 ## Contribution
 
