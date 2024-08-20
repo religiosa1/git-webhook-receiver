@@ -27,6 +27,7 @@ func TestConfigLoad(t *testing.T) {
 		configFileName := tmpConfigFile(t, `
 host: test.example.com
 port: 1234
+actions_db_file: db2.sqlite3
 projects:
   test-proj:
     git_provider: gitea
@@ -38,6 +39,16 @@ projects:
 		config, err := config.Load(configFileName)
 		if err != nil {
 			t.Errorf("Error loading the config file: %s", err)
+		}
+
+		wantHost := "test.example.com"
+		var wantPort int16 = 1234
+		if config.Host != wantHost || config.Port != wantPort {
+			t.Errorf("incorrect values read from config, want %s:%d, got %s:%d", wantHost, wantPort, config.Host, config.Port)
+		}
+
+		if want, got := "db2.sqlite3", config.ActionsDbFile; want != got {
+			t.Errorf("incorrect actions db file read from config, want %s, got %s", want, got)
 		}
 
 		if l := len(config.Projects); l != 1 {
@@ -52,12 +63,6 @@ projects:
 
 		if want, got := "username/reponame", project.Repo; want != got {
 			t.Errorf("incorrect repo value read from config, want %s, got %s", want, got)
-		}
-
-		wantHost := "test.example.com"
-		var wantPort int16 = 1234
-		if config.Host != wantHost || config.Port != wantPort {
-			t.Errorf("incorrect values read from config, want %s:%d, got %s:%d", wantHost, wantPort, config.Host, config.Port)
 		}
 	})
 
@@ -84,6 +89,10 @@ projects:
 			t.Errorf("incorrect port value read from config, want %d, got %d", wantPort, config.Port)
 		}
 
+		if want, got := "actions.sqlite3", config.ActionsDbFile; want != got {
+			t.Errorf("incorrect actions db file read from config, want %s, got %s", want, got)
+		}
+
 		var project = config.Projects["test-proj"]
 		var action = project.Actions[0]
 
@@ -94,6 +103,7 @@ projects:
 		if want, got := "master", action.Branch; want != got {
 			t.Errorf("Incorrect default branch, want '%s', got '%s'", want, got)
 		}
+
 	})
 }
 
@@ -130,8 +140,10 @@ projects:
 	t.Run("allows to override project values with env", func(t *testing.T) {
 		secret := "test secret"
 		auth := "test auth"
+		dbFile := "db.sqlite3"
 		t.Setenv("PROJECTS__test-proj__SECRET", secret)
 		t.Setenv("PROJECTS__test-proj__AUTH", auth)
+		t.Setenv("ACTIONS_DB_FILE", dbFile)
 
 		configFileName := tmpConfigFile(t, configContents)
 		config, err := config.Load(configFileName)
@@ -140,6 +152,10 @@ projects:
 		}
 
 		project := config.Projects["test-proj"]
+
+		if want, got := dbFile, config.ActionsDbFile; want != got {
+			t.Errorf("incorrect action db file read from config, want '%s', got '%s'", want, got)
+		}
 
 		if want, got := secret, project.Secret; want != got {
 			t.Errorf("incorrect secret value read from config, want '%s', got '%s'", want, got)

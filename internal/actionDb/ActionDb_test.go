@@ -1,6 +1,7 @@
 package actiondb_test
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"os"
@@ -26,6 +27,29 @@ func CompareAction(t *testing.T, action config.Action, record actiondb.PipeLineR
 	}
 }
 
+func CompareRecord(t *testing.T, want actiondb.PipeLineRecord, got actiondb.PipeLineRecord) {
+	t.Helper()
+
+	if want.PipeId != got.PipeId {
+		t.Errorf("Bad pipeId: want %s, got %s,", want.PipeId, got.PipeId)
+	}
+	if want.DeliveryId != got.DeliveryId {
+		t.Errorf("Bad deliveryId, want %s, got %s", want.DeliveryId, got.DeliveryId)
+	}
+	if want.Output != got.Output {
+		t.Errorf("Unexpted output in pipeline: want %v, got %v", want.Output, got.Output)
+	}
+	if want.Error != got.Error {
+		t.Errorf("Unexpted error value in created record: want %v, got %v", want.Error, got.Error)
+	}
+	if got.CreatedAt == 0 {
+		t.Errorf("Unexpted empty created date: want %d, got %d", want.CreatedAt, got.CreatedAt)
+	}
+	if want.EndedAt.Valid != got.EndedAt.Valid {
+		t.Errorf("Unexpted emptiness of ended date: want %t, got %t", want.EndedAt.Valid, got.EndedAt.Valid)
+	}
+}
+
 func TestActionDb(t *testing.T) {
 	pipeId := "123"
 	deliveryId := "321"
@@ -46,139 +70,155 @@ func TestActionDb(t *testing.T) {
 	t.Run("creates a record", func(t *testing.T) {
 		db, err := actiondb.New(":memory:")
 		if err != nil {
-			t.Fatalf("Unable to create a db: %s", err)
+			t.Errorf("Unable to create a db: %s", err)
 		}
 
 		err = db.CreateRecord(pipeId, deliveryId, action)
 		if err != nil {
-			t.Fatalf("Unable to create a pipeline rercord: %s", err)
+			t.Errorf("Unable to create a pipeline rercord: %s", err)
 		}
 
 		record, err := db.GetPipelineRecord(pipeId)
 		if err != nil {
-			t.Fatalf("Unable to retrieve the created record: %s", err)
+			t.Errorf("Unable to retrieve the created record: %s", err)
 		}
 
-		if record.PipeId != pipeId {
-			t.Errorf("Bad pipeId, got %s, want %s", record.PipeId, pipeId)
+		want := actiondb.PipeLineRecord{
+			PipeId:     pipeId,
+			DeliveryId: deliveryId,
 		}
-		if record.DeliveryId != deliveryId {
-			t.Errorf("Bad deliveryId, got %s, want %s", record.DeliveryId, deliveryId)
-		}
-		if record.Output.Valid {
-			t.Errorf("Unexpted non-empty output in pipeline: %s", record.Output.String)
-		}
-		if record.Error.Valid {
-			t.Errorf("Unexpted non-empty  error in created record: %s", record.Error.String)
-		}
-		if record.CreatedAt == 0 {
-			t.Errorf("Unexpted empty created date: %d", record.CreatedAt)
-		}
-		if record.EndedAt.Valid {
-			t.Errorf("Unexpted non-empty ended date: %d", record.EndedAt.Int64)
-		}
+
+		CompareRecord(t, want, record)
 		CompareAction(t, action, record)
 	})
 
-	// TODO
-	t.Run("Successfull actions", func(t *testing.T) {
-		t.Skip()
+	t.Run("Close successful action", func(t *testing.T) {
+		actionOutput := "test output"
+		db, err := actiondb.New(":memory:")
+		if err != nil {
+			t.Errorf("Unable to create a db: %s", err)
+		}
+
+		err = db.CreateRecord(pipeId, deliveryId, action)
+		if err != nil {
+			t.Errorf("Unable to create a pipeline rercord: %s", err)
+		}
+
+		err = db.CloseRecord(pipeId, nil, actionOutput)
+		if err != nil {
+			t.Errorf("Unable to close a pipeline rercord: %s", err)
+		}
+
+		record, err := db.GetPipelineRecord(pipeId)
+		if err != nil {
+			t.Errorf("Unable to retrieve the created record: %s", err)
+		}
+
+		want := actiondb.PipeLineRecord{
+			PipeId:     pipeId,
+			DeliveryId: deliveryId,
+			Output:     sql.NullString{Valid: true, String: actionOutput},
+			Error:      sql.NullString{Valid: false},
+			EndedAt:    sql.NullInt64{Valid: true},
+		}
+		CompareRecord(t, want, record)
+		CompareAction(t, action, record)
 	})
 
-	t.Run("updates a record on close with error", func(t *testing.T) {
+	t.Run("Close errored action", func(t *testing.T) {
 		actionErr := errors.New("some error blah blah")
 		actionOutput := "test output"
 		db, err := actiondb.New(":memory:")
 		if err != nil {
-			t.Fatalf("Unable to create a db: %s", err)
+			t.Errorf("Unable to create a db: %s", err)
 		}
 
 		err = db.CreateRecord(pipeId, deliveryId, action)
 		if err != nil {
-			t.Fatalf("Unable to create a pipeline rercord: %s", err)
+			t.Errorf("Unable to create a pipeline rercord: %s", err)
 		}
 
 		err = db.CloseRecord(pipeId, actionErr, actionOutput)
 		if err != nil {
-			t.Fatalf("Unable to close a pipeline rercord: %s", err)
+			t.Errorf("Unable to close a pipeline rercord: %s", err)
 		}
 
 		record, err := db.GetPipelineRecord(pipeId)
 		if err != nil {
-			t.Fatalf("Unable to retrieve the created record: %s", err)
+			t.Errorf("Unable to retrieve the created record: %s", err)
 		}
 
-		if record.PipeId != pipeId {
-			t.Errorf("Bad pipeId, got %s, want %s", record.PipeId, pipeId)
+		want := actiondb.PipeLineRecord{
+			PipeId:     pipeId,
+			DeliveryId: deliveryId,
+			Output:     sql.NullString{Valid: true, String: actionOutput},
+			Error:      sql.NullString{Valid: true, String: actionErr.Error()},
+			EndedAt:    sql.NullInt64{Valid: true},
 		}
-		if record.DeliveryId != deliveryId {
-			t.Errorf("Bad deliveryId, got %s, want %s", record.DeliveryId, deliveryId)
-		}
-		if !record.Output.Valid || record.Output.String != actionOutput {
-			t.Errorf("Bad output value, want %s, got %v", actionOutput, record.Output)
-		}
-		if !record.Error.Valid || record.Error.String != actionErr.Error() {
-			t.Errorf("Bad record's error value, want %s, got %v", actionErr, record.Error)
-		}
-		if record.CreatedAt == 0 {
-			t.Errorf("Unexpted empty created date: %d", record.CreatedAt)
-		}
-		if !record.EndedAt.Valid {
-			t.Errorf("Unexpted empty ended date: %v", record.EndedAt)
-		}
+		CompareRecord(t, want, record)
 		CompareAction(t, action, record)
+	})
+
+	t.Run("An action can only be closed once", func(t *testing.T) {
+		db, err := actiondb.New(":memory:")
+		if err != nil {
+			t.Errorf("Unable to create a db: %s", err)
+		}
+
+		err = db.CreateRecord(pipeId, deliveryId, action)
+		if err != nil {
+			t.Errorf("Unable to create a pipeline rercord: %s", err)
+		}
+
+		err = db.CloseRecord(pipeId, nil, "")
+		if err != nil {
+			t.Errorf("Unable to close a pipeline rercord: %s", err)
+		}
+
+		err = db.CloseRecord(pipeId, nil, "")
+		if err == nil {
+			t.Errorf("Repeated closing of an action was supposed to end with an error, but it didn't!")
+		}
 	})
 
 	t.Run("db keeps data persistently", func(t *testing.T) {
 		tmpdir := t.TempDir()
 		tmpfile, err := os.CreateTemp(tmpdir, "*.sqlite3")
 		if err != nil {
-			t.Fatalf("Unable to create a tempfile for db: %s", err)
+			t.Errorf("Unable to create a tempfile for db: %s", err)
 		}
 		defer tmpfile.Close()
 		db, err := actiondb.New(tmpfile.Name())
 		if err != nil {
-			t.Fatalf("Unable to create a db: %s", err)
+			t.Errorf("Unable to create a db: %s", err)
 		}
 
 		err = db.CreateRecord(pipeId, deliveryId, action)
 		if err != nil {
-			t.Fatalf("Unable to create a record: %s", err)
+			t.Errorf("Unable to create a record: %s", err)
 		}
 
 		err = db.Close()
 		if err != nil {
-			t.Fatalf("Unable to close the db: %s", err)
+			t.Errorf("Unable to close the db: %s", err)
 		}
 
 		db2, err := actiondb.New(tmpfile.Name())
 		if err != nil {
-			t.Fatalf("Unable to open the db for the second time: %s", err)
+			t.Errorf("Unable to open the db for the second time: %s", err)
 		}
 
 		record, err := db2.GetPipelineRecord(pipeId)
 		if err != nil {
-			t.Fatalf("Unable to retrieve the created record: %s", err)
+			t.Errorf("Unable to retrieve the created record: %s", err)
 		}
 
-		if record.PipeId != pipeId {
-			t.Errorf("Bad pipeId, got %s, want %s", record.PipeId, pipeId)
+		want := actiondb.PipeLineRecord{
+			PipeId:     pipeId,
+			DeliveryId: deliveryId,
 		}
-		if record.DeliveryId != deliveryId {
-			t.Errorf("Bad deliveryId, got %s, want %s", record.DeliveryId, deliveryId)
-		}
-		if record.Output.Valid {
-			t.Errorf("Unexpted non-empty output in pipeline: %s", record.Output.String)
-		}
-		if record.Error.Valid {
-			t.Errorf("Unexpted non-empty  error in created record: %s", record.Error.String)
-		}
-		if record.CreatedAt == 0 {
-			t.Errorf("Unexpted empty created date: %d", record.CreatedAt)
-		}
-		if record.EndedAt.Valid {
-			t.Errorf("Unexpted non-empty ended date: %d", record.EndedAt.Int64)
-		}
+
+		CompareRecord(t, want, record)
 		CompareAction(t, action, record)
 	})
 }
