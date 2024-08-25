@@ -28,4 +28,4 @@ projects:
         # Or to execute a script or program:
         # run: ["node", "--version"]
 actions_db_file: "actions.sqlite3"
-log_file: "logs.sqlite3" # By default logs storage is disabled! 
+logs_db_file: "logs.sqlite3" # Can be set to empty string or null to siable logs storage, defaults to logs.sqlite3

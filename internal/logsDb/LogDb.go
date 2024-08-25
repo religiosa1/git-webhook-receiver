@@ -46,14 +46,16 @@ func (d LogsDb) open() error {
 	return err
 }
 
-func (d *LogsDb) Close() error {
-	err := d.db.Close()
+func (d *LogsDb) Close() (err error) {
+	if d.db != nil {
+		err = d.db.Close()
+	}
 	d.db = nil
 	return err
 }
 
 func (d LogsDb) IsOpen() bool {
-	return d.db == nil
+	return d.db != nil
 }
 
 type LogEntry struct {

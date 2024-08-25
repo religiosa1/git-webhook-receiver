@@ -40,10 +40,10 @@ func (runner ActionRunner) executeAction(
 
 	var actionErr error
 	if len(action.Run) > 0 {
-		logger.Debug("Running the script", slog.String("script", action.Script))
+		logger.Debug("Running the command", slog.Any("command", action.Run))
 		actionErr = executeActionRun(runner.ctx, action, sysProcAttr, output)
 	} else {
-		logger.Debug("Running the command", slog.Any("command", action.Run))
+		logger.Debug("Running the script", slog.String("script", action.Script))
 		actionErr = executeActionScript(runner.ctx, action, sysProcAttr, output)
 	}
 

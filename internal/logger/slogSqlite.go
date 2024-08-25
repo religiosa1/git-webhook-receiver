@@ -2,6 +2,9 @@ package logger
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
+	"fmt"
 	"log/slog"
 
 	"github.com/religiosa1/webhook-receiver/internal/logsDb"
@@ -30,17 +33,41 @@ func (logger *SlogSqlite) Handle(ctx context.Context, record slog.Record) error 
 		return nil
 	}
 
-	// TODO parse args and populate logentry with them
-
 	dbRecord := logsDb.LogEntry{
-		Level: int(record.Level),
-		// Project    sql.NullString `db:"project"`
-		// DeliveryId sql.NullString `db:"delivery_id"`
-		// PipeId     sql.NullString `db:"pipe_id"`
+		Level:   int(record.Level),
 		Message: record.Message,
-		// Data       string         `db:"data"`
-		Ts: record.Time.UTC().Unix(),
+		Ts:      record.Time.UTC().Unix(),
 	}
+
+	dataObj := make(map[string]interface{})
+
+	procAttr := func(a slog.Attr) bool {
+		switch a.Key {
+		case "project":
+			dbRecord.Project = sql.NullString{Valid: true, String: a.Value.String()}
+		case "deliveryId":
+			dbRecord.Project = sql.NullString{Valid: true, String: a.Value.String()}
+		case "pipeId":
+			dbRecord.Project = sql.NullString{Valid: true, String: a.Value.String()}
+		default:
+			dataObj[a.Key] = a.Value.Any()
+		}
+		return true
+	}
+
+	for _, a := range logger.attrs {
+		procAttr(a)
+	}
+	record.Attrs(procAttr)
+
+	if len(dataObj) > 0 {
+		bytes, err := json.Marshal(dataObj)
+		if err != nil {
+			return fmt.Errorf("error while encoding record attrs to JSON: %w", err)
+		}
+		dbRecord.Data = string(bytes)
+	}
+
 	return logger.db.CreateEntry(dbRecord)
 }
 

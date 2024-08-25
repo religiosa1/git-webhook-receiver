@@ -36,7 +36,7 @@ func HandleWebhookPost(
 			w.Write([]byte("{err}"))
 			return
 		}
-		deliveryLogger := logger.With(slog.String("delivery", webhookInfo.DeliveryID))
+		deliveryLogger := logger.With(slog.String("deliveryId", webhookInfo.DeliveryID))
 		deliveryLogger.Info("Recieved a webhook post", slog.Any("webhookInfo", webhookInfo))
 
 		if project.Authorization != "" {

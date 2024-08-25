@@ -47,7 +47,7 @@ func main() {
 	}
 	defer dbActions.Close()
 
-	dbLogs, err := logsDb.New(cfg.LogFile)
+	dbLogs, err := logsDb.New(cfg.LogsDbFile)
 	if err != nil {
 		log.Printf("Error opening logs db: %s", err)
 		os.Exit(errCodeLogger)
@@ -63,6 +63,7 @@ func main() {
 		log.Printf("Error setting up the logger: %s", err)
 		os.Exit(errCodeLogger)
 	}
+	// TODO redact all of the secerets and auth tokens from the log
 	logger.Debug("configuration loaded", slog.Any("config", cfg))
 
 	actionRunner := ActionRunner.New(context.Background(), &dbActions)
