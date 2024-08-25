@@ -47,15 +47,18 @@ func main() {
 	}
 	defer dbActions.Close()
 
-	// TODO conditional open db
 	dbLogs, err := logsDb.New(cfg.LogFile)
 	if err != nil {
 		log.Printf("Error opening logs db: %s", err)
 		os.Exit(errCodeLogger)
 	}
-	defer dbLogs.Close()
+	defer func() {
+		if dbLogs != nil {
+			dbLogs.Close()
+		}
+	}()
 
-	logger, err := logger.SetupLogger(cfg.LogLevel, &dbLogs)
+	logger, err := logger.SetupLogger(cfg.LogLevel, dbLogs)
 	if err != nil {
 		log.Printf("Error setting up the logger: %s", err)
 		os.Exit(errCodeLogger)
@@ -101,7 +104,9 @@ func main() {
 	}()
 	actionRunner.Wait()
 	dbActions.Close()
-	dbLogs.Close()
+	if dbLogs != nil {
+		dbLogs.Close()
+	}
 
 	logger.Info("Done")
 }

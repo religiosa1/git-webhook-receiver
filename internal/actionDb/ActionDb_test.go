@@ -12,44 +12,6 @@ import (
 	"github.com/religiosa1/webhook-receiver/internal/config"
 )
 
-func CompareAction(t *testing.T, action config.Action, record actiondb.PipeLineRecord) {
-	t.Helper()
-
-	var recordConfig config.Action
-	err := json.Unmarshal(record.Config, &recordConfig)
-	if err != nil {
-		t.Errorf("failed to unmarshal record config: %v, JSON: %s", err, string(record.Config))
-		return
-	}
-
-	if !reflect.DeepEqual(action, recordConfig) {
-		t.Errorf("record config does not match, want %v, got %v", action, recordConfig)
-	}
-}
-
-func CompareRecord(t *testing.T, want actiondb.PipeLineRecord, got actiondb.PipeLineRecord) {
-	t.Helper()
-
-	if want.PipeId != got.PipeId {
-		t.Errorf("Bad pipeId: want %s, got %s,", want.PipeId, got.PipeId)
-	}
-	if want.DeliveryId != got.DeliveryId {
-		t.Errorf("Bad deliveryId, want %s, got %s", want.DeliveryId, got.DeliveryId)
-	}
-	if want.Output != got.Output {
-		t.Errorf("Unexpted output in pipeline: want %v, got %v", want.Output, got.Output)
-	}
-	if want.Error != got.Error {
-		t.Errorf("Unexpted error value in created record: want %v, got %v", want.Error, got.Error)
-	}
-	if got.CreatedAt == 0 {
-		t.Errorf("Unexpted empty created date: want %d, got %d", want.CreatedAt, got.CreatedAt)
-	}
-	if want.EndedAt.Valid != got.EndedAt.Valid {
-		t.Errorf("Unexpted emptiness of ended date: want %t, got %t", want.EndedAt.Valid, got.EndedAt.Valid)
-	}
-}
-
 func TestActionDb(t *testing.T) {
 	pipeId := "123"
 	deliveryId := "321"
@@ -221,4 +183,42 @@ func TestActionDb(t *testing.T) {
 		CompareRecord(t, want, record)
 		CompareAction(t, action, record)
 	})
+}
+
+func CompareAction(t *testing.T, action config.Action, record actiondb.PipeLineRecord) {
+	t.Helper()
+
+	var recordConfig config.Action
+	err := json.Unmarshal(record.Config, &recordConfig)
+	if err != nil {
+		t.Errorf("failed to unmarshal record config: %v, JSON: %s", err, string(record.Config))
+		return
+	}
+
+	if !reflect.DeepEqual(action, recordConfig) {
+		t.Errorf("record config does not match, want %v, got %v", action, recordConfig)
+	}
+}
+
+func CompareRecord(t *testing.T, want actiondb.PipeLineRecord, got actiondb.PipeLineRecord) {
+	t.Helper()
+
+	if want.PipeId != got.PipeId {
+		t.Errorf("Bad pipeId: want %s, got %s,", want.PipeId, got.PipeId)
+	}
+	if want.DeliveryId != got.DeliveryId {
+		t.Errorf("Bad deliveryId, want %s, got %s", want.DeliveryId, got.DeliveryId)
+	}
+	if want.Output != got.Output {
+		t.Errorf("Unexpted output in pipeline: want %v, got %v", want.Output, got.Output)
+	}
+	if want.Error != got.Error {
+		t.Errorf("Unexpted error value in created record: want %v, got %v", want.Error, got.Error)
+	}
+	if got.CreatedAt == 0 {
+		t.Errorf("Unexpted empty created date: want %d, got %d", want.CreatedAt, got.CreatedAt)
+	}
+	if want.EndedAt.Valid != got.EndedAt.Valid {
+		t.Errorf("Unexpted emptiness of ended date: want %t, got %t", want.EndedAt.Valid, got.EndedAt.Valid)
+	}
 }

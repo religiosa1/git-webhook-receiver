@@ -7,24 +7,29 @@ import (
 	"strings"
 
 	"github.com/jmoiron/sqlx"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type LogsDb struct {
 	db *sqlx.DB
 }
 
-func New(dbFileName string) (db LogsDb, _ error) {
+func New(dbFileName string) (*LogsDb, error) {
+	if dbFileName == "" {
+		return nil, nil
+	}
+	db := LogsDb{}
 	pragmas := "?_journal_mode=WAL&_foreign_keys=1&_busy_timeout=5000&_cache_size=2000&_synchronous=NORMAL"
 	d, err := sqlx.Open("sqlite3", dbFileName+pragmas)
 	if err != nil {
-		return db, err
+		return nil, err
 	}
 	db.db = d
 	err = db.open() // trying to open and migrate if necessasry the db
 	if err != nil {
-		return db, err
+		return nil, err
 	}
-	return db, nil
+	return &db, nil
 }
 
 //go:embed Init.sql
