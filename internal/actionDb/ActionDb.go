@@ -55,6 +55,10 @@ func (d ActionDb) open() error {
 	return err
 }
 
+func (d ActionDb) Close() error {
+	return d.db.Close()
+}
+
 func (d ActionDb) CreateRecord(pipeId string, deliveryId string, conf config.Action) error {
 	configJson, err := json.Marshal(conf)
 	if err != nil {
@@ -94,8 +98,4 @@ func (d ActionDb) GetPipelineRecord(pipeId string) (PipeLineRecord, error) {
 	var record PipeLineRecord
 	err := d.db.Get(&record, "SELECT * from pipeline WHERE pipe_id=?;", pipeId)
 	return record, err
-}
-
-func (d ActionDb) Close() error {
-	return d.db.Close()
 }

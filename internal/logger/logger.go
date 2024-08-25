@@ -5,40 +5,27 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/religiosa1/webhook-receiver/internal/logsDb"
 	slogmulti "github.com/samber/slog-multi"
 )
 
-type ClosableLogger struct {
-	Logger *slog.Logger
-	file   *os.File
-}
-
-func (logger ClosableLogger) Close() {
-	if logger.file != nil {
-		logger.file.Close()
-	}
-}
-
-func SetupLogger(logLevel string, logFileName string) (ClosableLogger, error) {
+func SetupLogger(logLevel string, db *logsDb.LogsDb) (*slog.Logger, error) {
 	var programLevel = new(slog.LevelVar)
 	programLevel.Set(strLogLevelToEnumValue(logLevel))
 	hdlrOpts := &slog.HandlerOptions{Level: programLevel}
 
 	textHandler := slog.NewTextHandler(os.Stdout, hdlrOpts)
-	if logFileName == "" {
-		return ClosableLogger{slog.New(textHandler), nil}, nil
+
+	if db == nil {
+		return slog.New(textHandler), nil
 	}
 
-	file, err := os.OpenFile(logFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return ClosableLogger{}, err
-	}
+	logger := slog.New(slogmulti.Fanout(
+		textHandler,
+		NewDBLogger(db, hdlrOpts),
+	))
 
-	return ClosableLogger{
-		slog.New(slogmulti.Fanout(
-			textHandler,
-			slog.NewJSONHandler(file, hdlrOpts),
-		)), file}, nil
+	return logger, nil
 }
 
 func strLogLevelToEnumValue(logLevel string) slog.Level {

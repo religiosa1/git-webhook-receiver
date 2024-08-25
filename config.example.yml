@@ -27,6 +27,5 @@ projects:
           npm run build
         # Or to execute a script or program:
         # run: ["node", "--version"]
-actions_db_file: "actions.sqlite3" # 
-# TODO remove all that and log directly into SQLite instance instead of a file
-log_file: "deploy.log"
+actions_db_file: "actions.sqlite3"
+log_file: "logs.sqlite3" # By default logs storage is disabled! 

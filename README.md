@@ -110,6 +110,12 @@ Actions' output is stored in the sqlite db specified in the config file
 (`actions.sqlite3` by default) once completed. While the action is still going,
 data is stored in a temp file.
 
+All of the logs are stored in sqlite db with 
+[Write-Ahead Logging](https://www.sqlite.org/wal.html) turned on, which
+means, that besides the file specified in the config, the app will also create
+2 additional temporary files during the operation `<YOUR_FILE>-wal` and 
+`<YOUR_FILE>-shm` to ensure data ingtegrity during the write operations.
+
 <!-- TODO: CLI access for the db entries -->
 
 <!-- 

@@ -17,6 +17,7 @@ import (
 	"github.com/religiosa1/webhook-receiver/internal/config"
 	"github.com/religiosa1/webhook-receiver/internal/http/handlers"
 	"github.com/religiosa1/webhook-receiver/internal/logger"
+	"github.com/religiosa1/webhook-receiver/internal/logsDb"
 	"github.com/religiosa1/webhook-receiver/internal/whreceiver"
 )
 
@@ -39,22 +40,29 @@ func main() {
 	//==========================================================================
 	// Logger
 
-	actionsDb, err := actiondb.New(cfg.ActionsDbFile)
+	dbActions, err := actiondb.New(cfg.ActionsDbFile)
 	if err != nil {
 		log.Printf("Error opening actions db: %s", err)
 		os.Exit(errCodeLogger)
 	}
+	defer dbActions.Close()
 
-	closableLogger, err := logger.SetupLogger(cfg.LogLevel, cfg.LogFile)
+	// TODO conditional open db
+	dbLogs, err := logsDb.New(cfg.LogFile)
+	if err != nil {
+		log.Printf("Error opening logs db: %s", err)
+		os.Exit(errCodeLogger)
+	}
+	defer dbLogs.Close()
+
+	logger, err := logger.SetupLogger(cfg.LogLevel, &dbLogs)
 	if err != nil {
 		log.Printf("Error setting up the logger: %s", err)
 		os.Exit(errCodeLogger)
 	}
-	defer closableLogger.Close()
-	logger := closableLogger.Logger
 	logger.Debug("configuration loaded", slog.Any("config", cfg))
 
-	actionRunner := ActionRunner.New(context.Background(), &actionsDb)
+	actionRunner := ActionRunner.New(context.Background(), &dbActions)
 
 	//==========================================================================
 	// HTTP-Server
@@ -92,7 +100,8 @@ func main() {
 		}
 	}()
 	actionRunner.Wait()
-	actionsDb.Close()
+	dbActions.Close()
+	dbLogs.Close()
 
 	logger.Info("Done")
 }
