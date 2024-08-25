@@ -9,16 +9,16 @@ import (
 	"github.com/religiosa1/webhook-receiver/internal/logsDb"
 )
 
-func TestLogDb(t *testing.T) {
-	testEntry := logsDb.LogEntry{
-		Level:      int(slog.LevelInfo),
-		Project:    sql.NullString{Valid: true, String: "testProject"},
-		DeliveryId: sql.NullString{Valid: true, String: "testDeliveryId"},
-		PipeId:     sql.NullString{Valid: true, String: "testPipeId"},
-		Message:    "testMessage",
-		Data:       "testData",
-	}
+var testEntry = logsDb.LogEntry{
+	Level:      int(slog.LevelInfo),
+	Project:    sql.NullString{Valid: true, String: "testProject"},
+	DeliveryId: sql.NullString{Valid: true, String: "testDeliveryId"},
+	PipeId:     sql.NullString{Valid: true, String: "testPipeId"},
+	Message:    "testMessage",
+	Data:       "testData",
+}
 
+func TestLogDb(t *testing.T) {
 	t.Run("Creates a db", func(t *testing.T) {
 		db, err := logsDb.New(":memory:")
 		if err != nil {
@@ -135,8 +135,157 @@ func TestLogDb(t *testing.T) {
 		}
 		CompareEntries(t, testEntry3, page2[0])
 	})
+}
 
-	// TODO filtering queries tests
+func TestLogDbFiltering(t *testing.T) {
+	t.Run("Single item-filtering", func(t *testing.T) {
+		db, err := logsDb.New(":memory:")
+		if err != nil {
+			t.Errorf("Error while opening a db: %s", err)
+		}
+
+		projectEntry := testEntry
+		projectEntry.Project = sql.NullString{Valid: true, String: "project-search"}
+
+		deliveryEntry := testEntry
+		deliveryEntry.DeliveryId = sql.NullString{Valid: true, String: "delivery-search"}
+
+		pipeEntry := testEntry
+		pipeEntry.PipeId = sql.NullString{Valid: true, String: "pipe-search"}
+
+		messageEntry := testEntry
+		messageEntry.Message = "message-search"
+
+		allEntries := []logsDb.LogEntry{
+			testEntry,
+			projectEntry,
+			deliveryEntry,
+			pipeEntry,
+			messageEntry,
+		}
+		for _, entry := range allEntries {
+			err := db.CreateEntry(entry)
+			if err != nil {
+				t.Errorf("error while creating an entry %v: %s", entry, err)
+			}
+		}
+
+		s1, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{Project: "project-search"})
+		if err != nil {
+			t.Errorf("Error while retrieving entries: %s", err)
+		}
+		if l := len(s1); l != 1 {
+			t.Errorf("Unexpected number of entries returned, want 1, got %d", l)
+		}
+		CompareEntries(t, projectEntry, s1[0])
+
+		s2, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{DeliveryId: "delivery-search"})
+		if err != nil {
+			t.Errorf("Error while retrieving entries: %s", err)
+		}
+		if l := len(s2); l != 1 {
+			t.Errorf("Unexpected number of entries returned, want 1, got %d", l)
+		}
+		CompareEntries(t, deliveryEntry, s2[0])
+
+		s3, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{PipeId: "pipe-search"})
+		if err != nil {
+			t.Errorf("Error while retrieving entries: %s", err)
+		}
+		if l := len(s3); l != 1 {
+			t.Errorf("Unexpected number of entries returned, want 1, got %d", l)
+		}
+		CompareEntries(t, pipeEntry, s3[0])
+
+		s4, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{Message: "message-search"})
+		if err != nil {
+			t.Errorf("Error while retrieving entries: %s", err)
+		}
+		if l := len(s4); l != 1 {
+			t.Errorf("Unexpected number of entries returned, want 1, got %d", l)
+		}
+		CompareEntries(t, messageEntry, s4[0])
+	})
+
+	t.Run("All of filtering conditions must match", func(t *testing.T) {
+		db, err := logsDb.New(":memory:")
+		if err != nil {
+			t.Errorf("Error while opening a db: %s", err)
+		}
+
+		pipeId := "test-pipeid-search"
+		delivery := "test-delivery-search"
+
+		entryA := testEntry
+		entryA.PipeId = sql.NullString{Valid: true, String: pipeId}
+
+		entryB := testEntry
+		entryB.DeliveryId = sql.NullString{Valid: true, String: delivery}
+
+		entryAB := testEntry
+		entryAB.PipeId = sql.NullString{Valid: true, String: pipeId}
+		entryAB.DeliveryId = sql.NullString{Valid: true, String: delivery}
+
+		allEntries := []logsDb.LogEntry{
+			testEntry,
+			entryA,
+			entryB,
+			entryAB,
+		}
+		for _, entry := range allEntries {
+			err := db.CreateEntry(entry)
+			if err != nil {
+				t.Errorf("error while creating an entry %v: %s", entry, err)
+			}
+		}
+
+		s1, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{DeliveryId: delivery, PipeId: pipeId})
+		if err != nil {
+			t.Errorf("Error while retrieving entries: %s", err)
+		}
+		if l := len(s1); l != 1 {
+			t.Errorf("Unexpected number of entries returned, want 1, got %d", l)
+		}
+		CompareEntries(t, entryAB, s1[0])
+	})
+
+	t.Run("Any of the log levels can match", func(t *testing.T) {
+		db, err := logsDb.New(":memory:")
+		if err != nil {
+			t.Errorf("Error while opening a db: %s", err)
+		}
+
+		entryA := testEntry
+		entryA.Level = int(slog.LevelError)
+
+		entryB := testEntry
+		entryB.Level = int(slog.LevelWarn)
+
+		allEntries := []logsDb.LogEntry{
+			testEntry,
+			entryA,
+			entryB,
+		}
+		for _, entry := range allEntries {
+			err := db.CreateEntry(entry)
+			if err != nil {
+				t.Errorf("error while creating an entry %v: %s", entry, err)
+			}
+		}
+
+		s1, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{Levels: []int{
+			int(slog.LevelError),
+			int(slog.LevelWarn),
+		}})
+		if err != nil {
+			t.Errorf("Error while retrieving entries: %s", err)
+		}
+		if l := len(s1); l != 2 {
+			t.Errorf("Unexpected number of entries returned, want 2, got %d", l)
+		}
+		CompareEntries(t, entryA, s1[0])
+		CompareEntries(t, entryB, s1[1])
+	})
 }
 
 func CompareEntries(t *testing.T, want logsDb.LogEntry, got logsDb.LogEntry) bool {
