@@ -8,12 +8,13 @@ In a nutshell:
 
 - you [deploy](#installation) it to your server
 - (optional but recommended) install an SSL cert or wrap it with
-  a [reverse proxy](./docs/nginx-setup.md) such as nginx or caddy, to have encryption
+  a [reverse proxy](./docs/nginx-setup.md) such as nginx or caddy, to have 
+  encryption
 - create a [config file](#config-file) and add your projects and their 
   corresponding build scripts/actions (either as a standalone script 
   or [crossplatform inline scripts](#inline-scripts-and-standalone-scripts))
-- set webhooks for those repo in their git services (github, gitea, etc.) to post
-  to {YOUR_HOST}/{PROJECT_NAME}
+- set webhooks for those repo in their git services (github, gitea, etc.) to 
+  post to {YOUR_HOST}/{PROJECT_NAME}
 - start the service, it will listen for the webhook posts and runs the actions
   you described in the config (building your projects or whatever) when those 
   webhooks are fired from git
@@ -96,7 +97,8 @@ If you need something more complicated, it's probably better to use `run` field
 instead of `script` in action config, allowing you to run a standalone script
 (bash, python, whatever you like and whatever is supported by your system).
 It accepts its parameters in exec form, as an array of argv strings, in the same
-way as docker's `CMD` [does](https://docs.docker.com/reference/dockerfile/#exec-form):
+way as docker's `CMD` 
+[does](https://docs.docker.com/reference/dockerfile/#exec-form):
 
 Example:
 
@@ -105,6 +107,11 @@ run: ["python", "./path/to/your/script", "--some-arg"]
 ```
 
 ## Logging
+
+By default, besides stdout logs are also stored in the sqlite file, specified
+in the `logs_db_file` of the config (`logs.sqlite3` by default). You can disable
+logging this functionality by passing an empty string or null-value in 
+the config.
 
 Actions' output is stored in the sqlite db specified in the config file 
 (`actions.sqlite3` by default) once completed. While the action is still going,
@@ -121,11 +128,11 @@ means, that besides the file specified in the config, the app will also create
 <!-- 
 TODO implement this functionality for actionsDb:
 
-Only N latest actions are stored in the directory, with N specified in the config
-as `max_output_files` field. When number of output files exceeds this number,
-the oldest actions (by their file LastModified date) are removed.
-`max_output_files` defaults to 10000, setting it as 0 or negative value turns off
-this functionality. -->
+Only N latest actions are stored in the directory, with N specified in the 
+config as `max_output_files` field. When number of output files exceeds this 
+number, the oldest actions (by their file LastModified date) are removed.
+`max_output_files` defaults to 10000, setting it as 0 or negative value turns 
+off this functionality. -->
 
 ## Contribution
 
