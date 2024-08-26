@@ -97,14 +97,22 @@ func main() {
 	}
 	logger.Info("Server closed")
 
-	logger.Info("Waiting for actions to complete... Press ctrl+c again to forcefully close")
 	go func() {
 		select {
 		case <-actionRunner.Done():
-			fmt.Println("Action completed")
+			// Action completed successfully within the timeout.
+		case <-time.After(500 * time.Millisecond):
+			logger.Info("Waiting for actions to complete... Press ctrl+c again to forcefully close")
+			<-actionRunner.Done()
+		}
+	}()
+	go func() {
+		select {
+		case <-actionRunner.Done():
+			logger.Info("Actions completed")
 		case <-interrupt:
 			actionRunner.Cancel()
-			fmt.Println("Action interrupted")
+			logger.Warn("Actions interrupted")
 		}
 	}()
 	actionRunner.Wait()
@@ -114,8 +122,6 @@ func main() {
 	if dbLogs != nil {
 		dbLogs.Close()
 	}
-
-	logger.Info("Done")
 }
 
 func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig, logger *slog.Logger) (err error) {
