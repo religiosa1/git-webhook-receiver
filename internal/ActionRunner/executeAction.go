@@ -15,10 +15,12 @@ func (runner ActionRunner) executeAction(
 	pipeLogger := logger.With(slog.String("pipeId", actionDescriptor.PipeId))
 	pipeLogger.Info("Running action", slog.Int("action_index", actionDescriptor.Index))
 
-	err := runner.actionsDb.CreateRecord(actionDescriptor.PipeId, actionDescriptor.DeliveryId, action)
-	if err != nil {
-		pipeLogger.Error("Error creating pipeline recor din the db", slog.Any("error", err))
-		return
+	if runner.actionsDb != nil {
+		err := runner.actionsDb.CreateRecord(actionDescriptor.PipeId, actionDescriptor.DeliveryId, action)
+		if err != nil {
+			pipeLogger.Error("Error creating pipeline recor din the db", slog.Any("error", err))
+			return
+		}
 	}
 
 	output, err := os.CreateTemp("", actionDescriptor.PipeId+"-*.output.tmp")
@@ -58,7 +60,13 @@ func (runner ActionRunner) executeAction(
 		logger.Error("Error while reading output file's content", slog.Any("error", err))
 	}
 
-	runner.actionsDb.CloseRecord(actionDescriptor.PipeId, actionErr, content)
+	if runner.actionsDb != nil {
+		err := runner.actionsDb.CloseRecord(actionDescriptor.PipeId, actionErr, content)
+		if err != nil {
+			pipeLogger.Error("Error closing action's db record", slog.Any("error", err))
+			return
+		}
+	}
 }
 
 func readOutputFile(output *os.File) (string, error) {

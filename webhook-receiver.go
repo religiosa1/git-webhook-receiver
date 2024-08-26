@@ -45,7 +45,11 @@ func main() {
 		log.Printf("Error opening actions db: %s", err)
 		os.Exit(errCodeLogger)
 	}
-	defer dbActions.Close()
+	defer func() {
+		if dbActions != nil {
+			dbActions.Close()
+		}
+	}()
 
 	dbLogs, err := logsDb.New(cfg.LogsDbFile)
 	if err != nil {
@@ -66,7 +70,7 @@ func main() {
 	// TODO redact all of the secerets and auth tokens from the log
 	logger.Debug("configuration loaded", slog.Any("config", cfg))
 
-	actionRunner := ActionRunner.New(context.Background(), &dbActions)
+	actionRunner := ActionRunner.New(context.Background(), dbActions)
 
 	//==========================================================================
 	// HTTP-Server
@@ -104,7 +108,9 @@ func main() {
 		}
 	}()
 	actionRunner.Wait()
-	dbActions.Close()
+	if dbActions != nil {
+		dbActions.Close()
+	}
 	if dbLogs != nil {
 		dbLogs.Close()
 	}

@@ -13,7 +13,7 @@ type Config struct {
 	Host          string             `yaml:"host" env:"HOST" env-default:"localhost"`
 	Port          int16              `yaml:"port" env:"PORT" env-default:"9090"`
 	LogLevel      string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
-	LogsDbFile    string             `yaml:"logs_db_file" env:"LOGS_DB_FILE" env-default:"logs.sqlite3"`
+	LogsDbFile    string             `yaml:"logs_db_file" env:"LOGS_DB_FILE"`
 	ActionsDbFile string             `yaml:"actions_db_file" env:"ACTIONS_DB_FILE" env-default:"actions.sqlite3"`
 	Ssl           SslConfig          `yaml:"ssl" env-prefix:"SSL__"`
 	Projects      map[string]Project `yaml:"projects" env-required:"true"`

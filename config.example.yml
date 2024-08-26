@@ -27,5 +27,6 @@ projects:
           npm run build
         # Or to execute a script or program:
         # run: ["node", "--version"]
+ # Defaults to "actions.sqlite3", use empty string or null to disable actions result storage
 actions_db_file: "actions.sqlite3"
-logs_db_file: "logs.sqlite3" # Can be set to empty string or null to siable logs storage, defaults to logs.sqlite3
+logs_db_file: "logs.sqlite3" # Storage of application logs, disabled by default
