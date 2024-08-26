@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"sync"
 
-	actiondb "github.com/religiosa1/webhook-receiver/internal/actionDb"
+	actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
 )
 
 type ActionArgs struct {

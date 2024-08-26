@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/religiosa1/webhook-receiver/internal/config"
-	"github.com/religiosa1/webhook-receiver/internal/whreceiver"
+	"github.com/religiosa1/git-webhook-receiver/internal/config"
+	"github.com/religiosa1/git-webhook-receiver/internal/whreceiver"
 )
 
 func TestGitea(t *testing.T) {

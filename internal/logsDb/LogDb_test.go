@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/religiosa1/webhook-receiver/internal/logsDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/logsDb"
 )
 
 var testEntry = logsDb.LogEntry{

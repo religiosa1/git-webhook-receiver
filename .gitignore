@@ -2,8 +2,8 @@ actions_output
 config.yml
 deploy.log
 index.js
-webhook-receiver.exe
-webhook-receiver
+git-webhook-receiver.exe
+git-webhook-receiver
 *.sqlite3
 *.sqlite3-wal
 *.sqlite3-shm

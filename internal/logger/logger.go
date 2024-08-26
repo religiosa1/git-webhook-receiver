@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/religiosa1/webhook-receiver/internal/logsDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/logsDb"
 	slogmulti "github.com/samber/slog-multi"
 )
 

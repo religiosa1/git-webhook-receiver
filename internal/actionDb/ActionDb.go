@@ -9,7 +9,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/religiosa1/webhook-receiver/internal/config"
+	"github.com/religiosa1/git-webhook-receiver/internal/config"
 )
 
 type PipeLineRecord struct {

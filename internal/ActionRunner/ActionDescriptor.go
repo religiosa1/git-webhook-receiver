@@ -1,6 +1,6 @@
 package ActionRunner
 
-import "github.com/religiosa1/webhook-receiver/internal/config"
+import "github.com/religiosa1/git-webhook-receiver/internal/config"
 
 type ActionIdentifier struct {
 	Index      int    `json:"actionIdx"`

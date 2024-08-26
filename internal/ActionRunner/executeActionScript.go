@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/religiosa1/webhook-receiver/internal/config"
+	"github.com/religiosa1/git-webhook-receiver/internal/config"
 	"mvdan.cc/sh/v3/interp"
 	"mvdan.cc/sh/v3/syntax"
 )

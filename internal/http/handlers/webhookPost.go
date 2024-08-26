@@ -8,9 +8,9 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/religiosa1/webhook-receiver/internal/ActionRunner"
-	"github.com/religiosa1/webhook-receiver/internal/config"
-	"github.com/religiosa1/webhook-receiver/internal/whreceiver"
+	"github.com/religiosa1/git-webhook-receiver/internal/ActionRunner"
+	"github.com/religiosa1/git-webhook-receiver/internal/config"
+	"github.com/religiosa1/git-webhook-receiver/internal/whreceiver"
 )
 
 func HandleWebhookPost(

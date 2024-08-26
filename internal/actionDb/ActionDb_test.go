@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"testing"
 
-	actiondb "github.com/religiosa1/webhook-receiver/internal/actionDb"
-	"github.com/religiosa1/webhook-receiver/internal/config"
+	actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/config"
 )
 
 func TestActionDb(t *testing.T) {

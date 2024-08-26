@@ -7,10 +7,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/religiosa1/webhook-receiver/internal/ActionRunner"
-	"github.com/religiosa1/webhook-receiver/internal/config"
-	"github.com/religiosa1/webhook-receiver/internal/http/handlers"
-	"github.com/religiosa1/webhook-receiver/internal/whreceiver"
+	"github.com/religiosa1/git-webhook-receiver/internal/ActionRunner"
+	"github.com/religiosa1/git-webhook-receiver/internal/config"
+	"github.com/religiosa1/git-webhook-receiver/internal/http/handlers"
+	"github.com/religiosa1/git-webhook-receiver/internal/whreceiver"
 )
 
 type ResponseStats struct {

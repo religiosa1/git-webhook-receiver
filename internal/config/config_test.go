@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/religiosa1/webhook-receiver/internal/config"
+	"github.com/religiosa1/git-webhook-receiver/internal/config"
 )
 
 func tmpConfigFile(t *testing.T, contents string) string {

@@ -1,4 +1,4 @@
-# git webhook-receiver
+# git webhook receiver
 
 Small service, that listens for the incoming webhhok HTTP-post from a git 
 providers (gitea, github, gitlab, etc.) for one or many projects and runs 
@@ -81,7 +81,7 @@ Snap and flatpak package support is planned for 1.0 release. -->
 To build the app, you'll require [go](https://go.dev/) version 1.22 or higher.
 
 ```sh
-go install github.com/religiosa1/webhook-receiver
+go install github.com/religiosa1/git-webhook-receiver
 ```
 
 Or you can clone the repo, and run the following command in its root dir:
@@ -181,4 +181,4 @@ write in the issues section or create a PR.
 
 ## License
 
-webhook-reciever is MIT licensed.
+git-webhook-reciever is MIT licensed.

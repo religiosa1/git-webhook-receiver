@@ -12,13 +12,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/religiosa1/webhook-receiver/internal/ActionRunner"
-	actiondb "github.com/religiosa1/webhook-receiver/internal/actionDb"
-	"github.com/religiosa1/webhook-receiver/internal/config"
-	"github.com/religiosa1/webhook-receiver/internal/http/handlers"
-	"github.com/religiosa1/webhook-receiver/internal/logger"
-	"github.com/religiosa1/webhook-receiver/internal/logsDb"
-	"github.com/religiosa1/webhook-receiver/internal/whreceiver"
+	"github.com/religiosa1/git-webhook-receiver/internal/ActionRunner"
+	actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/config"
+	"github.com/religiosa1/git-webhook-receiver/internal/http/handlers"
+	"github.com/religiosa1/git-webhook-receiver/internal/logger"
+	"github.com/religiosa1/git-webhook-receiver/internal/logsDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/whreceiver"
 )
 
 const errCodeCreate int = 2

@@ -3,7 +3,7 @@ package whreceiver
 import (
 	"net/http"
 
-	"github.com/religiosa1/webhook-receiver/internal/config"
+	"github.com/religiosa1/git-webhook-receiver/internal/config"
 )
 
 type WebhookPostRequest struct {

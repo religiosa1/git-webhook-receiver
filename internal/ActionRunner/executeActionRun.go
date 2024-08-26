@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"syscall"
 
-	"github.com/religiosa1/webhook-receiver/internal/config"
+	"github.com/religiosa1/git-webhook-receiver/internal/config"
 )
 
 func executeActionRun(ctx context.Context, action config.Action, sysProcAttr *syscall.SysProcAttr, output io.Writer) error {
