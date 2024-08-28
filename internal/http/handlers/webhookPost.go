@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/google/uuid"
+	"github.com/oklog/ulid/v2"
 	"github.com/religiosa1/git-webhook-receiver/internal/ActionRunner"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
 	"github.com/religiosa1/git-webhook-receiver/internal/whreceiver"
@@ -107,7 +107,7 @@ func getProjectsActionsForWebhookPost(project config.Project, webhookInfo *whrec
 			continue
 		}
 		actions = append(actions, ActionRunner.ActionDescriptor{
-			ActionIdentifier: ActionRunner.ActionIdentifier{Index: index, PipeId: uuid.NewString(), DeliveryId: webhookInfo.DeliveryID},
+			ActionIdentifier: ActionRunner.ActionIdentifier{Index: index, PipeId: ulid.Make().String(), DeliveryId: webhookInfo.DeliveryID},
 			Action:           action,
 		})
 	}

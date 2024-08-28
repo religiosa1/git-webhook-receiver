@@ -3,10 +3,10 @@ module github.com/religiosa1/git-webhook-receiver
 go 1.22.0
 
 require (
-	github.com/google/uuid v1.6.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/mattn/go-sqlite3 v1.14.22
+	github.com/oklog/ulid/v2 v2.1.0
 	github.com/samber/slog-multi v1.0.2
 	mvdan.cc/sh/v3 v3.8.0
 )
