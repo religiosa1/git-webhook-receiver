@@ -23,7 +23,7 @@ type Receiver interface {
 	Authorize(req WebhookPostRequest, auth string) (bool, error)
 	VerifySignature(req WebhookPostRequest, secret string) (bool, error)
 	IsPingRequest(req WebhookPostRequest) bool
-	GetWebhookInfo(WebhookPostRequest) (postInfo *WebhookPostInfo, err error)
+	GetWebhookInfo(req WebhookPostRequest) (*WebhookPostInfo, error)
 }
 
 func New(project config.Project) Receiver {
@@ -33,6 +33,9 @@ func New(project config.Project) Receiver {
 		receiver = GiteaReceiver{project}
 	case "github":
 		receiver = GithubReceiver{project}
+	case "gitlab":
+		receiver = GitlabReceiver{project}
 	}
+
 	return receiver
 }

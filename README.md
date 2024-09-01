@@ -13,8 +13,8 @@ In a nutshell:
 - create a [config file](#config-file) and add your projects and their 
   corresponding build scripts/actions (either as a standalone script 
   or [crossplatform inline scripts](#inline-scripts-and-standalone-scripts))
-- set webhooks for those repo in their git services (github, gitea, etc.) to 
-  post to {YOUR_HOST}/{PROJECT_NAME}
+- set webhooks for those repo in their git services (github, gitea, gitlab, 
+  etc.) to post to {YOUR_HOST}/{PROJECT_NAME}
 - start the service, it will listen for the webhook posts and runs the actions
   you described in the config (building your projects or whatever) when those 
   webhooks are fired from git
@@ -66,6 +66,13 @@ see a list of all available configuration fields.
 For security reason, it's recommended to always provide `secret` or at least
 `authorization` (in case of gitea provider) param for every action. `secret` 
 can also protect against MiM attacks, ensuring the payload wasn't tampered.
+
+Gitlab currently 
+[doesn't sign](https://gitlab.com/gitlab-org/gitlab/-/issues/19367) its 
+requests, so only `authorization` is availabe for gitlab receivers, 
+while Github only supports request signature and not authorization
+headers, so only `secret` for Github receivers. Gitea supports both 
+authorization and signature verification.
 
 Most of the config values can be provided via ENV variables, please consider
 if it makes sense for your application to provide secrets in this manner.
