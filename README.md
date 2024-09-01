@@ -79,6 +79,9 @@ Snap and flatpak package support is planned for 1.0 release. -->
 ### Build from source
 
 To build the app, you'll require [go](https://go.dev/) version 1.22 or higher.
+As the app stores its data in sqlite3 database via [go-sqlite3](https://github.com/mattn/go-sqlite3)
+you also need a `gcc` compiler installed on your system and have `CGO_ENABLED=1`
+env variable set.
 
 ```sh
 go install github.com/religiosa1/git-webhook-receiver
