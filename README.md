@@ -163,7 +163,18 @@ means, that besides the file specified in the config, the app will also create
 2 additional temporary files during the operation `<YOUR_FILE>-wal` and 
 `<YOUR_FILE>-shm` to ensure data ingtegrity during the write operations.
 
-<!-- TODO: CLI access for the db entries -->
+You can use `pipeline` subcommand to check the last or given pipeline:
+
+```sh
+git-webhook-receiever pipeline
+# OR
+git-webhook-receiever pipeline <PIPE_ID>
+```
+
+Run `git-webhook-receiever pipeline --help` to see the list of all available
+flags.
+
+Run `get-webhook-receiver ls` to see a list of the last N pipelines. 
 
 <!-- 
 TODO implement this functionality for actionsDb:

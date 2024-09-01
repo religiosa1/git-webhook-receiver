@@ -100,6 +100,10 @@ func (d ActionDb) CloseRecord(pipeId string, actionErr error, output string) err
 
 func (d ActionDb) GetPipelineRecord(pipeId string) (PipeLineRecord, error) {
 	var record PipeLineRecord
+	if pipeId == "" {
+		err := d.db.Get(&record, "SELECT * FROM pipeline ORDER BY created_at DESC LIMIT 1;")
+		return record, err
+	}
 	err := d.db.Get(&record, "SELECT * FROM pipeline WHERE pipe_id=?;", pipeId)
 	return record, err
 }

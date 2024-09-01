@@ -11,9 +11,8 @@ import (
 )
 
 type ListPipelinesArgs struct {
-	File   string `help:"Actions db file (default to the file, specified in config)" type:"path"`
-	Limit  int    `short:"l" default:"20" help:"Maximum number of pipeline record to output"`
-	Format string `default:"short" help:"Record display type"`
+	File  string `help:"Actions db file (default to the file, specified in config)" type:"path"`
+	Limit int    `short:"l" default:"20" help:"Maximum number of pipeline record to output"`
 }
 
 func ListPipelines(cfg config.Config, args ListPipelinesArgs) {
@@ -32,13 +31,7 @@ func ListPipelines(cfg config.Config, args ListPipelinesArgs) {
 		os.Exit(ExitCodeActionsDb)
 	}
 
-	switch args.Format {
-	case "short":
-		FormatShort(pipeLines)
-	default:
-		log.Printf("Unkown display format '%s'\n", args.Format)
-		os.Exit(1)
-	}
+	FormatShort(pipeLines)
 }
 
 func FormatShort(pipelines []actiondb.PipeLineRecord) {

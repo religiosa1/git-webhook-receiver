@@ -10,8 +10,8 @@ import (
 )
 
 type PipelineArgs struct {
+	PipeId     string `arg:"" optional:"" name:"pipeId" help:"Id of the pipeline output to extract (if empty returns the last created pipeline)"`
 	File       string `short:"f" help:"Actions db file (default to the file, specified in config)" type:"path"`
-	PipeId     string `arg:"" name:"pipeId" help:"Id of the pipeline output to extract"`
 	Info       bool   `short:"i" help:"Display only pipeline general info, without its output"`
 	OutputOnly bool   `short:"o" help:"Display only pipiline output, without general info"`
 }

@@ -12,8 +12,8 @@ import (
 var CLI struct {
 	ConfigPath    string                `short:"c" help:"Configuration file name"`
 	Serve         struct{}              `cmd:"" default:"1" help:"Run the webhook receiver server (default mode)"`
-	Pipeline      cmd.PipelineArgs      `cmd:"" help:"Display pipeline output"`
-	ListPipelines cmd.ListPipelinesArgs `cmd:"" help:"Display a list of last N pipelines"`
+	Pipeline      cmd.PipelineArgs      `cmd:"" aliases:"pl,get" help:"Display pipeline output"`
+	ListPipelines cmd.ListPipelinesArgs `cmd:"" aliases:"ls" help:"Display a list of last N pipelines"`
 }
 
 func main() {
@@ -25,10 +25,8 @@ func main() {
 		os.Exit(cmd.ExitReadConfig)
 	}
 
-	fmt.Printf("COMMAND: %s\n", args.Command())
-
 	switch args.Command() {
-	case "pipeline <pipeId>":
+	case "pipeline", "pipeline <pipeId>":
 		cmd.Pipeline(cfg, CLI.Pipeline)
 	case "list-pipelines":
 		cmd.ListPipelines(cfg, CLI.ListPipelines)
