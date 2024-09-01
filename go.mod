@@ -3,6 +3,7 @@ module github.com/religiosa1/git-webhook-receiver
 go 1.22.0
 
 require (
+	github.com/alecthomas/kong v0.9.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/mattn/go-sqlite3 v1.14.22

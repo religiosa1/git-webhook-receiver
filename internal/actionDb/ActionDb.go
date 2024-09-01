@@ -83,7 +83,7 @@ func (d ActionDb) CloseRecord(pipeId string, actionErr error, output string) err
 		actionErrValue.String = actionErr.Error()
 	}
 
-	query := `UPDATE pipeline SET error = ?, output = ?, ended_at = ? WHERE pipe_id = ? AND ended_at is NULL;`
+	query := `UPDATE pipeline SET error = ?, output = ?, ended_at = ? WHERE pipe_id = ? AND ended_at IS NULL;`
 	result, err := d.db.Exec(query, actionErrValue, output, time.Now().UTC().Unix(), pipeId)
 	if err != nil {
 		return fmt.Errorf("error while updating pipeline record: %w", err)
@@ -100,6 +100,13 @@ func (d ActionDb) CloseRecord(pipeId string, actionErr error, output string) err
 
 func (d ActionDb) GetPipelineRecord(pipeId string) (PipeLineRecord, error) {
 	var record PipeLineRecord
-	err := d.db.Get(&record, "SELECT * from pipeline WHERE pipe_id=?;", pipeId)
+	err := d.db.Get(&record, "SELECT * FROM pipeline WHERE pipe_id=?;", pipeId)
 	return record, err
+}
+
+func (d ActionDb) ListPipelineRecords(n int) ([]PipeLineRecord, error) {
+	var records []PipeLineRecord
+	query := "SELECT * FROM (SELECT id, pipe_id, delivery_id, error, created_at, ended_at FROM pipeline ORDER BY created_at DESC LIMIT ?) ORDER BY created_at ASC;"
+	err := d.db.Select(&records, query, n)
+	return records, err
 }
