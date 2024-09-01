@@ -15,6 +15,7 @@ import (
 type PipeLineRecord struct {
 	Id         int64           `db:"id"`
 	PipeId     string          `db:"pipe_id" json:"pipeId"`
+	Project    string          `db:"project" json:"project"`
 	DeliveryId string          `db:"delivery_id" json:"deliveryId"`
 	Config     json.RawMessage `db:"config" json:"config"`
 	Error      sql.NullString  `db:"error" json:"error,omitempty"`
@@ -63,13 +64,13 @@ func (d ActionDb) Close() error {
 	return d.db.Close()
 }
 
-func (d ActionDb) CreateRecord(pipeId string, deliveryId string, conf config.Action) error {
+func (d ActionDb) CreateRecord(pipeId string, project string, deliveryId string, conf config.Action) error {
 	configJson, err := json.Marshal(conf)
 	if err != nil {
 		return err
 	}
-	query := `INSERT INTO pipeline (pipe_id, delivery_id, config) VALUES (?, ?, ?)`
-	_, err = d.db.Exec(query, pipeId, deliveryId, configJson)
+	query := `INSERT INTO pipeline (pipe_id, project, delivery_id, config) VALUES (?, ?, ?, ?)`
+	_, err = d.db.Exec(query, pipeId, project, deliveryId, configJson)
 	return err
 }
 
@@ -110,7 +111,16 @@ func (d ActionDb) GetPipelineRecord(pipeId string) (PipeLineRecord, error) {
 
 func (d ActionDb) ListPipelineRecords(n int) ([]PipeLineRecord, error) {
 	var records []PipeLineRecord
-	query := "SELECT * FROM (SELECT id, pipe_id, delivery_id, error, created_at, ended_at FROM pipeline ORDER BY created_at DESC LIMIT ?) ORDER BY created_at ASC;"
+	query := `
+SELECT * FROM (
+	SELECT 
+		id, pipe_id, project, delivery_id, error, created_at, ended_at 
+	FROM 
+		pipeline 
+	ORDER BY 
+		created_at DESC 
+	LIMIT ?
+) ORDER BY created_at ASC;`
 	err := d.db.Select(&records, query, n)
 	return records, err
 }

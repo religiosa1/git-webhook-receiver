@@ -56,6 +56,7 @@ func displayPipeDetails(pipe actiondb.PipeLineRecord) {
 	}
 
 	fmt.Printf("pipeId        : %s\n", pipe.PipeId)
+	fmt.Printf("project       : %s\n", pipe.Project)
 	fmt.Printf("deliveryId    : %s\n", pipe.DeliveryId)
 	fmt.Printf("config        : %s\n", pipe.Config)
 	fmt.Printf("error         : %s\n", pipe.Error.String)

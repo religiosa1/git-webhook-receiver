@@ -31,10 +31,10 @@ func ListPipelines(cfg config.Config, args ListPipelinesArgs) {
 		os.Exit(ExitCodeActionsDb)
 	}
 
-	FormatShort(pipeLines)
+	formatShort(pipeLines)
 }
 
-func FormatShort(pipelines []actiondb.PipeLineRecord) {
+func formatShort(pipelines []actiondb.PipeLineRecord) {
 	for _, pl := range pipelines {
 		createAt := time.Unix(pl.CreatedAt, 0).Format(time.DateTime)
 
@@ -51,6 +51,6 @@ func FormatShort(pipelines []actiondb.PipeLineRecord) {
 		} else {
 			result = "ok"
 		}
-		fmt.Printf("%s-%s %s %s\n", createAt, endedAt, pl.PipeId, result)
+		fmt.Printf("%s-%s %s %s %s\n", createAt, endedAt, pl.PipeId, pl.Project, result)
 	}
 }

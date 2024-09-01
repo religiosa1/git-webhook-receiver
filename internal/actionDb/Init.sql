@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS pipeline (
   id INTEGER PRIMARY KEY NOT NULL,
   pipe_id TEXT NOT NULL,
+  project TEXT NOT NULL,
   delivery_id TEXT NOT NULL,
   config BLOB NOT NULL,
   error TEXT,

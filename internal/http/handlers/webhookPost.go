@@ -17,6 +17,7 @@ func HandleWebhookPost(
 	actionsCh chan ActionRunner.ActionArgs,
 	logger *slog.Logger,
 	cfg config.Config,
+	projectName string,
 	project config.Project,
 	receiver whreceiver.Receiver,
 ) http.HandlerFunc {
@@ -60,7 +61,7 @@ func HandleWebhookPost(
 			return
 		}
 
-		actions := getProjectsActionsForWebhookPost(project, webhookInfo)
+		actions := getProjectsActionsForWebhookPost(projectName, project, webhookInfo)
 		if len(actions) == 0 {
 			deliveryLogger.Info("No applicable actions found in webhook post")
 			w.WriteHeader(http.StatusOK)
@@ -97,7 +98,7 @@ func getWebhookErrorCode(err error) ErrorInfo {
 	return ErrorInfo{http.StatusBadRequest, err.Error()}
 }
 
-func getProjectsActionsForWebhookPost(project config.Project, webhookInfo *whreceiver.WebhookPostInfo) []ActionRunner.ActionDescriptor {
+func getProjectsActionsForWebhookPost(projectName string, project config.Project, webhookInfo *whreceiver.WebhookPostInfo) []ActionRunner.ActionDescriptor {
 	actions := make([]ActionRunner.ActionDescriptor, 0)
 	for index, action := range project.Actions {
 		if action.Branch != webhookInfo.Branch {
@@ -107,8 +108,13 @@ func getProjectsActionsForWebhookPost(project config.Project, webhookInfo *whrec
 			continue
 		}
 		actions = append(actions, ActionRunner.ActionDescriptor{
-			ActionIdentifier: ActionRunner.ActionIdentifier{Index: index, PipeId: ulid.Make().String(), DeliveryId: webhookInfo.DeliveryID},
-			Action:           action,
+			ActionIdentifier: ActionRunner.ActionIdentifier{
+				Index:      index,
+				PipeId:     ulid.Make().String(),
+				Project:    projectName,
+				DeliveryId: webhookInfo.DeliveryID,
+			},
+			Action: action,
 		})
 	}
 	return actions

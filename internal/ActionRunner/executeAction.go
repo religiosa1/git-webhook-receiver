@@ -16,7 +16,7 @@ func (runner ActionRunner) executeAction(
 	pipeLogger.Info("Running action", slog.Int("action_index", actionDescriptor.Index))
 
 	if runner.actionsDb != nil {
-		err := runner.actionsDb.CreateRecord(actionDescriptor.PipeId, actionDescriptor.DeliveryId, action)
+		err := runner.actionsDb.CreateRecord(actionDescriptor.PipeId, actionDescriptor.Project, actionDescriptor.DeliveryId, action)
 		if err != nil {
 			pipeLogger.Error("Error creating pipeline recor din the db", slog.Any("error", err))
 			return

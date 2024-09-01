@@ -66,12 +66,13 @@ func TestProjectMatching(t *testing.T) {
 	}
 	rcvr := whreceiver.New(prj)
 
-	projectEndPoint := "/testProj"
+	projectName := "testProj"
+	projectEndPoint := "/" + projectName
 
 	t.Run("returns 201 if some of the actions matches", func(t *testing.T) {
 		request, _ := requestDump.ToHttpRequest(projectEndPoint)
 		response := httptest.NewRecorder()
-		handlers.HandleWebhookPost(ch, logger, cfg, prj, rcvr)(response, request)
+		handlers.HandleWebhookPost(ch, logger, cfg, projectName, prj, rcvr)(response, request)
 
 		got := response.Result().StatusCode
 		want := 201
@@ -88,7 +89,7 @@ func TestProjectMatching(t *testing.T) {
 		request, _ := requestDump.ToHttpRequest(projectEndPoint)
 		response := httptest.NewRecorder()
 
-		handlers.HandleWebhookPost(ch, logger, cfg, prj2, rcvr)(response, request)
+		handlers.HandleWebhookPost(ch, logger, cfg, projectName, prj2, rcvr)(response, request)
 
 		got := response.Result().StatusCode
 		want := 200
@@ -128,7 +129,7 @@ func TestProjectMatching(t *testing.T) {
 			request, _ := requestDump.ToHttpRequest(projectEndPoint)
 			response := httptest.NewRecorder()
 
-			handlers.HandleWebhookPost(ch, logger, cfg, prj2, rcvr)(response, request)
+			handlers.HandleWebhookPost(ch, logger, cfg, projectName, prj2, rcvr)(response, request)
 
 			gotStatus := response.Result().StatusCode
 

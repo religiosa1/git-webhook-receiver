@@ -151,7 +151,7 @@ func createServer(actionsCh chan ActionRunner.ActionArgs, cfg config.Config, log
 		projectLogger := logger.With(slog.String("project", projectName))
 		mux.HandleFunc(
 			fmt.Sprintf("POST /%s", projectName),
-			handlers.HandleWebhookPost(actionsCh, projectLogger, cfg, project, receiver),
+			handlers.HandleWebhookPost(actionsCh, projectLogger, cfg, projectName, project, receiver),
 		)
 		logger.Debug("Registered project",
 			slog.String("projectName", projectName),

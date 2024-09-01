@@ -4,6 +4,7 @@ import "github.com/religiosa1/git-webhook-receiver/internal/config"
 
 type ActionIdentifier struct {
 	Index      int    `json:"actionIdx"`
+	Project    string `json:"project"`
 	PipeId     string `json:"pipeId"`
 	DeliveryId string `json:"-"`
 }

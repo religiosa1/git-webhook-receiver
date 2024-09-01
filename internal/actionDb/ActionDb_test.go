@@ -14,6 +14,7 @@ import (
 
 func TestActionDb(t *testing.T) {
 	pipeId := "123"
+	projectName := "testProj"
 	deliveryId := "321"
 	action := config.Action{
 		On:     "push",
@@ -35,7 +36,7 @@ func TestActionDb(t *testing.T) {
 			t.Errorf("Unable to create a db: %s", err)
 		}
 
-		err = db.CreateRecord(pipeId, deliveryId, action)
+		err = db.CreateRecord(pipeId, projectName, deliveryId, action)
 		if err != nil {
 			t.Errorf("Unable to create a pipeline rercord: %s", err)
 		}
@@ -47,6 +48,7 @@ func TestActionDb(t *testing.T) {
 
 		want := actiondb.PipeLineRecord{
 			PipeId:     pipeId,
+			Project:    projectName,
 			DeliveryId: deliveryId,
 		}
 
@@ -61,7 +63,7 @@ func TestActionDb(t *testing.T) {
 			t.Errorf("Unable to create a db: %s", err)
 		}
 
-		err = db.CreateRecord(pipeId, deliveryId, action)
+		err = db.CreateRecord(pipeId, projectName, deliveryId, action)
 		if err != nil {
 			t.Errorf("Unable to create a pipeline rercord: %s", err)
 		}
@@ -78,6 +80,7 @@ func TestActionDb(t *testing.T) {
 
 		want := actiondb.PipeLineRecord{
 			PipeId:     pipeId,
+			Project:    projectName,
 			DeliveryId: deliveryId,
 			Output:     sql.NullString{Valid: true, String: actionOutput},
 			Error:      sql.NullString{Valid: false},
@@ -95,7 +98,7 @@ func TestActionDb(t *testing.T) {
 			t.Errorf("Unable to create a db: %s", err)
 		}
 
-		err = db.CreateRecord(pipeId, deliveryId, action)
+		err = db.CreateRecord(pipeId, projectName, deliveryId, action)
 		if err != nil {
 			t.Errorf("Unable to create a pipeline rercord: %s", err)
 		}
@@ -112,6 +115,7 @@ func TestActionDb(t *testing.T) {
 
 		want := actiondb.PipeLineRecord{
 			PipeId:     pipeId,
+			Project:    projectName,
 			DeliveryId: deliveryId,
 			Output:     sql.NullString{Valid: true, String: actionOutput},
 			Error:      sql.NullString{Valid: true, String: actionErr.Error()},
@@ -127,7 +131,7 @@ func TestActionDb(t *testing.T) {
 			t.Errorf("Unable to create a db: %s", err)
 		}
 
-		err = db.CreateRecord(pipeId, deliveryId, action)
+		err = db.CreateRecord(pipeId, projectName, deliveryId, action)
 		if err != nil {
 			t.Errorf("Unable to create a pipeline rercord: %s", err)
 		}
@@ -155,7 +159,7 @@ func TestActionDb(t *testing.T) {
 			t.Errorf("Unable to create a db: %s", err)
 		}
 
-		err = db.CreateRecord(pipeId, deliveryId, action)
+		err = db.CreateRecord(pipeId, projectName, deliveryId, action)
 		if err != nil {
 			t.Errorf("Unable to create a record: %s", err)
 		}
@@ -177,6 +181,7 @@ func TestActionDb(t *testing.T) {
 
 		want := actiondb.PipeLineRecord{
 			PipeId:     pipeId,
+			Project:    projectName,
 			DeliveryId: deliveryId,
 		}
 
@@ -205,6 +210,9 @@ func CompareRecord(t *testing.T, want actiondb.PipeLineRecord, got actiondb.Pipe
 
 	if want.PipeId != got.PipeId {
 		t.Errorf("Bad pipeId: want %s, got %s,", want.PipeId, got.PipeId)
+	}
+	if want.Project != got.Project {
+		t.Errorf("Bad project: want %s, got %s,", want.Project, got.Project)
 	}
 	if want.DeliveryId != got.DeliveryId {
 		t.Errorf("Bad deliveryId, want %s, got %s", want.DeliveryId, got.DeliveryId)
