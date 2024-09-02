@@ -1,6 +1,7 @@
 package whreceiver
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -27,3 +28,6 @@ func (err AuthorizationError) Error() string {
 		err.info,
 	)
 }
+
+var ErrAuthNotSupported = errors.New("authorization header is not supported for this receiver, use secret signature instead")
+var ErrSignNotSupported = errors.New("request signature is not supported for this receiver, use authorization header instead")

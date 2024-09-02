@@ -1,0 +1,21 @@
+{
+  "url": "/gitlab-test",
+  "method": "POST",
+  "headers": {
+    "x-forwarded-proto": "https",
+    "x-forwarded-host": "receiver.example.com",
+    "host": "127.0.0.1:7070",
+    "connection": "close",
+    "content-length": "1743",
+    "content-type": "application/json",
+    "user-agent": "GitLab/17.3.1-ee",
+    "x-gitlab-event": "Push Hook",
+    "x-gitlab-webhook-uuid": "4c0554ee-e106-4626-8fbf-416432805b6c",
+    "x-gitlab-instance": "https://gitlab.example.com",
+    "x-gitlab-token": "32167",
+    "x-gitlab-event-uuid": "53c7c667-1a4b-49f2-94e1-8246ab64c776",
+    "accept-encoding": "gzip;q=1.0,deflate;q=0.6,identity;q=0.3",
+    "accept": "*/*"
+  },
+  "body": "{\"object_kind\":\"push\",\"event_name\":\"push\",\"before\":\"cc95703e989bef045106f320004b70bd4b90c3e6\",\"after\":\"ecb02fa2ce0400aaa3415de7b5b9f3cb59b3d5dc\",\"ref\":\"refs/heads/main\",\"ref_protected\":true,\"checkout_sha\":\"ecb02fa2ce0400aaa3415de7b5b9f3cb59b3d5dc\",\"message\":null,\"user_id\":1,\"user_name\":\"Administrator\",\"user_username\":\"root\",\"user_email\":null,\"user_avatar\":\"https://secure.gravatar.com/avatar/52f91317b3220e637f207b13a98deaf8172db1859f54e77a3a11d23b3fabad79?s=80&d=identicon\",\"project_id\":1,\"project\":{\"id\":1,\"name\":\"test\",\"description\":null,\"web_url\":\"https://gitlab.example.com/root/test\",\"avatar_url\":null,\"git_ssh_url\":\"git@gitlab.example.com:root/test.git\",\"git_http_url\":\"https://gitlab.example.com/root/test.git\",\"namespace\":\"Administrator\",\"visibility_level\":0,\"path_with_namespace\":\"root/test\",\"default_branch\":\"main\",\"ci_config_path\":null,\"homepage\":\"https://gitlab.example.com/root/test\",\"url\":\"git@gitlab.example.com:root/test.git\",\"ssh_url\":\"git@gitlab.example.com:root/test.git\",\"http_url\":\"https://gitlab.example.com/root/test.git\"},\"commits\":[{\"id\":\"ecb02fa2ce0400aaa3415de7b5b9f3cb59b3d5dc\",\"message\":\"test push\\n\",\"title\":\"test push\",\"timestamp\":\"2024-09-02T16:26:25+02:00\",\"url\":\"https://gitlab.example.com/root/test/-/commit/ecb02fa2ce0400aaa3415de7b5b9f3cb59b3d5dc\",\"author\":{\"name\":\"Viacheslav Azarov\",\"email\":\"public@example.com\"},\"added\":[\"test\"],\"modified\":[],\"removed\":[]}],\"total_commits_count\":1,\"push_options\":{},\"repository\":{\"name\":\"test\",\"url\":\"git@gitlab.example.com:root/test.git\",\"description\":null,\"homepage\":\"https://gitlab.example.com/root/test\",\"git_http_url\":\"https://gitlab.example.com/root/test.git\",\"git_ssh_url\":\"git@gitlab.example.com:root/test.git\",\"visibility_level\":0}}"
+}

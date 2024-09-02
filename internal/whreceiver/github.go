@@ -1,7 +1,6 @@
 package whreceiver
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -12,8 +11,16 @@ type GithubReceiver struct {
 	project config.Project
 }
 
+func (rcvr GithubReceiver) GetCapabilities() ReceiverCapabilities {
+	return ReceiverCapabilities{
+		CanAuthorize:       false,
+		CanVerifySignature: true,
+		HasPing:            true,
+	}
+}
+
 func (rcvr GithubReceiver) Authorize(req WebhookPostRequest, auth string) (bool, error) {
-	return false, errors.New("authorization header is not supported for github receiver, use secret signature instead")
+	return false, ErrAuthNotSupported
 }
 
 const signaturePrefix = "sha256="

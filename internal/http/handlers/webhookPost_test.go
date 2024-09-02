@@ -2,7 +2,6 @@ package handlers_test
 
 import (
 	"io"
-	"log"
 	"log/slog"
 	"net/http/httptest"
 	"testing"
@@ -10,6 +9,7 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/ActionRunner"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/handlers"
+	"github.com/religiosa1/git-webhook-receiver/internal/requestmock"
 	"github.com/religiosa1/git-webhook-receiver/internal/whreceiver"
 )
 
@@ -52,16 +52,15 @@ func TestProjectMatching(t *testing.T) {
 		}
 	}()
 
-	requestDump, err := LoadRequestMock("./requests_test/gitea.json")
-	if err != nil {
-		log.Fatalf("Unable to load request dump: %e", err)
-	}
+	requestDump := requestmock.LoadRequestMock(t, "../../requestmock/captured-requests/gitea.json")
+	authToken := "JgHhtuPOISmw3WDCRtz4H6IrT8zWwNkS"
+	secret := "cc7ec03e-2e09-4bb9-b2fc-388b865200d0"
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	cfg := config.Config{}
 	prj := config.Project{
 		GitProvider: "gitea",
-		Repo:        "baruser/foorepo",
+		Repo:        "religiosa/staticus",
 		Actions:     makeActionsList(config.Action{}),
 	}
 	rcvr := whreceiver.New(prj)
@@ -70,7 +69,7 @@ func TestProjectMatching(t *testing.T) {
 	projectEndPoint := "/" + projectName
 
 	t.Run("returns 201 if some of the actions matches", func(t *testing.T) {
-		request, _ := requestDump.ToHttpRequest(projectEndPoint)
+		request := requestDump.ToHttpRequest(projectEndPoint)
 		response := httptest.NewRecorder()
 		handlers.HandleWebhookPost(ch, logger, cfg, projectName, prj, rcvr)(response, request)
 
@@ -86,7 +85,7 @@ func TestProjectMatching(t *testing.T) {
 		prj2 := prj
 		prj2.Actions = makeActionsList(config.Action{Branch: "badbranch"})
 
-		request, _ := requestDump.ToHttpRequest(projectEndPoint)
+		request := requestDump.ToHttpRequest(projectEndPoint)
 		response := httptest.NewRecorder()
 
 		handlers.HandleWebhookPost(ch, logger, cfg, projectName, prj2, rcvr)(response, request)
@@ -110,9 +109,9 @@ func TestProjectMatching(t *testing.T) {
 		secret     string
 		wantStatus int
 	}{
-		{"correct signature", "", requestDump.Secret, 201},
+		{"correct signature", "", secret, 201},
 		{"bad signature", "", "bad key", 403},
-		{"correct auth", "123456", "", 201},
+		{"correct auth", authToken, "", 201},
 		{"bad auth", "bad pass", "", 401},
 		{"bad auth precedes bad sign", "bad pass", "bad key", 401},
 	}
@@ -126,7 +125,7 @@ func TestProjectMatching(t *testing.T) {
 			prj2.Secret = tt.secret
 			prj2.Actions = makeActionsList(actn)
 
-			request, _ := requestDump.ToHttpRequest(projectEndPoint)
+			request := requestDump.ToHttpRequest(projectEndPoint)
 			response := httptest.NewRecorder()
 
 			handlers.HandleWebhookPost(ch, logger, cfg, projectName, prj2, rcvr)(response, request)

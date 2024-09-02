@@ -10,6 +10,14 @@ type GiteaReceiver struct {
 	project config.Project
 }
 
+func (rcvr GiteaReceiver) GetCapabilities() ReceiverCapabilities {
+	return ReceiverCapabilities{
+		CanAuthorize:       true,
+		CanVerifySignature: true,
+		HasPing:            false,
+	}
+}
+
 func (rcvr GiteaReceiver) Authorize(req WebhookPostRequest, auth string) (bool, error) {
 	authorizationHeader := req.Headers.Get("Authorization")
 	isSame := subtle.ConstantTimeCompare([]byte(auth), []byte(authorizationHeader)) == 1

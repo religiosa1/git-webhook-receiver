@@ -19,11 +19,18 @@ type WebhookPostInfo struct {
 	Hash string
 }
 
+type ReceiverCapabilities struct {
+	CanAuthorize       bool
+	CanVerifySignature bool
+	HasPing            bool
+}
+
 type Receiver interface {
 	Authorize(req WebhookPostRequest, auth string) (bool, error)
 	VerifySignature(req WebhookPostRequest, secret string) (bool, error)
 	IsPingRequest(req WebhookPostRequest) bool
 	GetWebhookInfo(req WebhookPostRequest) (*WebhookPostInfo, error)
+	GetCapabilities() ReceiverCapabilities
 }
 
 func New(project config.Project) Receiver {

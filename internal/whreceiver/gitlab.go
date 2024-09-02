@@ -1,8 +1,9 @@
 package whreceiver
 
 import (
+	"bytes"
 	"crypto/subtle"
-	"errors"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -13,6 +14,14 @@ type GitlabReceiver struct {
 	project config.Project
 }
 
+func (rcvr GitlabReceiver) GetCapabilities() ReceiverCapabilities {
+	return ReceiverCapabilities{
+		CanAuthorize:       true,
+		CanVerifySignature: false,
+		HasPing:            false,
+	}
+}
+
 func (rcvr GitlabReceiver) Authorize(req WebhookPostRequest, auth string) (bool, error) {
 	authorizationHeader := req.Headers.Get("X-Gitlab-Token")
 	isSame := subtle.ConstantTimeCompare([]byte(auth), []byte(authorizationHeader)) == 1
@@ -21,7 +30,7 @@ func (rcvr GitlabReceiver) Authorize(req WebhookPostRequest, auth string) (bool,
 
 // https://gitlab.com/gitlab-org/gitlab/-/issues/19367
 func (rcvr GitlabReceiver) VerifySignature(req WebhookPostRequest, secret string) (bool, error) {
-	return false, errors.New("request signature is not supported for gitlab receiver, use Authorize instead")
+	return false, ErrSignNotSupported
 }
 
 func (rcvr GitlabReceiver) IsPingRequest(req WebhookPostRequest) bool {
@@ -30,17 +39,34 @@ func (rcvr GitlabReceiver) IsPingRequest(req WebhookPostRequest) bool {
 
 var gitlabEventSuffix = " Hook"
 
+type gitlabWebhookPayload struct {
+	Ref     string `json:"ref"`
+	After   string `json:"after"`
+	Project struct {
+		PathWithNamespace string `json:"path_with_namespace"`
+	} `json:"project"`
+}
+
 func (rcvr GitlabReceiver) GetWebhookInfo(req WebhookPostRequest) (*WebhookPostInfo, error) {
-	postInfo, err := getJsonPayloadInfo(req.Payload, rcvr.project.Repo)
-	if err != nil {
+	var postInfo WebhookPostInfo
+	var whPayload gitlabWebhookPayload
+	if err := json.NewDecoder(bytes.NewBuffer(req.Payload)).Decode(&whPayload); err != nil {
 		return nil, err
 	}
+	repo := whPayload.Project.PathWithNamespace
+	if repo != rcvr.project.Repo {
+		return nil, IncorrectRepoError{Expected: rcvr.project.Repo, Actual: repo}
+	}
+
+	postInfo.Branch = getBranchFromRefName(whPayload.Ref)
+
+	postInfo.Hash = whPayload.After
 	event := req.Headers.Get("X-Gitlab-Event")
 
 	if !strings.HasSuffix(event, gitlabEventSuffix) {
 		return nil, fmt.Errorf("malformed gitlab event, must end with ' Hook', got %s", event)
 	}
-	postInfo.Event = event[:len(event)-len(gitlabEventSuffix)]
+	postInfo.Event = strings.ToLower(event[:len(event)-len(gitlabEventSuffix)])
 	postInfo.DeliveryID = req.Headers.Get("X-Gitlab-Event-UUID")
-	return postInfo, nil
+	return &postInfo, nil
 }
