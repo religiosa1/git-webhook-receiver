@@ -1,12 +1,15 @@
 # git webhook receiver
 
-Small service, that listens for the incoming webhhok HTTP-post from a git 
-providers (gitea, github, gitlab, etc.) for one or many projects and runs 
-a script/program on a matching webhook event.
+Small service for listening for the incoming webhhok HTTP-post from a git 
+provider (gitea, github, gitlab) for one or many projects and running 
+a script/program on a matching webhook event. Supports request authorization.
+
+It's intended usage is to run CI/CD scripts on a server, but you can use it for
+running arbitraty actions on git events.
 
 In a nutshell:
 
-- you [deploy](#installation) it to your server
+- [deploy](#installation) it to your server
 - (optional but recommended) install an SSL cert or wrap it with
   a [reverse proxy](./docs/nginx-setup.md) such as nginx or caddy, to have 
   encryption
@@ -18,9 +21,6 @@ In a nutshell:
 - start the service, it will listen for the webhook posts and runs the actions
   you described in the config (building your projects or whatever) when those 
   webhooks are fired from git
-
-It's intended usage is to run CI/CD scripts on a server, but you can use it for
-running arbitraty actions on git events.
 
 WIP, but operational. Some planned MVP functionality is still missing and there
 will be breaking changes before version 1.0 release.
@@ -64,8 +64,9 @@ Please refer to the [config file example](./config.example.yml) in this repo, to
 see a list of all available configuration fields.
 
 For security reason, it's recommended to always provide `secret` or at least
-`authorization` (in case of gitea provider) param for every action. `secret` 
-can also protect against MiM attacks, ensuring the payload wasn't tampered.
+`authorization` (in case of gitea or gitlab provider) param for every action. 
+`secret` can also protect against MiM attacks, ensuring the payload wasn't 
+tampered.
 
 Gitlab currently 
 [doesn't sign](https://gitlab.com/gitlab-org/gitlab/-/issues/19367) its 
@@ -85,10 +86,10 @@ Snap and flatpak package support is planned for 1.0 release. -->
 
 ### Build from source
 
-To build the app, you'll require [go](https://go.dev/) version 1.22 or higher.
-As the app stores its data in sqlite3 database via [go-sqlite3](https://github.com/mattn/go-sqlite3)
-you also need a `gcc` compiler installed on your system and have `CGO_ENABLED=1`
-env variable set.
+To build the app, you need [go](https://go.dev/) version 1.22 or higher.
+As the app stores action outputs and app logs in sqlite3 database via 
+[go-sqlite3](https://github.com/mattn/go-sqlite3) you also need a `gcc` 
+compiler installed on your system and have `CGO_ENABLED=1` env variable set.
 
 ```sh
 go install github.com/religiosa1/git-webhook-receiver
@@ -111,7 +112,7 @@ If you have a http-server such as Nginx or Caddy, you can leverage
 it to provide you a reverse proxy with SSL support.
 
 Infortmation on how to configure nginx + [certbot](https://certbot.eff.org/)
-can be find [here](./docs/nginx-setup.md).
+can be found [here](./docs/nginx-setup.md).
 
 If you don't have an HTTP-server available, you can use internal
 SSL functionality by passing cert and key files in the corresponding config
@@ -121,7 +122,7 @@ fields.
 
 Inline scripts are processed with [mdvan/sh](https://github.com/mvdan/sh) 
 interpreter to ensure they're crossplatform (plainly speaking, working on 
-windows). They're intended to be simple one or multiple lines scripts of 
+windows). They're intended to be simple one- or multiple-line scripts of 
 bash-like code, like "clone and run the build task".
 
 Example:
@@ -134,10 +135,10 @@ script: |
 ```
 
 If you need something more complicated, it's probably better to use `run` field
-instead of `script` in action config, allowing you to run a standalone script
+instead of `script` in action config, passing a standalone script to it
 (bash, python, whatever you like and whatever is supported by your system).
-It accepts its parameters in exec form, as an array of argv strings, in the same
-way as docker's `CMD` 
+`run` accepts its parameters in exec form, as an array of argv strings, in the 
+same way as docker's `CMD` 
 [does](https://docs.docker.com/reference/dockerfile/#exec-form):
 
 Example:
