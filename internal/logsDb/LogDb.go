@@ -90,7 +90,7 @@ func (d LogsDb) GetEntry(search GetEntryQuery) ([]LogEntry, error) {
 	}
 
 	rows := []LogEntry{}
-	query := `SELECT * FROM (SELECT * from logs where (ts, id) > (?, ?) ORDER BY ts DESC, id LIMIT ?) ORDER BY ts, id;`
+	query := `SELECT * FROM (SELECT * from logs where (ts, id) > (?, ?) ORDER BY ts DESC, id LIMIT ?) ORDER BY ts ASC, id;`
 	err := d.db.Select(&rows, query, search.CursorTs, search.CursorId, search.PageSize)
 	return rows, err
 }
@@ -166,7 +166,7 @@ func (d LogsDb) GetEntryFiltered(search GetEntryFilteredQuery) ([]LogEntry, erro
 		args = append(args, search.Offset)
 	}
 
-	qb.WriteString(") ORDER BY ts, id;")
+	qb.WriteString(") ORDER BY ts ASC, id;")
 
 	err := d.db.Select(&rows, qb.String(), args...)
 	return rows, err

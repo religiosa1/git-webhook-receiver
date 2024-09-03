@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
@@ -13,15 +12,15 @@ import (
 )
 
 type LogsArgs struct {
-	File       string `short:"f" help:"logs db file (default to the file, specified in config)" type:"path"`
-	Levels     string `short:"e" help:"filter by levels (multiple values can be separated with comma)"`
-	Project    string `short:"p" help:"filter by project"`
-	DeliveryId string `short:"d" help:"filter by deliveryId"`
-	PipeId     string `short:"a" help:"filter by action's pipeId"`
-	Message    string `short:"m" help:"filter by message"`
-	Format     string `short:"F" help:"output format" default:"jq"`
-	Limit      int    `short:"l" default:"20" help:"Maximum number of log entries to output"`
-	Skip       int    `short:"s" default:"0" help:"Skip first N entries"`
+	File       string   `short:"f" help:"logs db file (default to the file, specified in config)" type:"path"`
+	Limit      int      `short:"l" default:"20" help:"Maximum number of log entries to output"`
+	Skip       int      `short:"s" default:"0" help:"Skip first N entries"`
+	Levels     []string `short:"e" help:"filter by levels" enum:"debug,info,warn,error"`
+	Project    string   `short:"p" help:"filter by project"`
+	DeliveryId string   `short:"d" help:"filter by deliveryId"`
+	PipeId     string   `short:"a" help:"filter by action's pipeId"`
+	Message    string   `short:"m" help:"filter by message"`
+	Format     string   `short:"F" help:"output format" enum:"simple,jq,json" default:"simple" `
 }
 
 func Logs(cfg config.Config, args LogsArgs) {
@@ -46,23 +45,17 @@ func Logs(cfg config.Config, args LogsArgs) {
 		Offset:     args.Skip,
 	}
 
-	if args.Levels != "" {
-		lvls := strings.Split(args.Levels, ",")
-		query.Levels = make([]int, 0)
-		for _, lvl := range lvls {
-			switch lvl {
-			case "debug":
-				query.Levels = append(query.Levels, int(slog.LevelDebug))
-			case "info":
-				query.Levels = append(query.Levels, int(slog.LevelInfo))
-			case "warn":
-				query.Levels = append(query.Levels, int(slog.LevelWarn))
-			case "error":
-				query.Levels = append(query.Levels, int(slog.LevelError))
-			default:
-				fmt.Printf("Unknown log level '%s'", lvl)
-				os.Exit(1)
-			}
+	query.Levels = make([]int, 0)
+	for _, lvl := range args.Levels {
+		switch lvl {
+		case "debug":
+			query.Levels = append(query.Levels, int(slog.LevelDebug))
+		case "info":
+			query.Levels = append(query.Levels, int(slog.LevelInfo))
+		case "warn":
+			query.Levels = append(query.Levels, int(slog.LevelWarn))
+		case "error":
+			query.Levels = append(query.Levels, int(slog.LevelError))
 		}
 	}
 
@@ -81,24 +74,6 @@ func Logs(cfg config.Config, args LogsArgs) {
 	outputFormmater(records)
 }
 
-func formatLogRecordsJq(entries []logsDb.LogEntry) {
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	for _, entry := range entries {
-		enc.Encode(prettyfyLogEntry(entry))
-	}
-}
-
-func formatLogRecordsJson(entries []logsDb.LogEntry) {
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	prettyRecords := make([]prettyLogEntry, len(entries))
-	for i := 0; i < len(entries); i++ {
-		prettyRecords[i] = prettyfyLogEntry(entries[i])
-	}
-	enc.Encode(prettyRecords)
-}
-
 type prettyLogEntry struct {
 	Level      string `json:"level"`
 	Project    string `json:"project,omitempty"`
@@ -112,7 +87,7 @@ type prettyLogEntry struct {
 func prettyfyLogEntry(entry logsDb.LogEntry) prettyLogEntry {
 	p := prettyLogEntry{
 		Project:    entry.Project.String,
-		DeliveryId: entry.Project.String,
+		DeliveryId: entry.DeliveryId.String,
 		PipeId:     entry.PipeId.String,
 		Message:    entry.Message,
 		Data:       entry.Data,
@@ -133,6 +108,8 @@ func prettyfyLogEntry(entry logsDb.LogEntry) prettyLogEntry {
 
 func getLogOutputFormatter(format string) func([]logsDb.LogEntry) {
 	switch format {
+	case "simple":
+		return formatLogRecordsSimple
 	case "jq":
 		return formatLogRecordsJq
 	case "json":
@@ -140,4 +117,29 @@ func getLogOutputFormatter(format string) func([]logsDb.LogEntry) {
 	default:
 		return nil
 	}
+}
+
+func formatLogRecordsSimple(entries []logsDb.LogEntry) {
+	for _, e := range entries {
+		ts := time.Unix(e.Ts, 0).Format(time.DateTime)
+		fmt.Printf("%s %s %s %s %s %s\n", ts, e.Message, e.Project.String, e.DeliveryId.String, e.PipeId.String, e.Data)
+	}
+}
+
+func formatLogRecordsJq(entries []logsDb.LogEntry) {
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	for _, entry := range entries {
+		enc.Encode(prettyfyLogEntry(entry))
+	}
+}
+
+func formatLogRecordsJson(entries []logsDb.LogEntry) {
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	prettyRecords := make([]prettyLogEntry, len(entries))
+	for i := 0; i < len(entries); i++ {
+		prettyRecords[i] = prettyfyLogEntry(entries[i])
+	}
+	enc.Encode(prettyRecords)
 }

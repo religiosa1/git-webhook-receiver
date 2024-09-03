@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -109,18 +110,106 @@ func (d ActionDb) GetPipelineRecord(pipeId string) (PipeLineRecord, error) {
 	return record, err
 }
 
-func (d ActionDb) ListPipelineRecords(n int) ([]PipeLineRecord, error) {
-	var records []PipeLineRecord
-	query := `
+type PipeStatus int
+
+const (
+	PipeStatusOk      PipeStatus = 1
+	PipeStatusError   PipeStatus = 2
+	PipeStatusPending PipeStatus = 3
+)
+
+type ListPipelineRecordsQuery struct {
+	Offset     int
+	Limit      int
+	Status     PipeStatus
+	Project    string
+	DeliveryId string
+}
+
+func (d ActionDb) ListPipelineRecords(search ListPipelineRecordsQuery) ([]PipeLineRecord, error) {
+	if search.Limit == 0 {
+		search.Limit = 20
+	}
+
+	var qb strings.Builder
+	args := make([]interface{}, 0)
+
+	qb.WriteString(`
 SELECT * FROM (
-	SELECT 
-		id, pipe_id, project, delivery_id, error, created_at, ended_at 
-	FROM 
-		pipeline 
-	ORDER BY 
-		created_at DESC 
-	LIMIT ?
-) ORDER BY created_at ASC;`
-	err := d.db.Select(&records, query, n)
+SELECT 
+	id, pipe_id, project, delivery_id, error, created_at, ended_at 
+FROM 
+	pipeline
+`)
+
+	fj := filterJoiner{}
+
+	fj.AddLikeFilter(search.DeliveryId, "delivery_id")
+	fj.AddLikeFilter(search.Project, "project")
+
+	switch search.Status {
+	case PipeStatusOk:
+		fj.AddFilter("(ended_at IS NOT NULL AND (error IS NULL OR error = ''))\n")
+	case PipeStatusError:
+		fj.AddFilter("(ended_at IS NOT NULL AND (error IS NOT NULL AND error <> ''))\n")
+	case PipeStatusPending:
+		fj.AddFilter("ended_at IS NULL\n")
+	}
+
+	if fj.HasFilters {
+		qb.WriteString("WHERE\n")
+		qb.WriteString(fj.String())
+		args = append(args, fj.Args()...)
+	}
+
+	qb.WriteString("ORDER BY created_at DESC\n")
+	qb.WriteString("LIMIT ?\n")
+	args = append(args, search.Limit)
+
+	if search.Offset != 0 {
+		qb.WriteString("OFFSET ?\n")
+		args = append(args, search.Offset)
+	}
+
+	qb.WriteString(") ORDER BY created_at ASC;")
+
+	var records []PipeLineRecord
+	err := d.db.Select(&records, qb.String(), args...)
 	return records, err
+}
+
+type filterJoiner struct {
+	HasFilters bool
+	qb         strings.Builder
+	args       []interface{}
+}
+
+func (fj *filterJoiner) AddLikeFilter(value string, columnName string) {
+	if value == "" {
+		return
+	}
+	fj.checkHasFilter()
+	fj.qb.WriteString("`" + columnName + "` LIKE ?\n")
+	fj.args = append(fj.args, "%"+value+"%")
+}
+
+func (fj *filterJoiner) AddFilter(filter string) {
+	fj.checkHasFilter()
+	fj.qb.WriteString(filter)
+}
+
+func (fj *filterJoiner) checkHasFilter() {
+	if !fj.HasFilters {
+		fj.HasFilters = true
+	} else {
+		fj.qb.WriteString(" AND ")
+	}
+}
+
+func (fj *filterJoiner) String() string {
+	return fj.qb.String()
+}
+
+func (fj *filterJoiner) Args() []interface{} {
+	return fj.args
 }

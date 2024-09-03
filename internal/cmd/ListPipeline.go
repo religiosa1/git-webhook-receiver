@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -10,14 +11,22 @@ import (
 )
 
 type ListPipelinesArgs struct {
-	File  string `help:"Actions db file (default to the file, specified in config)" type:"path"`
-	Limit int    `short:"l" default:"20" help:"Maximum number of pipeline record to output"`
+	File       string `help:"Actions db file (default to the file, specified in config)" type:"path"`
+	Limit      int    `short:"l" default:"20" help:"Maximum number of pipeline records to output"`
+	Skip       int    `short:"s" default:"0" help:"Skip first N entries"`
+	Status     string `short:"e" help:"filter by status" enum:"ok,error,pending,any" default:"any"`
+	Project    string `short:"p" help:"filter by project"`
+	DeliveryId string `short:"d" help:"filter by deliveryId"`
+	Format     string `short:"F" help:"output format" enum:"simple,jq,json" default:"simple"`
 }
 
 func ListPipelines(cfg config.Config, args ListPipelinesArgs) {
 	if args.File == "" {
 		args.File = cfg.ActionsDbFile
 	}
+
+	outputFormmater := getActionRecordOutputFormatter(args.Format)
+
 	dbActions, err := actiondb.New(args.File)
 	if err != nil {
 		fmt.Printf("Error opening actions db: %s\n", err)
@@ -25,16 +34,46 @@ func ListPipelines(cfg config.Config, args ListPipelinesArgs) {
 	}
 	defer dbActions.Close()
 
-	pipeLines, err := dbActions.ListPipelineRecords(args.Limit)
+	query := actiondb.ListPipelineRecordsQuery{
+		Limit:  args.Limit,
+		Offset: args.Skip,
+
+		Project:    args.Project,
+		DeliveryId: args.DeliveryId,
+	}
+
+	switch args.Status {
+	case "ok":
+		query.Status = actiondb.PipeStatusOk
+	case "error":
+		query.Status = actiondb.PipeStatusError
+	case "pending":
+		query.Status = actiondb.PipeStatusPending
+	}
+
+	pipeLines, err := dbActions.ListPipelineRecords(query)
 	if err != nil {
 		fmt.Printf("Error reading actions db: %s\n", err)
 		os.Exit(ExitCodeActionsDb)
 	}
 
-	formatShort(pipeLines)
+	outputFormmater(pipeLines)
 }
 
-func formatShort(pipelines []actiondb.PipeLineRecord) {
+func getActionRecordOutputFormatter(format string) func([]actiondb.PipeLineRecord) {
+	switch format {
+	case "simple":
+		return formatActionRecordsSimple
+	case "jq":
+		return formatActionRecordsJq
+	case "json":
+		return formatActionRecordsJson
+	default:
+		return nil
+	}
+}
+
+func formatActionRecordsSimple(pipelines []actiondb.PipeLineRecord) {
 	for _, pl := range pipelines {
 		createAt := time.Unix(pl.CreatedAt, 0).Format(time.DateTime)
 
@@ -51,6 +90,20 @@ func formatShort(pipelines []actiondb.PipeLineRecord) {
 		} else {
 			result = "ok"
 		}
-		fmt.Printf("%s-%s %s %s %s\n", createAt, endedAt, pl.PipeId, pl.Project, result)
+		fmt.Printf("%s-%s %s %s %s %s\n", createAt, endedAt, pl.PipeId, pl.DeliveryId, pl.Project, result)
 	}
+}
+
+func formatActionRecordsJq(pipelines []actiondb.PipeLineRecord) {
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	for _, pl := range pipelines {
+		enc.Encode(pl)
+	}
+}
+
+func formatActionRecordsJson(pipelines []actiondb.PipeLineRecord) {
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	enc.Encode(pipelines)
 }
