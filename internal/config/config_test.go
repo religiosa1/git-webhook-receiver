@@ -3,6 +3,7 @@ package config_test
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
@@ -335,6 +336,65 @@ projects:
 
 		if want, got := "info", config.LogLevel; want != got {
 			t.Errorf("Incorrect default loglevel, want '%s', got '%s'", want, got)
+		}
+	})
+}
+
+func TestSensitiveDataMasking(t *testing.T) {
+	makeTestCfg := func() config.Config {
+		cfg := config.Config{
+			Projects: make(map[string]config.Project),
+		}
+
+		cfg.Projects["proj1"] = config.Project{
+			Authorization: "auth",
+		}
+		cfg.Projects["proj2"] = config.Project{
+			Secret: "secret",
+		}
+		return cfg
+	}
+	t.Run("masks secrets and authorization headers", func(t *testing.T) {
+		cfg := makeTestCfg()
+		maskedCfg := cfg.MaskSensitiveData()
+
+		if maskedCfg.Projects["proj1"].Authorization == "auth" {
+			t.Errorf("Project Authorization value wasn't masked")
+		}
+
+		if maskedCfg.Projects["proj2"].Secret == "secret" {
+			t.Errorf("Project secret value wasn't masked")
+		}
+	})
+
+	t.Run("masks secrets and authorization headers only if they're present", func(t *testing.T) {
+		cfg := makeTestCfg()
+		maskedCfg := cfg.MaskSensitiveData()
+
+		if got := maskedCfg.Projects["proj2"].Authorization; got != "" {
+			t.Errorf("Project Authorization value was masked when it shouldn't. Want empty string, got %s", got)
+		}
+
+		if got := maskedCfg.Projects["proj1"].Secret; got != "" {
+			t.Errorf("Project secret value was masked when it shouldn't. Want empty string, got %s", got)
+		}
+	})
+
+	t.Run("doeesn't change the initial project in any way", func(t *testing.T) {
+		cfg := makeTestCfg()
+		cfg2 := makeTestCfg()
+		cfg.MaskSensitiveData()
+
+		if !reflect.DeepEqual(cfg, cfg2) {
+			t.Errorf("Project was modified, when it shouldn't: %v, %v", cfg, cfg2)
+		}
+
+		if cfg.Projects["proj1"].Authorization != "auth" {
+			t.Error("Project Authorization value was modified, when it shouldn't")
+		}
+
+		if cfg.Projects["proj2"].Secret != "secret" {
+			t.Error("Project secret value was modified, when it shouldn't")
 		}
 	})
 }

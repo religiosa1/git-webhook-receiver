@@ -54,8 +54,7 @@ func Serve(cfg config.Config) {
 		log.Printf("Error setting up the logger: %s", err)
 		os.Exit(ExitCodeLoggerDb)
 	}
-	// TODO redact all of the secerets and auth tokens from the log
-	logger.Debug("configuration loaded", slog.Any("config", cfg))
+	logger.Debug("configuration loaded", slog.Any("config", cfg.MaskSensitiveData()))
 
 	actionRunner := ActionRunner.New(context.Background(), dbActions)
 

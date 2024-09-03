@@ -153,3 +153,30 @@ func isValidProjectName(s string) error {
 
 	return nil
 }
+
+const maskValue = "********"
+
+func (cfg Config) MaskSensitiveData() Config {
+	maskedCfg := cfg
+
+	maskedCfg.Projects = make(map[string]Project, 0)
+
+	for projectName, project := range cfg.Projects {
+		maskedCfg.Projects[projectName] = project.MaskSensitiveData()
+	}
+
+	return maskedCfg
+}
+
+func (prj Project) MaskSensitiveData() Project {
+	maskedPrj := prj
+
+	if maskedPrj.Secret != "" {
+		maskedPrj.Secret = maskValue
+	}
+	if maskedPrj.Authorization != "" {
+		maskedPrj.Authorization = maskValue
+	}
+
+	return maskedPrj
+}
