@@ -90,7 +90,7 @@ func (d LogsDb) GetEntry(search GetEntryQuery) ([]LogEntry, error) {
 	}
 
 	rows := []LogEntry{}
-	query := `SELECT * from logs where (ts, id) > (?, ?) ORDER BY ts, id LIMIT ?`
+	query := `SELECT * FROM (SELECT * from logs where (ts, id) > (?, ?) ORDER BY ts DESC, id LIMIT ?) ORDER BY ts, id;`
 	err := d.db.Select(&rows, query, search.CursorTs, search.CursorId, search.PageSize)
 	return rows, err
 }
@@ -102,6 +102,7 @@ type GetEntryFilteredQuery struct {
 	DeliveryId string `json:"deliveryId"`
 	PipeId     string `json:"pipeId"`
 	Message    string `json:"message"`
+	Offset     int
 }
 
 func (d LogsDb) GetEntryFiltered(search GetEntryFilteredQuery) ([]LogEntry, error) {
@@ -118,6 +119,7 @@ func (d LogsDb) GetEntryFiltered(search GetEntryFilteredQuery) ([]LogEntry, erro
 	rows := []LogEntry{}
 
 	var qb strings.Builder
+	qb.WriteString("SELECT * FROM (")
 	qb.WriteString("SELECT * from logs where (ts, id) > (?, ?)\n")
 
 	args := make([]interface{}, 2)
@@ -154,8 +156,17 @@ func (d LogsDb) GetEntryFiltered(search GetEntryFilteredQuery) ([]LogEntry, erro
 		args = append(args, "%"+search.Message+"%")
 	}
 
-	qb.WriteString("ORDER BY ts, id LIMIT ?")
+	qb.WriteString("ORDER BY ts DESC, id\n")
+
+	qb.WriteString("LIMIT ?\n")
 	args = append(args, search.PageSize)
+
+	if search.Offset != 0 {
+		qb.WriteString("OFFSET ?\n")
+		args = append(args, search.Offset)
+	}
+
+	qb.WriteString(") ORDER BY ts, id;")
 
 	err := d.db.Select(&rows, qb.String(), args...)
 	return rows, err

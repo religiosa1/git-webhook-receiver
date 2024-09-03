@@ -29,6 +29,7 @@ func Pipeline(cfg config.Config, args PipelineArgs) {
 		fmt.Printf("Error opening actions db: %s\n", err)
 		os.Exit(ExitCodeActionsDb)
 	}
+	defer dbActions.Close()
 
 	pipe, err := dbActions.GetPipelineRecord(args.PipeId)
 	if err != nil {

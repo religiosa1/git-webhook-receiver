@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -19,15 +18,16 @@ func ListPipelines(cfg config.Config, args ListPipelinesArgs) {
 	if args.File == "" {
 		args.File = cfg.ActionsDbFile
 	}
-	actionDb, err := actiondb.New(args.File)
+	dbActions, err := actiondb.New(args.File)
 	if err != nil {
-		log.Printf("Error opening actions db: %s\n", err)
+		fmt.Printf("Error opening actions db: %s\n", err)
 		os.Exit(ExitCodeActionsDb)
 	}
+	defer dbActions.Close()
 
-	pipeLines, err := actionDb.ListPipelineRecords(args.Limit)
+	pipeLines, err := dbActions.ListPipelineRecords(args.Limit)
 	if err != nil {
-		log.Printf("Error reading actions db: %s\n", err)
+		fmt.Printf("Error reading actions db: %s\n", err)
 		os.Exit(ExitCodeActionsDb)
 	}
 

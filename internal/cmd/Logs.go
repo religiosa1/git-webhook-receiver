@@ -1,0 +1,143 @@
+package cmd
+
+import (
+	"encoding/json"
+	"fmt"
+	"log/slog"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/religiosa1/git-webhook-receiver/internal/config"
+	"github.com/religiosa1/git-webhook-receiver/internal/logsDb"
+)
+
+type LogsArgs struct {
+	File       string `short:"f" help:"logs db file (default to the file, specified in config)" type:"path"`
+	Levels     string `short:"e" help:"filter by levels (multiple values can be separated with comma)"`
+	Project    string `short:"p" help:"filter by project"`
+	DeliveryId string `short:"d" help:"filter by deliveryId"`
+	PipeId     string `short:"a" help:"filter by action's pipeId"`
+	Message    string `short:"m" help:"filter by message"`
+	Format     string `short:"F" help:"output format" default:"jq"`
+	Limit      int    `short:"l" default:"20" help:"Maximum number of log entries to output"`
+	Skip       int    `short:"s" default:"0" help:"Skip first N entries"`
+}
+
+func Logs(cfg config.Config, args LogsArgs) {
+	if args.File == "" {
+		args.File = cfg.LogsDbFile
+	}
+
+	outputFormmater := getLogOutputFormatter(args.Format)
+	if outputFormmater == nil {
+		fmt.Printf("unknown output format")
+		os.Exit(1)
+	}
+
+	query := logsDb.GetEntryFilteredQuery{
+		GetEntryQuery: logsDb.GetEntryQuery{
+			PageSize: args.Limit,
+		},
+		Project:    args.Project,
+		DeliveryId: args.DeliveryId,
+		PipeId:     args.PipeId,
+		Message:    args.Message,
+		Offset:     args.Skip,
+	}
+
+	if args.Levels != "" {
+		lvls := strings.Split(args.Levels, ",")
+		query.Levels = make([]int, 0)
+		for _, lvl := range lvls {
+			switch lvl {
+			case "debug":
+				query.Levels = append(query.Levels, int(slog.LevelDebug))
+			case "info":
+				query.Levels = append(query.Levels, int(slog.LevelInfo))
+			case "warn":
+				query.Levels = append(query.Levels, int(slog.LevelWarn))
+			case "error":
+				query.Levels = append(query.Levels, int(slog.LevelError))
+			default:
+				fmt.Printf("Unknown log level '%s'", lvl)
+				os.Exit(1)
+			}
+		}
+	}
+
+	dbLogs, err := logsDb.New(args.File)
+	if err != nil {
+		fmt.Printf("Error opening actions db: %s\n", err)
+		os.Exit(ExitCodeLoggerDb)
+	}
+	defer dbLogs.Close()
+
+	records, err := dbLogs.GetEntryFiltered(query)
+	if err != nil {
+		fmt.Printf("Error retrieving the records: %s", err)
+		os.Exit(ExitCodeLoggerDb)
+	}
+	outputFormmater(records)
+}
+
+func formatLogRecordsJq(entries []logsDb.LogEntry) {
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	for _, entry := range entries {
+		enc.Encode(prettyfyLogEntry(entry))
+	}
+}
+
+func formatLogRecordsJson(entries []logsDb.LogEntry) {
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	prettyRecords := make([]prettyLogEntry, len(entries))
+	for i := 0; i < len(entries); i++ {
+		prettyRecords[i] = prettyfyLogEntry(entries[i])
+	}
+	enc.Encode(prettyRecords)
+}
+
+type prettyLogEntry struct {
+	Level      string `json:"level"`
+	Project    string `json:"project,omitempty"`
+	DeliveryId string `json:"delivery_id,omitempty"`
+	PipeId     string `json:"pipe_id,omitempty"`
+	Message    string `json:"message"`
+	Data       string `json:"data"`
+	Ts         string `json:"ts"`
+}
+
+func prettyfyLogEntry(entry logsDb.LogEntry) prettyLogEntry {
+	p := prettyLogEntry{
+		Project:    entry.Project.String,
+		DeliveryId: entry.Project.String,
+		PipeId:     entry.PipeId.String,
+		Message:    entry.Message,
+		Data:       entry.Data,
+		Ts:         time.Unix(entry.Ts, 0).Format(time.DateTime),
+	}
+	switch slog.Level(entry.Level) {
+	case slog.LevelDebug:
+		p.Level = "debug"
+	case slog.LevelInfo:
+		p.Level = "info"
+	case slog.LevelWarn:
+		p.Level = "warn"
+	case slog.LevelError:
+		p.Level = "error"
+	}
+	return p
+}
+
+func getLogOutputFormatter(format string) func([]logsDb.LogEntry) {
+	switch format {
+	case "jq":
+		return formatLogRecordsJq
+	case "json":
+		return formatLogRecordsJson
+	default:
+		return nil
+	}
+}

@@ -14,6 +14,7 @@ var CLI struct {
 	Serve         struct{}              `cmd:"" default:"1" help:"Run the webhook receiver server (default mode)"`
 	Pipeline      cmd.PipelineArgs      `cmd:"" aliases:"pl,get" help:"Display pipeline output"`
 	ListPipelines cmd.ListPipelinesArgs `cmd:"" aliases:"ls" help:"Display a list of last N pipelines"`
+	Logs          cmd.LogsArgs          `cmd:"" help:"Display logs"`
 }
 
 func main() {
@@ -30,6 +31,8 @@ func main() {
 		cmd.Pipeline(cfg, CLI.Pipeline)
 	case "list-pipelines":
 		cmd.ListPipelines(cfg, CLI.ListPipelines)
+	case "logs":
+		cmd.Logs(cfg, CLI.Logs)
 	default:
 		cmd.Serve(cfg)
 	}
