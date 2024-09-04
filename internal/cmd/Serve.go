@@ -147,6 +147,15 @@ func createServer(actionsCh chan ActionRunner.ActionArgs, cfg config.Config, log
 		if receiver == nil {
 			return nil, fmt.Errorf("unknown git webhook provider type '%s' in project '%s'", project.GitProvider, projectName)
 		}
+
+		caps := receiver.GetCapabilities()
+		if !caps.CanAuthorize && project.Authorization != "" {
+			return nil, fmt.Errorf("misconfigured project '%s', receiver '%s' does not support authorization, but it was provided", projectName, project.GitProvider)
+		}
+		if !caps.CanVerifySignature && project.Secret != "" {
+			return nil, fmt.Errorf("misconfigured project '%s', receiver '%s' does not support signature validation, but secret was provided", projectName, project.GitProvider)
+		}
+
 		projectLogger := logger.With(slog.String("project", projectName))
 		mux.HandleFunc(
 			fmt.Sprintf("POST /%s", projectName),
