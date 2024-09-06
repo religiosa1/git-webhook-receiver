@@ -1,7 +1,5 @@
-actions_output
+build
 config.yml
-deploy.log
-index.js
 git-webhook-receiver.exe
 git-webhook-receiver
 *.sqlite3
