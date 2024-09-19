@@ -113,6 +113,7 @@ func (d ActionDb) GetPipelineRecord(pipeId string) (PipeLineRecord, error) {
 type PipeStatus int
 
 const (
+	PipeStatusAny     PipeStatus = 0
 	PipeStatusOk      PipeStatus = 1
 	PipeStatusError   PipeStatus = 2
 	PipeStatusPending PipeStatus = 3
@@ -178,38 +179,17 @@ FROM
 	return records, err
 }
 
-type filterJoiner struct {
-	HasFilters bool
-	qb         strings.Builder
-	args       []interface{}
-}
-
-func (fj *filterJoiner) AddLikeFilter(value string, columnName string) {
-	if value == "" {
-		return
+func ParsePipelineStatus(status string) (PipeStatus, error) {
+	switch status {
+	case "ok":
+		return PipeStatusOk, nil
+	case "error":
+		return PipeStatusError, nil
+	case "pending":
+		return PipeStatusPending, nil
+	case "any":
+		return PipeStatusAny, nil
+	default:
+		return PipeStatusAny, fmt.Errorf("unknown pipe status: '%s'", status)
 	}
-	fj.checkHasFilter()
-	fj.qb.WriteString("`" + columnName + "` LIKE ?\n")
-	fj.args = append(fj.args, "%"+value+"%")
-}
-
-func (fj *filterJoiner) AddFilter(filter string) {
-	fj.checkHasFilter()
-	fj.qb.WriteString(filter)
-}
-
-func (fj *filterJoiner) checkHasFilter() {
-	if !fj.HasFilters {
-		fj.HasFilters = true
-	} else {
-		fj.qb.WriteString(" AND ")
-	}
-}
-
-func (fj *filterJoiner) String() string {
-	return fj.qb.String()
-}
-
-func (fj *filterJoiner) Args() []interface{} {
-	return fj.args
 }

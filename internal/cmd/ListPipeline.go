@@ -41,15 +41,7 @@ func ListPipelines(cfg config.Config, args ListPipelinesArgs) {
 		Project:    args.Project,
 		DeliveryId: args.DeliveryId,
 	}
-
-	switch args.Status {
-	case "ok":
-		query.Status = actiondb.PipeStatusOk
-	case "error":
-		query.Status = actiondb.PipeStatusError
-	case "pending":
-		query.Status = actiondb.PipeStatusPending
-	}
+	query.Status, _ = actiondb.ParsePipelineStatus(args.Status)
 
 	pipeLines, err := dbActions.ListPipelineRecords(query)
 	if err != nil {

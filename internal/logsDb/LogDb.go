@@ -3,6 +3,7 @@ package logsDb
 import (
 	"database/sql"
 	_ "embed"
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -170,4 +171,19 @@ func (d LogsDb) GetEntryFiltered(search GetEntryFilteredQuery) ([]LogEntry, erro
 
 	err := d.db.Select(&rows, qb.String(), args...)
 	return rows, err
+}
+
+func ParseLogLevel(level string) (int, error) {
+	switch level {
+	case "debug":
+		return int(slog.LevelDebug), nil
+	case "info":
+		return int(slog.LevelInfo), nil
+	case "warn":
+		return int(slog.LevelWarn), nil
+	case "error":
+		return int(slog.LevelError), nil
+	default:
+		return 0, fmt.Errorf("unkown log level '%s'", level)
+	}
 }

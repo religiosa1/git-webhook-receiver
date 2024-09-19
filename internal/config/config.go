@@ -12,6 +12,7 @@ import (
 type Config struct {
 	Host          string             `yaml:"host" env:"HOST" env-default:"localhost"`
 	Port          int16              `yaml:"port" env:"PORT" env-default:"9090"`
+	WebAdmin      bool               `yaml:"web_admin" env:"WEB_ADMIN" env-default:"true"`
 	LogLevel      string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
 	LogsDbFile    string             `yaml:"logs_db_file" env:"LOGS_DB_FILE"`
 	ActionsDbFile string             `yaml:"actions_db_file" env:"ACTIONS_DB_FILE" env-default:"actions.sqlite3"`

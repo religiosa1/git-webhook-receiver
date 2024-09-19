@@ -2,6 +2,7 @@
 host: example.com # defaults to localhost
 port: 9090 # defaults to 9090
 log_level: "debug" # defaults to 'info', other options are 'warn' and 'error'
+web_admin: true # Enable web-interface to retrieve pipelines and logs
 # SSL config: (optional, but recommended, unless you're using a reverse proxy)
 ssl:
   cert_file_path: "./your/certfile/path/fullchain.pem"

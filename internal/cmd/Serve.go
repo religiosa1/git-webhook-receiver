@@ -14,7 +14,8 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/ActionRunner"
 	actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
-	"github.com/religiosa1/git-webhook-receiver/internal/http/handlers"
+	"github.com/religiosa1/git-webhook-receiver/internal/http/admin"
+	handlers "github.com/religiosa1/git-webhook-receiver/internal/http/webhook_handlers"
 	"github.com/religiosa1/git-webhook-receiver/internal/logger"
 	"github.com/religiosa1/git-webhook-receiver/internal/logsDb"
 	"github.com/religiosa1/git-webhook-receiver/internal/whreceiver"
@@ -60,10 +61,27 @@ func Serve(cfg config.Config) {
 
 	//==========================================================================
 	// HTTP-Server
-	srv, err := createServer(actionRunner.Chan(), cfg, logger)
+	mux, err := createProjectsMux(actionRunner.Chan(), cfg, logger)
 	if err != nil {
 		logger.Error("Error creating the server", slog.Any("error", err))
 		os.Exit(ExitReadConfig)
+	}
+	if cfg.WebAdmin {
+		if dbActions != nil {
+			logger.Debug("Web admin enabled for pipelines")
+			mux.HandleFunc("GET /pipelines", admin.ListPipelines(dbActions, logger))
+			mux.HandleFunc("GET /pipelines/{pipeId}", admin.GetPipeline(dbActions, logger))
+			mux.HandleFunc("GET /pipelines/{pipeId}/output", admin.GetPipelineOutput(dbActions, logger))
+		}
+		if dbLogs != nil {
+			logger.Debug("Web admin enabled for logs")
+			mux.HandleFunc("GET /logs", admin.GetLogs(dbLogs, logger))
+		}
+	}
+
+	srv := &http.Server{
+		Addr:    fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+		Handler: mux,
 	}
 
 	srvCtx, srcCancel := context.WithCancel(context.Background())
@@ -140,7 +158,7 @@ func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig
 	return err
 }
 
-func createServer(actionsCh chan ActionRunner.ActionArgs, cfg config.Config, logger *slog.Logger) (*http.Server, error) {
+func createProjectsMux(actionsCh chan ActionRunner.ActionArgs, cfg config.Config, logger *slog.Logger) (*http.ServeMux, error) {
 	mux := http.NewServeMux()
 	for projectName, project := range cfg.Projects {
 		receiver := whreceiver.New(project)
@@ -158,7 +176,7 @@ func createServer(actionsCh chan ActionRunner.ActionArgs, cfg config.Config, log
 
 		projectLogger := logger.With(slog.String("project", projectName))
 		mux.HandleFunc(
-			fmt.Sprintf("POST /%s", projectName),
+			fmt.Sprintf("POST /projects/%s", projectName),
 			handlers.HandleWebhookPost(actionsCh, projectLogger, cfg, projectName, project, receiver),
 		)
 		logger.Debug("Registered project",
@@ -167,11 +185,7 @@ func createServer(actionsCh chan ActionRunner.ActionArgs, cfg config.Config, log
 			slog.String("repo", project.Repo),
 		)
 	}
-	srv := &http.Server{
-		Addr:    fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
-		Handler: mux,
-	}
-	return srv, nil
+	return mux, nil
 }
 
 type ErrShutdown struct {

@@ -1,6 +1,6 @@
 # git webhook receiver
 
-Small service for listening for the incoming webhhok HTTP-post from a git 
+Small service for listening for the incoming webhook HTTP-posts from a git 
 provider (gitea, github, gitlab) for one or many projects and running 
 a script/program on a matching webhook event. Supports request authorization.
 
@@ -17,8 +17,8 @@ In a nutshell:
   corresponding build scripts/actions (either as a standalone script 
   or [crossplatform inline scripts](#inline-scripts-and-standalone-scripts))
 - set webhooks for those repo in their git services (github, gitea, gitlab, 
-  etc.) to post to {YOUR_HOST}/{PROJECT_NAME}
-- start the service, it will listen for the webhook posts and runs the actions
+  etc.) to post to {YOUR_HOST}/projects/{PROJECT_NAME}
+- start the service, it will listen for the webhook posts and run the actions
   you described in the config (building your projects or whatever) when those 
   webhooks are fired from git
 

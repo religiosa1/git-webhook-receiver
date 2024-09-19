@@ -47,15 +47,9 @@ func Logs(cfg config.Config, args LogsArgs) {
 
 	query.Levels = make([]int, 0)
 	for _, lvl := range args.Levels {
-		switch lvl {
-		case "debug":
-			query.Levels = append(query.Levels, int(slog.LevelDebug))
-		case "info":
-			query.Levels = append(query.Levels, int(slog.LevelInfo))
-		case "warn":
-			query.Levels = append(query.Levels, int(slog.LevelWarn))
-		case "error":
-			query.Levels = append(query.Levels, int(slog.LevelError))
+		l, err := logsDb.ParseLogLevel(lvl)
+		if err == nil {
+			query.Levels = append(query.Levels, l)
 		}
 	}
 

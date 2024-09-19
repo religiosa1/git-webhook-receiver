@@ -1,4 +1,4 @@
-package handlers_test
+package webhookhandlers_test
 
 import (
 	"io"
@@ -8,7 +8,7 @@ import (
 
 	"github.com/religiosa1/git-webhook-receiver/internal/ActionRunner"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
-	"github.com/religiosa1/git-webhook-receiver/internal/http/handlers"
+	handlers "github.com/religiosa1/git-webhook-receiver/internal/http/webhook_handlers"
 	"github.com/religiosa1/git-webhook-receiver/internal/requestmock"
 	"github.com/religiosa1/git-webhook-receiver/internal/whreceiver"
 )
