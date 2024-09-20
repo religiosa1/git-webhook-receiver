@@ -3,16 +3,16 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"os"
 	"time"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
 	"github.com/religiosa1/git-webhook-receiver/internal/logsDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/serialization"
 )
 
 type LogsArgs struct {
-	File       string   `short:"f" help:"logs db file (default to the file, specified in config)" type:"path"`
+	File       string   `short:"i" help:"logs db file (default to the file, specified in config)" type:"path"`
 	Limit      int      `short:"l" default:"20" help:"Maximum number of log entries to output"`
 	Skip       int      `short:"s" default:"0" help:"Skip first N entries"`
 	Levels     []string `short:"e" help:"filter by levels" enum:"debug,info,warn,error"`
@@ -20,7 +20,7 @@ type LogsArgs struct {
 	DeliveryId string   `short:"d" help:"filter by deliveryId"`
 	PipeId     string   `short:"a" help:"filter by action's pipeId"`
 	Message    string   `short:"m" help:"filter by message"`
-	Format     string   `short:"F" help:"output format" enum:"simple,jq,json" default:"simple" `
+	Format     string   `short:"f" help:"output format" enum:"simple,jq,json" default:"simple" `
 }
 
 func Logs(cfg config.Config, args LogsArgs) {
@@ -68,38 +68,6 @@ func Logs(cfg config.Config, args LogsArgs) {
 	outputFormmater(records)
 }
 
-type prettyLogEntry struct {
-	Level      string `json:"level"`
-	Project    string `json:"project,omitempty"`
-	DeliveryId string `json:"delivery_id,omitempty"`
-	PipeId     string `json:"pipe_id,omitempty"`
-	Message    string `json:"message"`
-	Data       string `json:"data"`
-	Ts         string `json:"ts"`
-}
-
-func prettyfyLogEntry(entry logsDb.LogEntry) prettyLogEntry {
-	p := prettyLogEntry{
-		Project:    entry.Project.String,
-		DeliveryId: entry.DeliveryId.String,
-		PipeId:     entry.PipeId.String,
-		Message:    entry.Message,
-		Data:       entry.Data,
-		Ts:         time.Unix(entry.Ts, 0).Format(time.DateTime),
-	}
-	switch slog.Level(entry.Level) {
-	case slog.LevelDebug:
-		p.Level = "debug"
-	case slog.LevelInfo:
-		p.Level = "info"
-	case slog.LevelWarn:
-		p.Level = "warn"
-	case slog.LevelError:
-		p.Level = "error"
-	}
-	return p
-}
-
 func getLogOutputFormatter(format string) func([]logsDb.LogEntry) {
 	switch format {
 	case "simple":
@@ -124,16 +92,12 @@ func formatLogRecordsJq(entries []logsDb.LogEntry) {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	for _, entry := range entries {
-		enc.Encode(prettyfyLogEntry(entry))
+		enc.Encode(serialization.LogEntry(entry))
 	}
 }
 
 func formatLogRecordsJson(entries []logsDb.LogEntry) {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
-	prettyRecords := make([]prettyLogEntry, len(entries))
-	for i := 0; i < len(entries); i++ {
-		prettyRecords[i] = prettyfyLogEntry(entries[i])
-	}
-	enc.Encode(prettyRecords)
+	enc.Encode(serialization.LogEntries((entries)))
 }

@@ -8,16 +8,17 @@ import (
 
 	actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
+	"github.com/religiosa1/git-webhook-receiver/internal/serialization"
 )
 
 type ListPipelinesArgs struct {
-	File       string `help:"Actions db file (default to the file, specified in config)" type:"path"`
+	File       string `short:"i" help:"Actions db file (default to the file, specified in config)" type:"path"`
 	Limit      int    `short:"l" default:"20" help:"Maximum number of pipeline records to output"`
 	Skip       int    `short:"s" default:"0" help:"Skip first N entries"`
 	Status     string `short:"e" help:"filter by status" enum:"ok,error,pending,any" default:"any"`
 	Project    string `short:"p" help:"filter by project"`
 	DeliveryId string `short:"d" help:"filter by deliveryId"`
-	Format     string `short:"F" help:"output format" enum:"simple,jq,json" default:"simple"`
+	Format     string `short:"f" help:"output format" enum:"simple,jq,json" default:"simple"`
 }
 
 func ListPipelines(cfg config.Config, args ListPipelinesArgs) {
@@ -90,12 +91,12 @@ func formatActionRecordsJq(pipelines []actiondb.PipeLineRecord) {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	for _, pl := range pipelines {
-		enc.Encode(pl)
+		enc.Encode(serialization.PipelineRecord(pl))
 	}
 }
 
 func formatActionRecordsJson(pipelines []actiondb.PipeLineRecord) {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
-	enc.Encode(pipelines)
+	enc.Encode(serialization.PipelineRecords(pipelines))
 }

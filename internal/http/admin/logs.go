@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/logsDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/serialization"
 )
 
 func GetLogs(db *logsDb.LogsDb, logger *slog.Logger) http.HandlerFunc {
@@ -42,7 +43,7 @@ func GetLogs(db *logsDb.LogsDb, logger *slog.Logger) http.HandlerFunc {
 			return
 		}
 
-		json.NewEncoder(w).Encode(logs)
+		json.NewEncoder(w).Encode(serialization.LogEntries(logs))
 	}
 }
 

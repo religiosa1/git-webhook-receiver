@@ -15,7 +15,7 @@ var testEntry = logsDb.LogEntry{
 	DeliveryId: sql.NullString{Valid: true, String: "testDeliveryId"},
 	PipeId:     sql.NullString{Valid: true, String: "testPipeId"},
 	Message:    "testMessage",
-	Data:       "testData",
+	Data:       `{"test":123}`,
 }
 
 func TestLogDb(t *testing.T) {
@@ -310,8 +310,8 @@ func CompareEntries(t *testing.T, want logsDb.LogEntry, got logsDb.LogEntry) boo
 		t.Errorf("Wrong Message value, want %s got %s", want.Message, got.Message)
 		return false
 	}
-	if want.Data != got.Data {
-		t.Errorf("Wrong Data value, want %s got %s", want.Data, got.Data)
+	if want, got := want.Data, got.Data; want != got {
+		t.Errorf("Wrong Data value, want %s got %s", want, got)
 		return false
 	}
 	return true

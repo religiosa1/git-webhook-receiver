@@ -15,14 +15,14 @@ import (
 
 type PipeLineRecord struct {
 	Id         int64           `db:"id"`
-	PipeId     string          `db:"pipe_id" json:"pipeId"`
-	Project    string          `db:"project" json:"project"`
-	DeliveryId string          `db:"delivery_id" json:"deliveryId"`
-	Config     json.RawMessage `db:"config" json:"config"`
-	Error      sql.NullString  `db:"error" json:"error,omitempty"`
-	Output     sql.NullString  `db:"output" json:"output,omitempty"`
-	CreatedAt  int64           `db:"created_at" json:"createdAt"`
-	EndedAt    sql.NullInt64   `db:"ended_at" json:"endedAt,omitempty"`
+	PipeId     string          `db:"pipe_id"`
+	Project    string          `db:"project"`
+	DeliveryId string          `db:"delivery_id"`
+	Config     json.RawMessage `db:"config"`
+	Error      sql.NullString  `db:"error"`
+	Output     sql.NullString  `db:"output"`
+	CreatedAt  int64           `db:"created_at"`
+	EndedAt    sql.NullInt64   `db:"ended_at"`
 }
 
 type ActionDb struct {
@@ -138,7 +138,7 @@ func (d ActionDb) ListPipelineRecords(search ListPipelineRecordsQuery) ([]PipeLi
 	qb.WriteString(`
 SELECT * FROM (
 SELECT 
-	id, pipe_id, project, delivery_id, error, created_at, ended_at 
+	id, pipe_id, project, delivery_id, config, error, created_at, ended_at 
 FROM 
 	pipeline
 `)

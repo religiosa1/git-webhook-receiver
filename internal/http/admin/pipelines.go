@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/serialization"
 )
 
 func ListPipelines(db *actiondb.ActionDb, logger *slog.Logger) http.HandlerFunc {
@@ -31,7 +32,7 @@ func ListPipelines(db *actiondb.ActionDb, logger *slog.Logger) http.HandlerFunc 
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(records)
+		json.NewEncoder(w).Encode(serialization.PipelineRecords(records))
 	}
 }
 
@@ -49,7 +50,7 @@ func GetPipeline(db *actiondb.ActionDb, logger *slog.Logger) http.HandlerFunc {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(record)
+		json.NewEncoder(w).Encode(serialization.PipelineRecord(record))
 	}
 }
 
