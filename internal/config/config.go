@@ -13,6 +13,8 @@ type Config struct {
 	Host          string             `yaml:"host" env:"HOST" env-default:"localhost"`
 	Port          int16              `yaml:"port" env:"PORT" env-default:"9090"`
 	WebAdmin      bool               `yaml:"web_admin" env:"WEB_ADMIN" env-default:"true"`
+	WebAdminUser  string             `yaml:"web_admin_user" env:"WEB_ADMIN_USER" env-default:"admin"`
+	WebAdminPwd   string             `yaml:"web_admin_password" env:"WEB_ADMIN_PASSWORD"`
 	LogLevel      string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
 	LogsDbFile    string             `yaml:"logs_db_file" env:"LOGS_DB_FILE"`
 	ActionsDbFile string             `yaml:"actions_db_file" env:"ACTIONS_DB_FILE" env-default:"actions.sqlite3"`
@@ -159,6 +161,10 @@ const maskValue = "********"
 
 func (cfg Config) MaskSensitiveData() Config {
 	maskedCfg := cfg
+
+	if maskedCfg.WebAdminPwd != "" {
+		maskedCfg.WebAdminPwd = maskValue
+	}
 
 	maskedCfg.Projects = make(map[string]Project, 0)
 

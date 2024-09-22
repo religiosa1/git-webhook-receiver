@@ -2,12 +2,12 @@ package whreceiver
 
 import (
 	"bytes"
-	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
+	"github.com/religiosa1/git-webhook-receiver/internal/cryptoutils"
 )
 
 type GitlabReceiver struct {
@@ -24,8 +24,7 @@ func (rcvr GitlabReceiver) GetCapabilities() ReceiverCapabilities {
 
 func (rcvr GitlabReceiver) Authorize(req WebhookPostRequest, auth string) (bool, error) {
 	authorizationHeader := req.Headers.Get("X-Gitlab-Token")
-	isSame := subtle.ConstantTimeCompare([]byte(auth), []byte(authorizationHeader)) == 1
-	return isSame, nil
+	return cryptoutils.NewConstantTimeComparer(auth).Eq(authorizationHeader), nil
 }
 
 // https://gitlab.com/gitlab-org/gitlab/-/issues/19367

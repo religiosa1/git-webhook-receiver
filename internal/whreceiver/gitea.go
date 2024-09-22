@@ -1,9 +1,8 @@
 package whreceiver
 
 import (
-	"crypto/subtle"
-
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
+	"github.com/religiosa1/git-webhook-receiver/internal/cryptoutils"
 )
 
 type GiteaReceiver struct {
@@ -20,8 +19,7 @@ func (rcvr GiteaReceiver) GetCapabilities() ReceiverCapabilities {
 
 func (rcvr GiteaReceiver) Authorize(req WebhookPostRequest, auth string) (bool, error) {
 	authorizationHeader := req.Headers.Get("Authorization")
-	isSame := subtle.ConstantTimeCompare([]byte(auth), []byte(authorizationHeader)) == 1
-	return isSame, nil
+	return cryptoutils.NewConstantTimeComparer(auth).Eq(authorizationHeader), nil
 }
 
 func (rcvr GiteaReceiver) VerifySignature(req WebhookPostRequest, secret string) (bool, error) {

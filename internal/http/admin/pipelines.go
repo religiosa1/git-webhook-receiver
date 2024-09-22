@@ -41,7 +41,7 @@ func GetPipeline(db *actiondb.ActionDb, logger *slog.Logger) http.HandlerFunc {
 		pipeId := req.PathValue("pipeId")
 		record, err := db.GetPipelineRecord(pipeId)
 		if err == sql.ErrNoRows {
-			w.WriteHeader(404)
+			http.Error(w, "Not Found", http.StatusNotFound)
 			return
 		} else if err != nil {
 			logger.Error("Error processing GetPipeline request", slog.Any("error", err))
@@ -59,7 +59,7 @@ func GetPipelineOutput(db *actiondb.ActionDb, logger *slog.Logger) http.HandlerF
 		pipeId := req.PathValue("pipeId")
 		record, err := db.GetPipelineRecord(pipeId)
 		if err == sql.ErrNoRows {
-			w.WriteHeader(404)
+			http.Error(w, "Not Found", http.StatusNotFound)
 			return
 		} else if err != nil {
 			logger.Error("Error processing GetPipelineOutput request", slog.Any("error", err))

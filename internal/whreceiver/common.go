@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/religiosa1/git-webhook-receiver/internal/cryptoutils"
 )
 
 // Common significant payload for push events for Gitea and Github
@@ -45,9 +46,8 @@ func verifyPayloadSignature(payload []byte, signature string, secret string) (bo
 	}
 
 	payloadSignature := GetPayloadSignature(secret, payload)
-	signatureMatch := subtle.ConstantTimeCompare(payloadSignature, headSig) == 1
 
-	return signatureMatch, nil
+	return cryptoutils.NewConstantTimeComparerBytes(headSig).EqBytes((payloadSignature)), nil
 }
 
 func getBranchFromRefName(ref string) string {

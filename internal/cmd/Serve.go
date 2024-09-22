@@ -15,6 +15,7 @@ import (
 	actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/admin"
+	"github.com/religiosa1/git-webhook-receiver/internal/http/middleware"
 	handlers "github.com/religiosa1/git-webhook-receiver/internal/http/webhook_handlers"
 	"github.com/religiosa1/git-webhook-receiver/internal/logger"
 	"github.com/religiosa1/git-webhook-receiver/internal/logsDb"
@@ -69,9 +70,10 @@ func Serve(cfg config.Config) {
 	if cfg.WebAdmin {
 		if dbActions != nil {
 			logger.Debug("Web admin enabled for pipelines")
-			mux.HandleFunc("GET /pipelines", admin.ListPipelines(dbActions, logger))
-			mux.HandleFunc("GET /pipelines/{pipeId}", admin.GetPipeline(dbActions, logger))
-			mux.HandleFunc("GET /pipelines/{pipeId}/output", admin.GetPipelineOutput(dbActions, logger))
+			basicAuth := middleware.NewBasicAuth(cfg.WebAdminUser, cfg.WebAdminPwd, logger)
+			mux.HandleFunc("GET /pipelines", basicAuth(admin.ListPipelines(dbActions, logger)))
+			mux.HandleFunc("GET /pipelines/{pipeId}", basicAuth(admin.GetPipeline(dbActions, logger)))
+			mux.HandleFunc("GET /pipelines/{pipeId}/output", basicAuth(admin.GetPipelineOutput(dbActions, logger)))
 		}
 		if dbLogs != nil {
 			logger.Debug("Web admin enabled for logs")

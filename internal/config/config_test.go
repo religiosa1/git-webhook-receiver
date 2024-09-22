@@ -346,6 +346,8 @@ func TestSensitiveDataMasking(t *testing.T) {
 			Projects: make(map[string]config.Project),
 		}
 
+		cfg.WebAdminPwd = "testPassword"
+
 		cfg.Projects["proj1"] = config.Project{
 			Authorization: "auth",
 		}
@@ -377,6 +379,25 @@ func TestSensitiveDataMasking(t *testing.T) {
 
 		if got := maskedCfg.Projects["proj1"].Secret; got != "" {
 			t.Errorf("Project secret value was masked when it shouldn't. Want empty string, got %s", got)
+		}
+	})
+
+	t.Run("masks WebAdminPassword if present", func(t *testing.T) {
+		cfg := makeTestCfg()
+		maskedCfg := cfg.MaskSensitiveData()
+
+		if got := maskedCfg.WebAdminPwd; got == cfg.WebAdminPwd {
+			t.Errorf("WebAdminPassword value wasn't masked: %s", got)
+		}
+	})
+
+	t.Run("masks WebAdminPassword only if present", func(t *testing.T) {
+		cfg := makeTestCfg()
+		cfg.WebAdminPwd = ""
+		maskedCfg := cfg.MaskSensitiveData()
+
+		if got := maskedCfg.WebAdminPwd; got != "" {
+			t.Errorf("WebAdminPassword value was masked when it shouldn't. Want empty string, got %s", got)
 		}
 	})
 
