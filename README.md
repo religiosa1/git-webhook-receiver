@@ -165,13 +165,16 @@ GET /pipelines/{:pipeId} # To see the pipeline status
 GET /pipelines/{:pipeId}/output # To see the pipe output
 GET /pipelines # To list last pipelines
 GET /logs # To see the logs result
+```
 
 <!-- TODO: document all of the available query params for the endpoints -->
 
 BasicAuth can be set on those endpoints in the config:
+
 ```
 web_admin_password: "mysecret" # OR with env WEB_ADMIN_PASSWORD=mysecret
 ```
+
 **Security Warning**: Do not use BasicAuth unless SSL is enabled (either in the 
 app or via a reverse proxy), as your credentials can sniffed.
 
