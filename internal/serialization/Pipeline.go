@@ -1,6 +1,8 @@
 package serialization
 
-import actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
+import (
+	actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
+)
 
 type PrettyPipelineRecord struct {
 	PipeId     string     `json:"pipeId"`

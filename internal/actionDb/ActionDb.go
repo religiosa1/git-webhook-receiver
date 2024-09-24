@@ -127,8 +127,10 @@ type ListPipelineRecordsQuery struct {
 	DeliveryId string
 }
 
+const maxPageSize int = 200
+
 func (d ActionDb) ListPipelineRecords(search ListPipelineRecordsQuery) ([]PipeLineRecord, error) {
-	if search.Limit == 0 {
+	if search.Limit <= 0 || search.Limit > maxPageSize {
 		search.Limit = 20
 	}
 

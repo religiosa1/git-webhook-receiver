@@ -67,17 +67,21 @@ func Serve(cfg config.Config) {
 		logger.Error("Error creating the server", slog.Any("error", err))
 		os.Exit(ExitReadConfig)
 	}
-	if cfg.WebAdmin {
+	if !cfg.DisableApi {
 		if dbActions != nil {
 			logger.Debug("Web admin enabled for pipelines")
-			basicAuth := middleware.NewBasicAuth(cfg.WebAdminUser, cfg.WebAdminPwd, logger)
+			basicAuth := middleware.NewBasicAuth(cfg.ApiUser, cfg.ApiPassword, logger)
 			mux.HandleFunc("GET /pipelines", basicAuth(admin.ListPipelines(dbActions, logger)))
 			mux.HandleFunc("GET /pipelines/{pipeId}", basicAuth(admin.GetPipeline(dbActions, logger)))
 			mux.HandleFunc("GET /pipelines/{pipeId}/output", basicAuth(admin.GetPipelineOutput(dbActions, logger)))
+		} else {
+			logger.Warn("actions_db_file config value is an empty string. All of /pipeline API endpoints won't be available")
 		}
 		if dbLogs != nil {
 			logger.Debug("Web admin enabled for logs")
 			mux.HandleFunc("GET /logs", admin.GetLogs(dbLogs, logger))
+		} else {
+			logger.Warn("logs_db_file config value is an empty string. Logs inspection won't be available")
 		}
 	}
 

@@ -12,11 +12,11 @@ import (
 type Config struct {
 	Host          string             `yaml:"host" env:"HOST" env-default:"localhost"`
 	Port          int16              `yaml:"port" env:"PORT" env-default:"9090"`
-	WebAdmin      bool               `yaml:"web_admin" env:"WEB_ADMIN" env-default:"true"`
-	WebAdminUser  string             `yaml:"web_admin_user" env:"WEB_ADMIN_USER" env-default:"admin"`
-	WebAdminPwd   string             `yaml:"web_admin_password" env:"WEB_ADMIN_PASSWORD"`
+	DisableApi    bool               `yaml:"disable_api" env:"DISABLE_API"`
+	ApiUser       string             `yaml:"api_user" env:"API_USER" env-default:"admin"`
+	ApiPassword   string             `yaml:"api_password" env:"API_PASSWORD"`
 	LogLevel      string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
-	LogsDbFile    string             `yaml:"logs_db_file" env:"LOGS_DB_FILE"`
+	LogsDbFile    string             `yaml:"logs_db_file" env:"LOGS_DB_FILE" env-default:"logs.sqlite3"`
 	ActionsDbFile string             `yaml:"actions_db_file" env:"ACTIONS_DB_FILE" env-default:"actions.sqlite3"`
 	Ssl           SslConfig          `yaml:"ssl" env-prefix:"SSL__"`
 	Projects      map[string]Project `yaml:"projects" env-required:"true"`
@@ -162,8 +162,8 @@ const maskValue = "********"
 func (cfg Config) MaskSensitiveData() Config {
 	maskedCfg := cfg
 
-	if maskedCfg.WebAdminPwd != "" {
-		maskedCfg.WebAdminPwd = maskValue
+	if maskedCfg.ApiPassword != "" {
+		maskedCfg.ApiPassword = maskValue
 	}
 
 	maskedCfg.Projects = make(map[string]Project, 0)

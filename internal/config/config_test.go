@@ -346,7 +346,7 @@ func TestSensitiveDataMasking(t *testing.T) {
 			Projects: make(map[string]config.Project),
 		}
 
-		cfg.WebAdminPwd = "testPassword"
+		cfg.ApiPassword = "testPassword"
 
 		cfg.Projects["proj1"] = config.Project{
 			Authorization: "auth",
@@ -382,22 +382,22 @@ func TestSensitiveDataMasking(t *testing.T) {
 		}
 	})
 
-	t.Run("masks WebAdminPassword if present", func(t *testing.T) {
+	t.Run("masks ApiPassword if present", func(t *testing.T) {
 		cfg := makeTestCfg()
 		maskedCfg := cfg.MaskSensitiveData()
 
-		if got := maskedCfg.WebAdminPwd; got == cfg.WebAdminPwd {
-			t.Errorf("WebAdminPassword value wasn't masked: %s", got)
+		if got := maskedCfg.ApiPassword; got == cfg.ApiPassword {
+			t.Errorf("ApiPassword value wasn't masked: %s", got)
 		}
 	})
 
-	t.Run("masks WebAdminPassword only if present", func(t *testing.T) {
+	t.Run("masks ApiPassword only if present", func(t *testing.T) {
 		cfg := makeTestCfg()
-		cfg.WebAdminPwd = ""
+		cfg.ApiPassword = ""
 		maskedCfg := cfg.MaskSensitiveData()
 
-		if got := maskedCfg.WebAdminPwd; got != "" {
-			t.Errorf("WebAdminPassword value was masked when it shouldn't. Want empty string, got %s", got)
+		if got := maskedCfg.ApiPassword; got != "" {
+			t.Errorf("ApiPassword value was masked when it shouldn't. Want empty string, got %s", got)
 		}
 	})
 

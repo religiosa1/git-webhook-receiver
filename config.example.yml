@@ -2,9 +2,9 @@
 host: example.com # defaults to localhost
 port: 9090 # defaults to 9090
 log_level: "debug" # defaults to 'info', other options are 'warn' and 'error'
-web_admin: true # Enable HTTP-api for inspection -- to retrieve pipelines and logs
-web_admin_user: 'admin' # Basic auth user for inspection API. Defaults to "admin"
-web_admin_password: '' # Basic auth user for inspection API. Empty string (disabled) by default
+disable_api: true # Disable Inspection HTTP API
+api_user: 'admin' # Basic auth user for the inspection API. Defaults to "admin"
+api_password: '' # Basic auth user for the inspection API. Defaults to empty string (disabled)
 # SSL config: (optional, but recommended, unless you're using a reverse proxy)
 ssl:
   cert_file_path: "./your/certfile/path/fullchain.pem"
@@ -30,6 +30,7 @@ projects:
           npm run build
         # Or to execute a script or program:
         # run: ["node", "--version"]
- # Defaults to "actions.sqlite3", use empty string or null to disable actions result storage
+ # pipeline results db filename, defaults to `actions.sqlite3` use empty string or null to disable
 actions_db_file: "actions.sqlite3"
-logs_db_file: "logs.sqlite3" # Storage of application logs, disabled by default
+# application logs db filename, default to `logs.sqlite3`. Use empty string or null to disable
+logs_db_file: "logs.sqlite3" 

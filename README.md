@@ -154,10 +154,10 @@ run the script.
 Please notice, that `user` param is not supported on windows and your script
 will always run from the same user, that launches the service.
 
-## Inspection HTTP-API/Admin
+## Inspection HTTP API
 
-By default, the app exposes inspection/admin HTTP endpoints, unless
-`web_admin: false` is set in the config. These endpoints allows you to get the
+By default, the app exposes inspection HTTP endpoints, unless
+`disable_api: true` is set in the config. These endpoints allows you to get the
 status/output of a pipeline, list pipelines, or view the app logs.
 
 ```
@@ -167,49 +167,42 @@ GET /pipelines # To list last pipelines
 GET /logs # To see the logs result
 ```
 
-<!-- TODO: document all of the available query params for the endpoints -->
+You can find the full documentation for endpoints and params they accept
+[here](./docs/inspection-api.md)
 
-BasicAuth can be set on those endpoints in the config:
+You can also enable BasicAuth for the APi either in the config:
 
 ```
-web_admin_password: "mysecret" # OR with env WEB_ADMIN_PASSWORD=mysecret
+api_password: "mysecret"
 ```
+
+or with a env variable API_PASSWORD=mysecret
 
 **Security Warning**: Do not use BasicAuth unless SSL is enabled (either in the
 app or via a reverse proxy), as your credentials can sniffed.
 
-## Logging
+## CLI 
 
-By default, action outputs are stored persistently in the SQLite database, while
-application logs are not, as they are expected to be processed by `journalctl`
-or another similar solution. The destination of the action output database file
-is controlled by the `actions_db_file` parameter in the config (set to
-`actions.sqlite3` by default), and actions will be stored there once completed.
-While the action is still in progress, data is stored in a temporary file.
+In addition to the default serve mode, the app provides a couple of CLI
+subcommands to retrieve logs, inspect pipeline results, and retrieve their 
+output. It duplicates the HTTP-API functionality for the local access or cases 
+when HTTP-API is disabled.
 
-You can enable the storage of application logs by providing logs_db_file in the
-config, allowing you to inspect them later (for example, by filtering by
-delivery or pipeline ID). Run `./git-webhook-receiver logs --help` to see the
-list of available filter options.
+Run `git-webhook-receiver --help` to see the list of available subcomands 
+or run `git-webhook-receiver <SUBCOMMAND> --help` to subcommand's help.
 
-All of the logs are stored in an SQLite database
-[Write-Ahead Logging](https://www.sqlite.org/wal.html) turned on. This
-means, in addition to the file specified in the config, the app will also create
-two additional temporary files during operation `<YOUR_FILE>-wal` and
-`<YOUR_FILE>-shm`, to ensure data ingtegrity during write operations.
+Some examples:
 
 You can use `pipeline` subcommand to check the last or given pipeline:
 
 ```sh
-git-webhook-receiever pipeline
+git-webhook-receiever pipeline # shows the last pipeline
 # OR
 git-webhook-receiever pipeline <PIPE_ID>
 ```
 
-Run `git-webhook-receiever pipeline --help` to see the list of all available
-flags.
-
 Run `get-webhook-receiver ls` to see a list of the last N pipelines.
+Run `get-webhook-receiver logs` to inspect app logs.
 
 <!--
 TODO implement this functionality for actionsDb:
@@ -219,6 +212,26 @@ config as `max_output_files` field. When number of output files exceeds this
 number, the oldest actions (by their file LastModified date) are removed.
 `max_output_files` defaults to 10000, setting it as 0 or negative value turns
 off this functionality. -->
+
+## Logging
+
+By default, action outputs and logs are stored persistently in two SQLite 
+databases: one for app logs and one for actions and their outputt.
+By default, actions db filename is `actions.sqlite3`, logs db filename is 
+`logs.sqlite3`. This filenames are controlled by the `actions_db_file` and 
+`logs_db_file` fields in the config correspondingly. 
+
+Setting those config values to an empty string will disable the persistent on 
+storage of this information and in turn will also disable the corresponding 
+HTTP-API and/or CLI subcommands.
+
+Actions' output is stored in the db once the action is completed.
+While the action is still in progress, data is stored in a temporary file.
+
+Both databases use [Write-Ahead Logging](https://www.sqlite.org/wal.html).
+This means, in addition to the file specified in the config, the app will also 
+create two additional temporary files during operation `<YOUR_FILE>-wal` and
+`<YOUR_FILE>-shm`, to ensure data ingtegrity during write operations.
 
 ## Contribution
 

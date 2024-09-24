@@ -1,3 +1,4 @@
+PRAGMA user_version = 1;
 CREATE TABLE IF NOT EXISTS pipeline (
   id INTEGER PRIMARY KEY NOT NULL,
   pipe_id TEXT NOT NULL,

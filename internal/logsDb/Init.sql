@@ -1,3 +1,4 @@
+PRAGMA user_version = 1;
 CREATE TABLE IF NOT EXISTS logs (
 	id integer PRIMARY KEY NOT NULL,
   level integer NOT NULL, -- log level as used in slog: -4 for debug, 0 for info, 4 for warn and 8 for error
