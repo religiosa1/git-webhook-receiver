@@ -9,18 +9,22 @@ execute arbitrary actions on Git events.
 
 In a nutshell:
 
-- [Seploy](#installation) it to your server.
+- [Deploy](#installation) it to your server.
 - (Optional but recommended) Install an SSL certificate or wrap it with a
-  [reverse proxy](./docs/nginx-setup.md), such as Nginx or Caddy, to enable
-  encryption.
+  [reverse proxy](./docs/ssl-or-nginx-setup.md#nginx-configuration), such as 
+  Nginx or Caddy, to enable encryption.
 - Create a [config file](#config-file) and add your projects along with their
   corresponding build scripts/actions, either as standalone scripts or
   [cross-platform inline scripts](#inline-scripts-and-standalone-scripts)
+- Optional: add the app to your server startup scripts (systemd scripts 
+  setup is described [in this document](./docs/systemd-init-script.md))
 - set webhooks for those repo in their git services (Github, Gitea, Gitlab,
-  etc.) to post to {YOUR_HOST}/projects/{PROJECT_NAME}
+  etc.) to post to {YOUR_HOST}/projects/{PROJECT_NAME}. Information on how to 
+  setup github webhooks for your project can be found 
+  in [this document](./docs/github-webhooks-setup.md).
 - Start the service. It will listen for the webhook posts and execute the
-  actions described in the config (e.g., building your projects or other tasks)
-  when the webhooks are triggered by Git.
+  actions described in the config (e.g., building your projects or performing
+  other tasks) when the webhooks are triggered by Git.
 
 WIP, but operational. Some planned MVP functionality is still missing and there
 will be breaking changes before version 1.0 release.
@@ -37,12 +41,13 @@ A typical config file may look like this:
 ```yaml
 host: example.com
 ssl:
-  cert_file_path: "./your/certfile/path/fullchain.pem"
-  key_file_path: "/your/keyfile/path/privkey.pem"
+  cert_file_path: "/etc/letsencrypt/live/example.com/fullchain.pem"
+  key_file_path: "/etc/letsencrypt/live/example.com/privkey.pem"
+api_password: "password for inspection api basic auth"
 projects:
   my_awesome_roject:
     repo: "username/reponame"
-    secret: "YourSecretGoesHere"
+    secret: "YourSecretGoesHere" # generate it with `openssl rand -base64 42`
     actions:
       - on: push
         branch: main
@@ -78,6 +83,7 @@ authorization and signature verification.
 Most of the config values can be provided via ENV variables. Please consider
 if it makes sense for your application to provide secrets in this manner.
 
+
 ## Installation
 
 <!-- ### TODO snap
@@ -112,7 +118,7 @@ If you have an HTTP server such as Nginx or Caddy, you can use it to provide
 a reverse proxy with SSL support.
 
 Infortmation on how to configure nginx + [certbot](https://certbot.eff.org/)
-can be found [here](./docs/nginx-setup.md).
+can be found [here](./docs/ssl-or-nginx-setup.md).
 
 If you don’t have an HTTP server available, you can use the internal SSL
 functionality by providing the certificate and key files in the corresponding

@@ -1,4 +1,4 @@
-# Nginx onfiguration
+## Nginx configuration
 
 TODO
 

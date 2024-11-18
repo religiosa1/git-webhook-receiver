@@ -4,7 +4,7 @@ If you're depploying application manually after compilation, you'll need
 a startup script for the service.
 
 On systems with systemd startup you can use
-a script like that (assuming you cloned and compiled the app in `/var/www/deploy` directory).
+a script like that:
 
 `/etc/systemd/system/git-webhook-receiver.service`:
 
@@ -13,8 +13,10 @@ a script like that (assuming you cloned and compiled the app in `/var/www/deploy
 Description=Git webhook receiver startup script
 
 [Service]
+# path where your db files will be stored
 WorkingDirectory=/var/www/deploy
-ExecStart=/var/www/deploy/git-webhook-receiver
+# path to the binary with optional path to config
+ExecStart=/root/go/bin/git-webhook-receiver -c /root/receiver-config.yaml
 
 [Install]
 WantedBy=multi-user.target
