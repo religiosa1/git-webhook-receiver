@@ -110,15 +110,23 @@ After a push event to your target branch, there should be a recent delivery
 in github webhooks page, with a status of 201 and response body (in the response
 tab) like:
 ```json
-[{"actionIdx":0,"project":"my_project","pipeId":"01JCPSSCDAKKCDBN9VFB589ZE3B"}]
+[{
+  "actionIdx":0,
+  "project":"my_project",
+  "pipeId":"01JCPSSCDAKKCDBN9VFB589ZE3B",
+  "url": "https://example.com:9090/pipelines/01JCPSSCDAKKCDBN9VFB589ZE3B"
+}]
 ```
+
+If you don't have `disable_api: true` in your config, then you can follow the 
+url value, to inspect the pipeline outcome.
 
 If you have 200 status instead, it means that action didn't match on branch or 
 event, most likely you messed up `master` and `main` and have to change it in 
 config and restart the app.
 
-You can verify through the inspection
-API of the app, that pipeline ended in success. To do that, open in your browser
+You can check the list of all pipelines and their results if you open the
+inspection API in your browser:
 ```
 https://example.com:9090/pipelines
 ```

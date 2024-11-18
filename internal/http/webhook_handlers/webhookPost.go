@@ -3,9 +3,11 @@ package webhookhandlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/oklog/ulid/v2"
 	"github.com/religiosa1/git-webhook-receiver/internal/ActionRunner"
@@ -76,7 +78,7 @@ func HandleWebhookPost(
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(actions)
+		json.NewEncoder(w).Encode(actionsToOutput(cfg, actions))
 	}
 }
 
@@ -118,4 +120,41 @@ func getProjectsActionsForWebhookPost(projectName string, project config.Project
 		})
 	}
 	return actions
+}
+
+type ActionOutput struct {
+	ActionRunner.ActionIdentifier
+	Url string `json:"url,omitempty"`
+}
+
+func actionsToOutput(cfg config.Config, actions []ActionRunner.ActionDescriptor) []ActionOutput {
+	output := make([]ActionOutput, len(actions))
+	baseUrl := generatePublicBaseUrl(cfg)
+	for idx, action := range actions {
+		var url string
+		if baseUrl != "" {
+			url = baseUrl + action.ActionIdentifier.PipeId
+		}
+		output[idx] = ActionOutput{
+			ActionIdentifier: action.ActionIdentifier,
+			Url:              url,
+		}
+	}
+	return output
+}
+
+func generatePublicBaseUrl(cfg config.Config) string {
+	if cfg.DisableApi {
+		return ""
+	}
+	if cfg.PublicUrl != "" {
+		return strings.TrimSuffix(cfg.PublicUrl, "/") + "/pipelines/"
+	}
+
+	protocol := "http"
+	if cfg.Ssl.CertFilePath != "" && cfg.Ssl.KeyFilePath != "" {
+		protocol = "https"
+	}
+
+	return fmt.Sprintf("%s://%s:%d/pipelines/", protocol, cfg.Host, cfg.Port)
 }

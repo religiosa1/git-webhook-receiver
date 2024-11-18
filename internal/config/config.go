@@ -12,6 +12,7 @@ import (
 type Config struct {
 	Host          string             `yaml:"host" env:"HOST" env-default:"localhost"`
 	Port          int16              `yaml:"port" env:"PORT" env-default:"9090"`
+	PublicUrl     string             `yaml:"public_url" env:"PUBLIC_URL"`
 	DisableApi    bool               `yaml:"disable_api" env:"DISABLE_API"`
 	ApiUser       string             `yaml:"api_user" env:"API_USER" env-default:"admin"`
 	ApiPassword   string             `yaml:"api_password" env:"API_PASSWORD"`

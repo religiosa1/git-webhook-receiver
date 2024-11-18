@@ -1,6 +1,9 @@
 # All fields are optional, unless stated otherwise
 host: example.com # defaults to localhost
 port: 9090 # defaults to 9090
+# Public URL to use in the post output for pipeline url generation
+# If not specified public url will be a combination of protocol + host + port
+public_url: https://example.com:9090/ 
 log_level: "debug" # defaults to 'info', other options are 'warn' and 'error'
 disable_api: true # Disable Inspection HTTP API
 api_user: 'admin' # Basic auth user for the inspection API. Defaults to "admin"
