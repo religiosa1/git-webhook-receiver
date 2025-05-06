@@ -28,6 +28,8 @@ func HandleWebhookPost(
 		payload, err := io.ReadAll(req.Body)
 		if err != nil {
 			logger.Error("Error while reading the POST request body", slog.Any("error", err))
+			w.WriteHeader(http.StatusBadRequest)
+			return
 		}
 		whReq := whreceiver.WebhookPostRequest{Payload: payload, Headers: req.Header}
 
