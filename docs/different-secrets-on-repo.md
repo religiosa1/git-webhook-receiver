@@ -1,12 +1,14 @@
-# Different secrets/auth for actions.
+# Different secrets/auth on per action level.
 
-For each created webhook github sends a 
+You can only specify secret on the project level, not on the action level.
+
+For each created webhook github sends a
 [ping request](https://docs.github.com/en/webhooks/webhook-events-and-payloads#ping).
 
 This request is intended to verify, that the setup is working correctly.
 
 The problem lies in the fact, that github doesn't allow to specify a branch, for
-which the request is triggered, and branch is a required part for us to run 
+which the request is triggered, and branch is a required part for us to run
 actions on.
 
 Because of that, we can't determine what action should be triggered on the ping
@@ -17,5 +19,6 @@ actually verifying them.
 To circumvent this behavior, we don't allow secrets and auth info to be setup
 on the action level, only on the project level itself.
 
-If you need to have multiple different secrets for the same repo on different 
+If you need to have multiple different secrets for the same repo on different
 actions, you must create different projects in the config for them.
+

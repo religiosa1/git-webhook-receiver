@@ -1,6 +1,6 @@
 # Systemd init script example
 
-If you're depploying application manually after compilation, you'll need
+If you're deploying application manually after compilation, you'll need
 a startup script for the service.
 
 On systems with systemd startup you can use

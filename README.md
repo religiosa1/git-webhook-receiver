@@ -11,16 +11,16 @@ In a nutshell:
 
 - [Deploy](#installation) it to your server.
 - (Optional but recommended) Install an SSL certificate or wrap it with a
-  [reverse proxy](./docs/ssl-or-nginx-setup.md#nginx-configuration), such as 
+  [reverse proxy](./docs/ssl-or-nginx-setup.md#nginx-configuration), such as
   Nginx or Caddy, to enable encryption.
 - Create a [config file](#config-file) and add your projects along with their
   corresponding build scripts/actions, either as standalone scripts or
   [cross-platform inline scripts](#inline-scripts-and-standalone-scripts)
-- Optional: add the app to your server startup scripts (systemd scripts 
+- Optional: add the app to your server startup scripts (systemd scripts
   setup is described [in this document](./docs/systemd-init-script.md))
 - set webhooks for those repo in their git services (Github, Gitea, Gitlab,
-  etc.) to post to {YOUR_HOST}/projects/{PROJECT_NAME}. Information on how to 
-  setup github webhooks for your project can be found 
+  etc.) to post to {YOUR_HOST}/projects/{PROJECT_NAME}. Information on how to
+  setup github webhooks for your project can be found
   in [this document](./docs/github-webhooks-setup.md).
 - Start the service. It will listen for the webhook posts and execute the
   actions described in the config (e.g., building your projects or performing
@@ -45,7 +45,7 @@ ssl:
   key_file_path: "/etc/letsencrypt/live/example.com/privkey.pem"
 api_password: "password for inspection api basic auth"
 projects:
-  my_awesome_roject:
+  my_awesome_project:
     repo: "username/reponame"
     secret: "YourSecretGoesHere" # generate it with `openssl rand -base64 42`
     actions:
@@ -75,7 +75,7 @@ hasn't been tampered with.
 
 Gitlab currently
 [doesn't sign](https://gitlab.com/gitlab-org/gitlab/-/issues/19367) its
-requests, so only `authorization` is availabe for gitlab receivers,
+requests, so only `authorization` is available for gitlab receivers,
 while Github only supports request signature and not authorization
 headers, so only `secret` for Github receivers. Gitea supports both
 authorization and signature verification.
@@ -83,16 +83,11 @@ authorization and signature verification.
 Most of the config values can be provided via ENV variables. Please consider
 if it makes sense for your application to provide secrets in this manner.
 
-
 ## Installation
-
-<!-- ### TODO snap
-
-Snap and flatpak package support is planned for 1.0 release. -->
 
 ### Build from source
 
-To build the app, you need [go](https://go.dev/) version 1.22 or higher.
+To build the app, you need [go](https://go.dev/) version 1.26.2 or higher.
 Since the app stores action outputs and logs in an SQLite3 database via
 [go-sqlite3](https://github.com/mattn/go-sqlite3) you also need a `gcc`
 compiler installed on your system and have `CGO_ENABLED=1` env variable set.
@@ -117,7 +112,7 @@ It’s recommended to use SSL so that your requests are encrypted.
 If you have an HTTP server such as Nginx or Caddy, you can use it to provide
 a reverse proxy with SSL support.
 
-Infortmation on how to configure nginx + [certbot](https://certbot.eff.org/)
+Information on how to configure nginx + [certbot](https://certbot.eff.org/)
 can be found [here](./docs/ssl-or-nginx-setup.md).
 
 If you don’t have an HTTP server available, you can use the internal SSL
@@ -187,24 +182,24 @@ or with a env variable API_PASSWORD=mysecret
 **Security Warning**: Do not use BasicAuth unless SSL is enabled (either in the
 app or via a reverse proxy), as your credentials can sniffed.
 
-## CLI 
+## CLI
 
 In addition to the default serve mode, the app provides a couple of CLI
-subcommands to retrieve logs, inspect pipeline results, and retrieve their 
-output. It duplicates the HTTP-API functionality for the local access or cases 
+subcommands to retrieve logs, inspect pipeline results, and retrieve their
+output. It duplicates the HTTP-API functionality for the local access or cases
 when HTTP-API is disabled.
 
-Run `git-webhook-receiver --help` to see the list of available subcomands 
-or run `git-webhook-receiver <SUBCOMMAND> --help` to subcommand's help.
+Run `git-webhook-receiver --help` to see the list of available subcommands
+or run `git-webhook-receiver <SUBCOMMAND> --help` to subcommand help.
 
 Some examples:
 
 You can use `pipeline` subcommand to check the last or given pipeline:
 
 ```sh
-git-webhook-receiever pipeline # shows the last pipeline
+git-webhook-receiver pipeline # shows the last pipeline
 # OR
-git-webhook-receiever pipeline <PIPE_ID>
+git-webhook-receiver pipeline <PIPE_ID>
 ```
 
 Run `get-webhook-receiver ls` to see a list of the last N pipelines.
@@ -221,23 +216,23 @@ off this functionality. -->
 
 ## Logging
 
-By default, action outputs and logs are stored persistently in two SQLite 
-databases: one for app logs and one for actions and their outputt.
-By default, actions db filename is `actions.sqlite3`, logs db filename is 
-`logs.sqlite3`. This filenames are controlled by the `actions_db_file` and 
-`logs_db_file` fields in the config correspondingly. 
+By default, action outputs and logs are stored persistently in two SQLite
+databases: one for app logs and one for actions and their output.
+By default, actions db filename is `actions.sqlite3`, logs db filename is
+`logs.sqlite3`. This filenames are controlled by the `actions_db_file` and
+`logs_db_file` fields in the config correspondingly.
 
-Setting those config values to an empty string will disable the persistent on 
-storage of this information and in turn will also disable the corresponding 
+Setting those config values to an empty string will disable the persistent on
+storage of this information and in turn will also disable the corresponding
 HTTP-API and/or CLI subcommands.
 
 Actions' output is stored in the db once the action is completed.
 While the action is still in progress, data is stored in a temporary file.
 
 Both databases use [Write-Ahead Logging](https://www.sqlite.org/wal.html).
-This means, in addition to the file specified in the config, the app will also 
+This means, in addition to the file specified in the config, the app will also
 create two additional temporary files during operation `<YOUR_FILE>-wal` and
-`<YOUR_FILE>-shm`, to ensure data ingtegrity during write operations.
+`<YOUR_FILE>-shm`, to ensure data integrity during write operations.
 
 ## Contribution
 
@@ -246,4 +241,4 @@ write in the issues section or create a PR.
 
 ## License
 
-git-webhook-reciever is MIT licensed.
+git-webhook-receiver is MIT licensed.

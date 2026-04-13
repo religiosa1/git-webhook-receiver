@@ -1,35 +1,36 @@
 # Inspection HTTP API
 
-Unless `disable_api: true` is set in your configuration, the app will create a 
-couple of  additional endpoints, which will allow you to retrieve information 
-about pipelines and logs in JSON format. 
+Unless `disable_api: true` is set in your configuration, the app will create a
+couple of additional endpoints, which will allow you to retrieve information
+about pipelines and logs in JSON format.
 
-You can optionally set HTTP BasicAuth on those endpoints, using the following 
+You can optionally set HTTP BasicAuth on those endpoints, using the following
 configuration fields:
 
 ```
 # Basic auth user for inspection API. Defaults to "admin"
 api_user: 'admin'
-# Basic auth user for inspection API. Empty string (disabled) by default 
-api_password: '' 
+# Basic auth user for inspection API. Empty string (disabled) by default
+api_password: ''
 ```
 
 **Security Warning**: Do not use BasicAuth unless SSL is enabled (either in the
 app or via a reverse proxy), as your credentials can sniffed.
 
-Please note that this functionality requires persistent storage for logs and 
-action data. Ensure that the `logs_db_file` and `actions_db_file` fields in 
+Please note that this functionality requires persistent storage for logs and
+action data. Ensure that the `logs_db_file` and `actions_db_file` fields in
 the configuration are not left empty.
 
 ## Available endpoints:
 
 ### GET /pipelines
 
-Returns a list of last N run pipelines. 
+Returns a list of last N run pipelines.
 
 N is 20 by default.
 
 #### Example:
+
 ```
 GET /pipelines
 
@@ -74,22 +75,22 @@ GET /pipelines
 - `limit`: `int`
   The maximum number of pipelines to return. Defaults to 20. Min is 0, max is 200.
 - `project`: `string`
-  Filters the pipelines by project name. 
+  Filters the pipelines by project name.
 - `deliveryId`: `string`
   Filters the pipelines by deliveryId.
 - `status`: "`ok" | "error" | "pending" | "any"`
   Filters pipelines based on their completion status:
-    - "ok": Only returns pipelines that completed successfully.
-    - "error": Only returns pipelines that encountered an error.
-    - "pending": Returns pipelines that are still in progress or haven't finished yet.
-    - "any": Returns pipelines regardless of their status (default behavior if no status is specified).
- 
+  - "ok": Only returns pipelines that completed successfully.
+  - "error": Only returns pipelines that encountered an error.
+  - "pending": Returns pipelines that are still in progress or haven't finished yet.
+  - "any": Returns pipelines regardless of their status (default behavior if no status is specified).
 
 ### GET /pipelines/{pipeId}
 
 Get pipeline basic info.
 
 #### Example:
+
 ```
 GET /pipelines/01J8DCJS1K10N1CTEB2T30E4RT
 
@@ -115,15 +116,16 @@ GET /pipelines/01J8DCJS1K10N1CTEB2T30E4RT
 
 Output is the same as in list format, but only returns a single record.
 If the pipeline is still pending, `endedAt` will be null, otherwise it will
-contain the ending datetime of the operation. 
+contain the ending datetime of the operation.
 
-`error` will contain error message, if the pipiline ended with error. 
+`error` will contain error message, if the pipeline ended with error.
 
 ### GET /pipelines/{pipeId}/output
 
 Returns pipeline output.
 
 #### Example:
+
 ```
 GET /pipelines/01J8DCJS1K10N1CTEB2T30E4RT/output
 
@@ -138,15 +140,14 @@ If the pipeline is still pending it will return an empty response.
 Response's content-type is always `text/plain`, containing cumulative output
 from both STDOUT and STDERR of the pipeline.
 
-
 ### GET /logs
 
 Returns a list of last N app log entries.
 
 N is 20 by default.
 
-
 #### Example:
+
 ```
 GET /logs
 
@@ -185,14 +186,14 @@ GET /logs
 - `limit`: `int`
   The maximum number of log entries to return. Defaults to 20, min is 0 max is 200.
 - `cursorId`: `int`
-  Specifies the starting point for the logs based on the id of the last log 
+  Specifies the starting point for the logs based on the id of the last log
   entry. Must be used together with cursorTs.
 - `cursorTs`: `int`
-  Specifies the starting point for the logs based on the timestamp (ts) of the 
+  Specifies the starting point for the logs based on the timestamp (ts) of the
   last log entry. Must be used together with cursorId.
 - `level`: `Array<"debug" | "info" | "warn" | "error">`
-  Filters logs by severity level. This query parameter can be repeated multiple 
-  times (e.g., ?level=warn&level=error) to include multiple log levels in the 
+  Filters logs by severity level. This query parameter can be repeated multiple
+  times (e.g., ?level=warn&level=error) to include multiple log levels in the
   response. Defaults to all available levels.
 - `project`: `string`
   Filters log entries by project name.
@@ -202,3 +203,4 @@ GET /logs
   Filters log entries by pipeId.
 - `message`: `string`
   Filters logs that contain a specific string in the message field
+

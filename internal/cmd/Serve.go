@@ -119,7 +119,7 @@ func Serve(cfg config.Config) {
 	go func() {
 		select {
 		case <-actionRunner.Done():
-			logger.Info("Actions completed")
+			logger.Info("Action runner closed")
 		case <-interrupt:
 			actionRunner.Cancel()
 			logger.Warn("Actions interrupted")
