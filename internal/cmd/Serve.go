@@ -126,12 +126,6 @@ func Serve(cfg config.Config) {
 		}
 	}()
 	actionRunner.Wait()
-	if dbActions != nil {
-		dbActions.Close()
-	}
-	if dbLogs != nil {
-		dbLogs.Close()
-	}
 }
 
 func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig, logger *slog.Logger) (err error) {
