@@ -12,7 +12,7 @@ type IncorrectRepoError struct {
 
 func (err IncorrectRepoError) Error() string {
 	return fmt.Sprintf(
-		"Incorrect repo receieved in the webhook payload, expected '%s' but received '%s'",
+		"Incorrect repo received in the webhook payload, expected '%s' but received '%s'",
 		err.Expected,
 		err.Actual,
 	)
@@ -29,5 +29,7 @@ func (err AuthorizationError) Error() string {
 	)
 }
 
-var ErrAuthNotSupported = errors.New("authorization header is not supported for this receiver, use secret signature instead")
-var ErrSignNotSupported = errors.New("request signature is not supported for this receiver, use authorization header instead")
+var (
+	ErrAuthNotSupported = errors.New("authorization header is not supported for this receiver, use secret signature instead")
+	ErrSignNotSupported = errors.New("request signature is not supported for this receiver, use authorization header instead")
+)

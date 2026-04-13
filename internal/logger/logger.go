@@ -9,8 +9,8 @@ import (
 	slogmulti "github.com/samber/slog-multi"
 )
 
-func SetupLogger(logLevel string, db *logsDb.LogsDb) (*slog.Logger, error) {
-	var programLevel = new(slog.LevelVar)
+func SetupLogger(logLevel string, db *logsDb.LogsDB) (*slog.Logger, error) {
+	programLevel := new(slog.LevelVar)
 	programLevel.Set(strLogLevelToEnumValue(logLevel))
 	hdlrOpts := &slog.HandlerOptions{Level: programLevel}
 

@@ -11,7 +11,7 @@ import (
 
 func getSysProcAttr(username string) (*syscall.SysProcAttr, error) {
 	// On Unix-like os, spawned processes inherit the process group of the parent
-	// process, which will prevent gracefull shutdown. So we're spawning it in a separate
+	// process, which will prevent graceful shutdown. So we're spawning it in a separate
 	// group.
 	// https://www.dolthub.com/blog/2022-11-28-go-os-exec-patterns/#process-groups-and-graceful-shutdown
 	sysProcAttr := syscall.SysProcAttr{Setpgid: true}
@@ -21,15 +21,15 @@ func getSysProcAttr(username string) (*syscall.SysProcAttr, error) {
 		if err != nil {
 			return nil, fmt.Errorf("unable to obtain UID/GID for the specified user '%s', does it exist?: %w", username, err)
 		}
-		sysProcAttr.Credential = &syscall.Credential{Uid: usr.Uid, Gid: usr.Gid}
+		sysProcAttr.Credential = &syscall.Credential{Uid: usr.UID, Gid: usr.GID}
 	}
 
 	return &sysProcAttr, nil
 }
 
 type UnixUserInfo struct {
-	Uid uint32
-	Gid uint32
+	UID uint32
+	GID uint32
 }
 
 func getUnixUserInfo(username string) (*UnixUserInfo, error) {
@@ -45,5 +45,5 @@ func getUnixUserInfo(username string) (*UnixUserInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &UnixUserInfo{Uid: uint32(uid), Gid: uint32(gid)}, nil
+	return &UnixUserInfo{UID: uint32(uid), GID: uint32(gid)}, nil
 }

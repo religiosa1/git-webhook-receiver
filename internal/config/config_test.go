@@ -48,7 +48,7 @@ projects:
 			t.Errorf("incorrect values read from config, want %s:%d, got %s:%d", wantHost, wantPort, config.Host, config.Port)
 		}
 
-		if want, got := "db2.sqlite3", config.ActionsDbFile; want != got {
+		if want, got := "db2.sqlite3", config.ActionsDBFile; want != got {
 			t.Errorf("incorrect actions db file read from config, want %s, got %s", want, got)
 		}
 
@@ -90,12 +90,12 @@ projects:
 			t.Errorf("incorrect port value read from config, want %d, got %d", wantPort, config.Port)
 		}
 
-		if want, got := "actions.sqlite3", config.ActionsDbFile; want != got {
+		if want, got := "actions.sqlite3", config.ActionsDBFile; want != got {
 			t.Errorf("incorrect actions db file read from config, want %s, got %s", want, got)
 		}
 
-		var project = config.Projects["test-proj"]
-		var action = project.Actions[0]
+		project := config.Projects["test-proj"]
+		action := project.Actions[0]
 
 		if want, got := "push", action.On; want != got {
 			t.Errorf("Incorrect default on event, want '%s', got '%s'", want, got)
@@ -104,7 +104,6 @@ projects:
 		if want, got := "master", action.Branch; want != got {
 			t.Errorf("Incorrect default branch, want '%s', got '%s'", want, got)
 		}
-
 	})
 }
 
@@ -118,10 +117,10 @@ projects:
       - run: ["node", "--version"]`
 
 	t.Run("allows to override config values with env", func(t *testing.T) {
-		overridenHost := "test2.example.com"
-		var overridenPort int16 = 32167
-		t.Setenv("HOST", overridenHost)
-		t.Setenv("PORT", fmt.Sprintf("%d", overridenPort))
+		overriddenHost := "test2.example.com"
+		var overriddenPort int16 = 32167
+		t.Setenv("HOST", overriddenHost)
+		t.Setenv("PORT", fmt.Sprintf("%d", overriddenPort))
 
 		configFileName := tmpConfigFile(t, configContents)
 		config, err := config.Load(configFileName)
@@ -129,12 +128,12 @@ projects:
 			t.Error(err)
 		}
 
-		if config.Host != overridenHost {
-			t.Errorf("incorrect host value read from config, want %s, got %s", overridenHost, config.Host)
+		if config.Host != overriddenHost {
+			t.Errorf("incorrect host value read from config, want %s, got %s", overriddenHost, config.Host)
 		}
 
-		if config.Port != overridenPort {
-			t.Errorf("incorrect port value read from config, want %d, got %d", overridenPort, config.Port)
+		if config.Port != overriddenPort {
+			t.Errorf("incorrect port value read from config, want %d, got %d", overriddenPort, config.Port)
 		}
 	})
 
@@ -154,7 +153,7 @@ projects:
 
 		project := config.Projects["test-proj"]
 
-		if want, got := dbFile, config.ActionsDbFile; want != got {
+		if want, got := dbFile, config.ActionsDBFile; want != got {
 			t.Errorf("incorrect action db file read from config, want '%s', got '%s'", want, got)
 		}
 
@@ -346,7 +345,7 @@ func TestSensitiveDataMasking(t *testing.T) {
 			Projects: make(map[string]config.Project),
 		}
 
-		cfg.ApiPassword = "testPassword"
+		cfg.APIPassword = "testPassword"
 
 		cfg.Projects["proj1"] = config.Project{
 			Authorization: "auth",
@@ -386,17 +385,17 @@ func TestSensitiveDataMasking(t *testing.T) {
 		cfg := makeTestCfg()
 		maskedCfg := cfg.MaskSensitiveData()
 
-		if got := maskedCfg.ApiPassword; got == cfg.ApiPassword {
+		if got := maskedCfg.APIPassword; got == cfg.APIPassword {
 			t.Errorf("ApiPassword value wasn't masked: %s", got)
 		}
 	})
 
 	t.Run("masks ApiPassword only if present", func(t *testing.T) {
 		cfg := makeTestCfg()
-		cfg.ApiPassword = ""
+		cfg.APIPassword = ""
 		maskedCfg := cfg.MaskSensitiveData()
 
-		if got := maskedCfg.ApiPassword; got != "" {
+		if got := maskedCfg.APIPassword; got != "" {
 			t.Errorf("ApiPassword value was masked when it shouldn't. Want empty string, got %s", got)
 		}
 	})

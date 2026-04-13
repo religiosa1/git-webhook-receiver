@@ -11,22 +11,22 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-type LogsDb struct {
+type LogsDB struct {
 	db *sqlx.DB
 }
 
-func New(dbFileName string) (*LogsDb, error) {
+func New(dbFileName string) (*LogsDB, error) {
 	if dbFileName == "" {
 		return nil, nil
 	}
-	db := LogsDb{}
+	db := LogsDB{}
 	pragmas := "?_journal_mode=WAL&_foreign_keys=1&_busy_timeout=5000&_cache_size=2000&_synchronous=NORMAL"
 	d, err := sqlx.Open("sqlite3", dbFileName+pragmas)
 	if err != nil {
 		return nil, err
 	}
 	db.db = d
-	err = db.open() // trying to open and migrate if necessasry the db
+	err = db.open() // trying to open and migrate if necessary the db
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func New(dbFileName string) (*LogsDb, error) {
 //go:embed Init.sql
 var schema string
 
-func (d LogsDb) open() error {
+func (d LogsDB) open() error {
 	var userVersion int
 	err := d.db.Get(&userVersion, "PRAGMA user_version;")
 
@@ -47,7 +47,7 @@ func (d LogsDb) open() error {
 	return err
 }
 
-func (d *LogsDb) Close() (err error) {
+func (d *LogsDB) Close() (err error) {
 	if d.db != nil {
 		err = d.db.Close()
 	}
@@ -55,44 +55,46 @@ func (d *LogsDb) Close() (err error) {
 	return err
 }
 
-func (d LogsDb) IsOpen() bool {
+func (d LogsDB) IsOpen() bool {
 	return d.db != nil
 }
 
 type LogEntry struct {
-	Id         int64          `db:"id"`
+	ID         int64          `db:"id"`
 	Level      int            `db:"level"`
 	Project    sql.NullString `db:"project"`
-	DeliveryId sql.NullString `db:"delivery_id"`
-	PipeId     sql.NullString `db:"pipe_id"`
+	DeliveryID sql.NullString `db:"delivery_id"`
+	PipeID     sql.NullString `db:"pipe_id"`
 	Message    string         `db:"message"`
 	Data       string         `db:"data"`
-	Ts         int64          `db:"ts"`
+	TS         int64          `db:"ts"`
 }
 
-func (d LogsDb) CreateEntry(entry LogEntry) error {
+func (d LogsDB) CreateEntry(entry LogEntry) error {
 	query := "INSERT INTO logs (level, project, delivery_id, pipe_id, message, data) VALUES (?, ?, ?, ?, ?, ?)"
-	_, err := d.db.Exec(query, entry.Level, entry.Project, entry.DeliveryId, entry.PipeId, entry.Message, entry.Data)
+	_, err := d.db.Exec(query, entry.Level, entry.Project, entry.DeliveryID, entry.PipeID, entry.Message, entry.Data)
 	return err
 }
 
-const maxPageSize int = 200
-const defaultPageSize int = 20
+const (
+	maxPageSize     int = 200
+	defaultPageSize int = 20
+)
 
 type GetEntryQuery struct {
-	CursorId int64 `json:"cursorId"`
-	CursorTs int64 `json:"cursorTs"`
+	CursorID int64 `json:"cursorId"`
+	CursorTS int64 `json:"cursorTs"`
 	PageSize int   `json:"pageSize"`
 }
 
-func (d LogsDb) GetEntry(search GetEntryQuery) ([]LogEntry, error) {
+func (d LogsDB) GetEntry(search GetEntryQuery) ([]LogEntry, error) {
 	if search.PageSize <= 0 || search.PageSize > maxPageSize {
 		search.PageSize = defaultPageSize
 	}
 
 	rows := []LogEntry{}
 	query := `SELECT * FROM (SELECT * from logs where (ts, id) > (?, ?) ORDER BY ts DESC, id LIMIT ?) ORDER BY ts ASC, id;`
-	err := d.db.Select(&rows, query, search.CursorTs, search.CursorId, search.PageSize)
+	err := d.db.Select(&rows, query, search.CursorTS, search.CursorID, search.PageSize)
 	return rows, err
 }
 
@@ -100,17 +102,17 @@ type GetEntryFilteredQuery struct {
 	GetEntryQuery
 	Levels     []int  `json:"levels"`
 	Project    string `json:"project"`
-	DeliveryId string `json:"deliveryId"`
-	PipeId     string `json:"pipeId"`
+	DeliveryID string `json:"deliveryId"`
+	PipeID     string `json:"pipeId"`
 	Message    string `json:"message"`
 	Offset     int
 }
 
-func (d LogsDb) GetEntryFiltered(search GetEntryFilteredQuery) ([]LogEntry, error) {
+func (d LogsDB) GetEntryFiltered(search GetEntryFilteredQuery) ([]LogEntry, error) {
 	if search.PageSize <= 0 || search.PageSize > maxPageSize {
 		search.PageSize = defaultPageSize
 	}
-	if search.Levels == nil || len(search.Levels) == 0 {
+	if len(search.Levels) == 0 {
 		search.Levels = make([]int, 4)
 		search.Levels[0] = int(slog.LevelDebug)
 		search.Levels[1] = int(slog.LevelInfo)
@@ -123,11 +125,11 @@ func (d LogsDb) GetEntryFiltered(search GetEntryFilteredQuery) ([]LogEntry, erro
 	qb.WriteString("SELECT * FROM (")
 	qb.WriteString("SELECT * from logs where (ts, id) > (?, ?)\n")
 
-	args := make([]interface{}, 2)
-	args[0] = search.CursorTs
-	args[1] = search.CursorId
+	args := make([]any, 2)
+	args[0] = search.CursorTS
+	args[1] = search.CursorID
 
-	if search.Levels != nil && len(search.Levels) > 0 {
+	if len(search.Levels) > 0 {
 		query, listArgs, err := sqlx.In("AND level IN (?)\n", search.Levels)
 		if err != nil {
 			return rows, err
@@ -142,14 +144,14 @@ func (d LogsDb) GetEntryFiltered(search GetEntryFilteredQuery) ([]LogEntry, erro
 		args = append(args, "%"+search.Project+"%")
 	}
 
-	if search.DeliveryId != "" {
+	if search.DeliveryID != "" {
 		qb.WriteString("AND delivery_id LIKE ?\n")
-		args = append(args, "%"+search.DeliveryId+"%")
+		args = append(args, "%"+search.DeliveryID+"%")
 	}
 
-	if search.PipeId != "" {
+	if search.PipeID != "" {
 		qb.WriteString("AND pipe_id LIKE ?\n")
-		args = append(args, "%"+search.PipeId+"%")
+		args = append(args, "%"+search.PipeID+"%")
 	}
 
 	if search.Message != "" {
@@ -184,6 +186,6 @@ func ParseLogLevel(level string) (int, error) {
 	case "error":
 		return int(slog.LevelError), nil
 	default:
-		return 0, fmt.Errorf("unkown log level '%s'", level)
+		return 0, fmt.Errorf("unknown log level '%s'", level)
 	}
 }

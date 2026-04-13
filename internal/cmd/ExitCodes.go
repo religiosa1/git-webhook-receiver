@@ -1,7 +1,9 @@
 package cmd
 
-const ExitReadConfig int = 2
-const ExitCodeLoggerDb = 3
-const ExitCodeActionsDb = 4
-const ExitCodeRun int = 5
-const ExitCodeShutdown int = 6
+const (
+	ExitReadConfig    int = 2
+	ExitCodeLoggerDB  int = 3
+	ExitCodeActionsDB int = 4
+	ExitCodeRun       int = 5
+	ExitCodeShutdown  int = 6
+)

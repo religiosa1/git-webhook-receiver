@@ -38,7 +38,7 @@ func (rcvr GithubReceiver) VerifySignature(req WebhookPostRequest, secret string
 }
 
 func (rcvr GithubReceiver) GetWebhookInfo(req WebhookPostRequest) (*WebhookPostInfo, error) {
-	postInfo, err := getJsonPayloadInfo(req.Payload, rcvr.project.Repo)
+	postInfo, err := getJSONPayloadInfo(req.Payload, rcvr.project.Repo)
 	if err != nil {
 		return nil, err
 	}

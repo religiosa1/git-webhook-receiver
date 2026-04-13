@@ -45,10 +45,12 @@ func makeActionsList(actions ...config.Action) []config.Action {
 	return mergedActions
 }
 
-var authToken = "JgHhtuPOISmw3WDCRtz4H6IrT8zWwNkS"
-var secret = "cc7ec03e-2e09-4bb9-b2fc-388b865200d0"
-var projectName = "testProj"
-var projectEndPoint = "/" + projectName
+var (
+	authToken       = "JgHhtuPOISmw3WDCRtz4H6IrT8zWwNkS"
+	secret          = "cc7ec03e-2e09-4bb9-b2fc-388b865200d0"
+	projectName     = "testProj"
+	projectEndPoint = "/" + projectName
+)
 
 func loadMockRequest(t *testing.T) requestmock.RequestMock {
 	return requestmock.LoadRequestMock(t, "../../requestmock/captured-requests/gitea.json")
@@ -68,7 +70,7 @@ func makeChannelDrainer() chan ActionRunner.ActionArgs {
 
 func TestProjectMatching(t *testing.T) {
 	ch := makeChannelDrainer()
-	var requestDump = loadMockRequest(t)
+	requestDump := loadMockRequest(t)
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 
@@ -153,7 +155,7 @@ func TestProjectMatching(t *testing.T) {
 
 func TestResponseBody(t *testing.T) {
 	ch := makeChannelDrainer()
-	var requestDump = loadMockRequest(t)
+	requestDump := loadMockRequest(t)
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 
@@ -255,7 +257,7 @@ func TestResponseBody(t *testing.T) {
 
 	t.Run("if public url is present, then it overrides values in the url field", func(t *testing.T) {
 		publicUrl := "ftp://example.com/"
-		actionResponse := getActionResponse(t, config.Config{Host: "localhost", Port: 9090, PublicUrl: publicUrl})
+		actionResponse := getActionResponse(t, config.Config{Host: "localhost", Port: 9090, PublicURL: publicUrl})
 		url, ok := actionResponse["url"].(string)
 
 		if !ok || url == "" {
@@ -271,7 +273,7 @@ func TestResponseBody(t *testing.T) {
 
 	t.Run("trailing slash is optional for the public url", func(t *testing.T) {
 		publicUrl := "ftp://example.com"
-		actionResponse := getActionResponse(t, config.Config{Host: "localhost", Port: 9090, PublicUrl: publicUrl})
+		actionResponse := getActionResponse(t, config.Config{Host: "localhost", Port: 9090, PublicURL: publicUrl})
 		url, ok := actionResponse["url"].(string)
 
 		if !ok || url == "" {
@@ -289,7 +291,7 @@ func TestResponseBody(t *testing.T) {
 		actionResponse := getActionResponse(t, config.Config{
 			Host:       "example.com",
 			Port:       9090,
-			DisableApi: true,
+			DisableAPI: true,
 		})
 
 		if url, ok := actionResponse["url"].(string); ok || url != "" {

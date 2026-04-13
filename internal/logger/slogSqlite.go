@@ -11,13 +11,13 @@ import (
 )
 
 type SlogSqlite struct {
-	db      *logsDb.LogsDb
+	db      *logsDb.LogsDB
 	attrs   []slog.Attr
 	leveler slog.Leveler
 	group   string
 }
 
-func NewDBLogger(db *logsDb.LogsDb, opts *slog.HandlerOptions) *SlogSqlite {
+func NewDBLogger(db *logsDb.LogsDB, opts *slog.HandlerOptions) *SlogSqlite {
 	return &SlogSqlite{
 		db:      db,
 		leveler: opts.Level,
@@ -36,19 +36,19 @@ func (logger *SlogSqlite) Handle(ctx context.Context, record slog.Record) error 
 	dbRecord := logsDb.LogEntry{
 		Level:   int(record.Level),
 		Message: record.Message,
-		Ts:      record.Time.UTC().Unix(),
+		TS:      record.Time.UTC().Unix(),
 	}
 
-	dataObj := make(map[string]interface{})
+	dataObj := make(map[string]any)
 
 	procAttr := func(a slog.Attr) bool {
 		switch a.Key {
 		case "project":
 			dbRecord.Project = sql.NullString{Valid: true, String: a.Value.String()}
 		case "deliveryId":
-			dbRecord.Project = sql.NullString{Valid: true, String: a.Value.String()}
+			dbRecord.DeliveryID = sql.NullString{Valid: true, String: a.Value.String()}
 		case "pipeId":
-			dbRecord.Project = sql.NullString{Valid: true, String: a.Value.String()}
+			dbRecord.PipeID = sql.NullString{Valid: true, String: a.Value.String()}
 		default:
 			dataObj[a.Key] = a.Value.Any()
 		}
@@ -80,7 +80,7 @@ func (logger *SlogSqlite) WithAttrs(attrs []slog.Attr) slog.Handler {
 	}
 }
 
-// TODO why we even need this?..
+// WithGroup is part of slog.Handler interface
 func (logger *SlogSqlite) WithGroup(name string) slog.Handler {
 	return &SlogSqlite{
 		db:      logger.db,

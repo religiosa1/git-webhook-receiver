@@ -17,21 +17,21 @@ type ListPipelinesArgs struct {
 	Skip       int    `short:"s" default:"0" help:"Skip first N entries"`
 	Status     string `short:"e" help:"filter by status" enum:"ok,error,pending,any" default:"any"`
 	Project    string `short:"p" help:"filter by project"`
-	DeliveryId string `short:"d" help:"filter by deliveryId"`
+	DeliveryID string `short:"d" help:"filter by deliveryId"`
 	Format     string `short:"f" help:"output format" enum:"simple,jq,json" default:"simple"`
 }
 
 func ListPipelines(cfg config.Config, args ListPipelinesArgs) {
 	if args.File == "" {
-		args.File = cfg.ActionsDbFile
+		args.File = cfg.ActionsDBFile
 	}
 
-	outputFormmater := getActionRecordOutputFormatter(args.Format)
+	outputFormatter := getActionRecordOutputFormatter(args.Format)
 
 	dbActions, err := actiondb.New(args.File)
 	if err != nil {
 		fmt.Printf("Error opening actions db: %s\n", err)
-		os.Exit(ExitCodeActionsDb)
+		os.Exit(ExitCodeActionsDB)
 	}
 	defer dbActions.Close()
 
@@ -40,17 +40,17 @@ func ListPipelines(cfg config.Config, args ListPipelinesArgs) {
 		Offset: args.Skip,
 
 		Project:    args.Project,
-		DeliveryId: args.DeliveryId,
+		DeliveryId: args.DeliveryID,
 	}
 	query.Status, _ = actiondb.ParsePipelineStatus(args.Status)
 
 	pipeLines, err := dbActions.ListPipelineRecords(query)
 	if err != nil {
 		fmt.Printf("Error reading actions db: %s\n", err)
-		os.Exit(ExitCodeActionsDb)
+		os.Exit(ExitCodeActionsDB)
 	}
 
-	outputFormmater(pipeLines)
+	outputFormatter(pipeLines)
 }
 
 func getActionRecordOutputFormatter(format string) func([]actiondb.PipeLineRecord) {
@@ -60,7 +60,7 @@ func getActionRecordOutputFormatter(format string) func([]actiondb.PipeLineRecor
 	case "jq":
 		return formatActionRecordsJq
 	case "json":
-		return formatActionRecordsJson
+		return formatActionRecordsJSON
 	default:
 		return nil
 	}
@@ -95,7 +95,7 @@ func formatActionRecordsJq(pipelines []actiondb.PipeLineRecord) {
 	}
 }
 
-func formatActionRecordsJson(pipelines []actiondb.PipeLineRecord) {
+func formatActionRecordsJSON(pipelines []actiondb.PipeLineRecord) {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	enc.Encode(serialization.PipelineRecords(pipelines))

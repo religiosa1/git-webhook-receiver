@@ -5,8 +5,8 @@ import "github.com/religiosa1/git-webhook-receiver/internal/config"
 type ActionIdentifier struct {
 	Index      int    `json:"actionIdx"`
 	Project    string `json:"project"`
-	PipeId     string `json:"pipeId"`
-	DeliveryId string `json:"-"`
+	PipeID     string `json:"pipeId"`
+	DeliveryID string `json:"-"`
 }
 type ActionDescriptor struct {
 	ActionIdentifier
@@ -15,7 +15,7 @@ type ActionDescriptor struct {
 
 func GetActionIds(descs []ActionDescriptor) []ActionIdentifier {
 	result := make([]ActionIdentifier, len(descs))
-	for i := 0; i < len(descs); i++ {
+	for i := range descs {
 		result[i] = descs[i].ActionIdentifier
 	}
 	return result

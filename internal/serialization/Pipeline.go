@@ -5,26 +5,26 @@ import (
 )
 
 type PrettyPipelineRecord struct {
-	PipeId     string     `json:"pipeId"`
+	PipeID     string     `json:"pipeId"`
 	Project    string     `json:"project"`
-	DeliveryId string     `json:"deliveryId"`
-	Config     JsonData   `json:"config"`
+	DeliveryID string     `json:"deliveryId"`
+	Config     JSONData   `json:"config"`
 	Error      NullString `json:"error"`
 	CreatedAt  Timestamp  `json:"createdAt"`
-	EndedAt    NullTs     `json:"endedAt"`
+	EndedAt    NullTS     `json:"endedAt"`
 }
 
 func PipelineRecord(r actiondb.PipeLineRecord) PrettyPipelineRecord {
-	config, _ := NewJsonData(r.Config)
+	config, _ := NewJSONData(r.Config)
 
 	return PrettyPipelineRecord{
-		PipeId:     r.PipeId,
+		PipeID:     r.PipeId,
 		Project:    r.Project,
-		DeliveryId: r.DeliveryId,
+		DeliveryID: r.DeliveryId,
 		Config:     config,
 		Error:      NullString{r.Error},
 		CreatedAt:  Timestamp{r.CreatedAt},
-		EndedAt:    NullTs{r.EndedAt},
+		EndedAt:    NullTS{r.EndedAt},
 	}
 }
 

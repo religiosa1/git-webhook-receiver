@@ -9,11 +9,11 @@ import (
 type PrettyLogEntry struct {
 	Level      string     `json:"level"`
 	Project    NullString `json:"project"`
-	DeliveryId NullString `json:"deliveryId"`
-	PipeId     NullString `json:"pipeId"`
+	DeliveryID NullString `json:"deliveryId"`
+	PipeID     NullString `json:"pipeId"`
 	Message    string     `json:"message"`
-	Data       JsonData   `json:"data"`
-	Ts         Timestamp  `json:"ts"`
+	Data       JSONData   `json:"data"`
+	TS         Timestamp  `json:"ts"`
 }
 
 func LogEntry(e logsDb.LogEntry) PrettyLogEntry {
@@ -29,16 +29,16 @@ func LogEntry(e logsDb.LogEntry) PrettyLogEntry {
 		level = "error"
 	}
 
-	data, _ := NewJsonData([]byte(e.Data))
+	data, _ := NewJSONData([]byte(e.Data))
 
 	return PrettyLogEntry{
 		Level:      level,
 		Project:    NullString{e.Project},
-		DeliveryId: NullString{e.DeliveryId},
-		PipeId:     NullString{e.PipeId},
+		DeliveryID: NullString{e.DeliveryID},
+		PipeID:     NullString{e.PipeID},
 		Message:    e.Message,
 		Data:       data,
-		Ts:         Timestamp{e.Ts},
+		TS:         Timestamp{e.TS},
 	}
 }
 

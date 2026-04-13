@@ -12,18 +12,18 @@ func (runner ActionRunner) executeAction(
 	actionDescriptor ActionDescriptor,
 ) {
 	action := actionDescriptor.Action
-	pipeLogger := logger.With(slog.String("pipeId", actionDescriptor.PipeId))
+	pipeLogger := logger.With(slog.String("pipeId", actionDescriptor.PipeID))
 	pipeLogger.Info("Running action", slog.Int("action_index", actionDescriptor.Index))
 
-	if runner.actionsDb != nil {
-		err := runner.actionsDb.CreateRecord(actionDescriptor.PipeId, actionDescriptor.Project, actionDescriptor.DeliveryId, action)
+	if runner.actionsDB != nil {
+		err := runner.actionsDB.CreateRecord(actionDescriptor.PipeID, actionDescriptor.Project, actionDescriptor.DeliveryID, action)
 		if err != nil {
-			pipeLogger.Error("Error creating pipeline recor din the db", slog.Any("error", err))
+			pipeLogger.Error("Error creating pipeline record in the db", slog.Any("error", err))
 			return
 		}
 	}
 
-	output, err := os.CreateTemp("", actionDescriptor.PipeId+"-*.output.tmp")
+	output, err := os.CreateTemp("", actionDescriptor.PipeID+"-*.output.tmp")
 	if err != nil {
 		pipeLogger.Error("Error creating temporary file to capture action's output", slog.Any("error", err))
 		return
@@ -50,7 +50,7 @@ func (runner ActionRunner) executeAction(
 	}
 
 	if actionErr != nil {
-		logger.Error("Error while running the action", slog.Any("error", err))
+		logger.Error("Error while running the action", slog.Any("error", actionErr))
 	} else {
 		logger.Info("Action successfully finished")
 	}
@@ -60,8 +60,8 @@ func (runner ActionRunner) executeAction(
 		logger.Error("Error while reading output file's content", slog.Any("error", err))
 	}
 
-	if runner.actionsDb != nil {
-		err := runner.actionsDb.CloseRecord(actionDescriptor.PipeId, actionErr, content)
+	if runner.actionsDB != nil {
+		err := runner.actionsDB.CloseRecord(actionDescriptor.PipeID, actionErr, content)
 		if err != nil {
 			pipeLogger.Error("Error closing action's db record", slog.Any("error", err))
 			return

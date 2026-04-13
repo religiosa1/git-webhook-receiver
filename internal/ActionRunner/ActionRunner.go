@@ -18,14 +18,14 @@ type ActionRunner struct {
 	wg        *sync.WaitGroup
 	ctx       context.Context
 	cancel    func()
-	actionsDb *actiondb.ActionDb
+	actionsDB *actiondb.ActionDb
 }
 
-func New(ctx context.Context, actionsDb *actiondb.ActionDb) (runner ActionRunner) {
+func New(ctx context.Context, actionsDB *actiondb.ActionDb) (runner ActionRunner) {
 	runner.ch = make(chan ActionArgs)
 	runner.ctx, runner.cancel = context.WithCancel(ctx)
 	runner.wg = &sync.WaitGroup{}
-	runner.actionsDb = actionsDb
+	runner.actionsDB = actionsDB
 	go runner.listen()
 	return runner
 }

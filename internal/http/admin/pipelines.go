@@ -38,8 +38,8 @@ func ListPipelines(db *actiondb.ActionDb, logger *slog.Logger) http.HandlerFunc 
 
 func GetPipeline(db *actiondb.ActionDb, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		pipeId := req.PathValue("pipeId")
-		record, err := db.GetPipelineRecord(pipeId)
+		pipeID := req.PathValue("pipeId")
+		record, err := db.GetPipelineRecord(pipeID)
 		if err == sql.ErrNoRows {
 			http.Error(w, "Not Found", http.StatusNotFound)
 			return
@@ -56,8 +56,8 @@ func GetPipeline(db *actiondb.ActionDb, logger *slog.Logger) http.HandlerFunc {
 
 func GetPipelineOutput(db *actiondb.ActionDb, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		pipeId := req.PathValue("pipeId")
-		record, err := db.GetPipelineRecord(pipeId)
+		pipeID := req.PathValue("pipeId")
+		record, err := db.GetPipelineRecord(pipeID)
 		if err == sql.ErrNoRows {
 			http.Error(w, "Not Found", http.StatusNotFound)
 			return

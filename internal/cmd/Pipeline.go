@@ -10,10 +10,10 @@ import (
 )
 
 type PipelineArgs struct {
-	PipeId     string `arg:"" optional:"" name:"pipeId" help:"Id of the pipeline output to extract (if empty returns the last created pipeline)"`
+	PipeID     string `arg:"" optional:"" name:"pipeId" help:"Id of the pipeline output to extract (if empty returns the last created pipeline)"`
 	File       string `short:"f" help:"Actions db file (default to the file, specified in config)" type:"path"`
 	Info       bool   `short:"i" help:"Display only pipeline general info, without its output"`
-	OutputOnly bool   `short:"o" help:"Display only pipiline output, without general info"`
+	OutputOnly bool   `short:"o" help:"Display only pipeline output, without general info"`
 }
 
 func Pipeline(cfg config.Config, args PipelineArgs) {
@@ -22,19 +22,19 @@ func Pipeline(cfg config.Config, args PipelineArgs) {
 		os.Exit(2)
 	}
 	if args.File == "" {
-		args.File = cfg.ActionsDbFile
+		args.File = cfg.ActionsDBFile
 	}
-	dbActions, err := actiondb.New(cfg.ActionsDbFile)
+	dbActions, err := actiondb.New(cfg.ActionsDBFile)
 	if err != nil {
 		fmt.Printf("Error opening actions db: %s\n", err)
-		os.Exit(ExitCodeActionsDb)
+		os.Exit(ExitCodeActionsDB)
 	}
 	defer dbActions.Close()
 
-	pipe, err := dbActions.GetPipelineRecord(args.PipeId)
+	pipe, err := dbActions.GetPipelineRecord(args.PipeID)
 	if err != nil {
 		fmt.Printf("Unable to get the pipeline record: %s\n", err)
-		os.Exit(ExitCodeActionsDb)
+		os.Exit(ExitCodeActionsDB)
 	}
 
 	if !args.OutputOnly {

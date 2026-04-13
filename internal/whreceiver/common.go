@@ -12,7 +12,7 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/cryptoutils"
 )
 
-// Common significant payload for push events for Gitea and Github
+// CommonWebhookPayload is common significant payload for push events for Gitea and Github
 type CommonWebhookPayload struct {
 	Ref        string            `json:"ref"`
 	After      string            `json:"after"`
@@ -25,7 +25,7 @@ type CommonWebhookRepo struct {
 
 // Returns partial data from the payload common for gitea and github, to be populated
 // with the headers information down the line.
-func getJsonPayloadInfo(payload []byte, repo string) (*WebhookPostInfo, error) {
+func getJSONPayloadInfo(payload []byte, repo string) (*WebhookPostInfo, error) {
 	var whPayload CommonWebhookPayload
 	if err := json.NewDecoder(bytes.NewBuffer(payload)).Decode(&whPayload); err != nil {
 		return nil, err

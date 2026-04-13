@@ -10,7 +10,7 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/serialization"
 )
 
-func GetLogs(db *logsDb.LogsDb, logger *slog.Logger) http.HandlerFunc {
+func GetLogs(db *logsDb.LogsDB, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		queryParams := req.URL.Query()
@@ -18,19 +18,19 @@ func GetLogs(db *logsDb.LogsDb, logger *slog.Logger) http.HandlerFunc {
 		offset, _ := strconv.Atoi(queryParams.Get("offset"))
 		limit, _ := strconv.Atoi(queryParams.Get("limit"))
 
-		cursorId, _ := strconv.ParseInt(queryParams.Get("cursorId"), 10, 64)
-		cursorTs, _ := strconv.ParseInt(queryParams.Get("cursorTs"), 10, 64)
+		cursorID, _ := strconv.ParseInt(queryParams.Get("cursorId"), 10, 64)
+		cursorTS, _ := strconv.ParseInt(queryParams.Get("cursorTs"), 10, 64)
 
 		query := logsDb.GetEntryFilteredQuery{
 			GetEntryQuery: logsDb.GetEntryQuery{
-				CursorId: cursorId,
-				CursorTs: cursorTs,
+				CursorID: cursorID,
+				CursorTS: cursorTS,
 				PageSize: limit,
 			},
 			Levels:     parseLevels(queryParams["level"]),
 			Project:    queryParams.Get("project"),
-			DeliveryId: queryParams.Get("deliveryId"),
-			PipeId:     queryParams.Get("pipeId"),
+			DeliveryID: queryParams.Get("deliveryId"),
+			PipeID:     queryParams.Get("pipeId"),
 			Message:    queryParams.Get("message"),
 			Offset:     offset,
 		}
@@ -39,11 +39,11 @@ func GetLogs(db *logsDb.LogsDb, logger *slog.Logger) http.HandlerFunc {
 		if err != nil {
 			logger.Error("Error processing GetLogs request", slog.Any("error", err))
 			w.WriteHeader(500)
-			w.Write([]byte(err.Error()))
+			_, _ = w.Write([]byte(err.Error()))
 			return
 		}
 
-		json.NewEncoder(w).Encode(serialization.LogEntries(logs))
+		_ = json.NewEncoder(w).Encode(serialization.LogEntries(logs))
 	}
 }
 

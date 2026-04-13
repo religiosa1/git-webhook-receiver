@@ -12,13 +12,13 @@ import (
 type Config struct {
 	Host          string             `yaml:"host" env:"HOST" env-default:"localhost"`
 	Port          int16              `yaml:"port" env:"PORT" env-default:"9090"`
-	PublicUrl     string             `yaml:"public_url" env:"PUBLIC_URL"`
-	DisableApi    bool               `yaml:"disable_api" env:"DISABLE_API"`
-	ApiUser       string             `yaml:"api_user" env:"API_USER" env-default:"admin"`
-	ApiPassword   string             `yaml:"api_password" env:"API_PASSWORD"`
+	PublicURL     string             `yaml:"public_url" env:"PUBLIC_URL"`
+	DisableAPI    bool               `yaml:"disable_api" env:"DISABLE_API"`
+	APIUser       string             `yaml:"api_user" env:"API_USER" env-default:"admin"`
+	APIPassword   string             `yaml:"api_password" env:"API_PASSWORD"`
 	LogLevel      string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
-	LogsDbFile    string             `yaml:"logs_db_file" env:"LOGS_DB_FILE" env-default:"logs.sqlite3"`
-	ActionsDbFile string             `yaml:"actions_db_file" env:"ACTIONS_DB_FILE" env-default:"actions.sqlite3"`
+	LogsDBFile    string             `yaml:"logs_db_file" env:"LOGS_DB_FILE" env-default:"logs.sqlite3"`
+	ActionsDBFile string             `yaml:"actions_db_file" env:"ACTIONS_DB_FILE" env-default:"actions.sqlite3"`
 	Ssl           SslConfig          `yaml:"ssl" env-prefix:"SSL__"`
 	Projects      map[string]Project `yaml:"projects" env-required:"true"`
 }
@@ -28,7 +28,7 @@ type SslConfig struct {
 	KeyFilePath  string `yaml:"key_file_path" env:"KEY_FILE_PATH"`
 }
 
-// For both Projects and Actions only the fileds marked with env:"..." struct
+// For both Projects and Actions only the fields marked with env:"..." struct
 // tag can be set through the env variables. See [applyEnvToProjectAndActions]
 
 type Project struct {
@@ -67,7 +67,7 @@ func Load(configPath string) (Config, error) {
 
 	projectsWithDefaults, err := validateAndSetDefaultsConfigProjects(cfg.Projects)
 	if err != nil {
-		return cfg, fmt.Errorf("config's projects validation failed: %w", err)
+		return cfg, fmt.Errorf("configs projects validation failed: %w", err)
 	}
 
 	cfg.Projects = projectsWithDefaults
@@ -149,7 +149,7 @@ func isValidProjectName(s string) error {
 		if r == '_' && lastRune == '_' {
 			return fmt.Errorf("name can't contain two or more consecutive '_' chars")
 		}
-		if !(unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_') {
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '-' && r != '_' {
 			return fmt.Errorf("name can only contain chars from range [a-Z0-9_-]")
 		}
 		lastRune = r
@@ -163,8 +163,8 @@ const maskValue = "********"
 func (cfg Config) MaskSensitiveData() Config {
 	maskedCfg := cfg
 
-	if maskedCfg.ApiPassword != "" {
-		maskedCfg.ApiPassword = maskValue
+	if maskedCfg.APIPassword != "" {
+		maskedCfg.APIPassword = maskValue
 	}
 
 	maskedCfg.Projects = make(map[string]Project, 0)
@@ -176,15 +176,15 @@ func (cfg Config) MaskSensitiveData() Config {
 	return maskedCfg
 }
 
-func (prj Project) MaskSensitiveData() Project {
-	maskedPrj := prj
+func (project Project) MaskSensitiveData() Project {
+	maskedProject := project
 
-	if maskedPrj.Secret != "" {
-		maskedPrj.Secret = maskValue
+	if maskedProject.Secret != "" {
+		maskedProject.Secret = maskValue
 	}
-	if maskedPrj.Authorization != "" {
-		maskedPrj.Authorization = maskValue
+	if maskedProject.Authorization != "" {
+		maskedProject.Authorization = maskValue
 	}
 
-	return maskedPrj
+	return maskedProject
 }

@@ -29,10 +29,10 @@ func Serve(cfg config.Config) {
 	//==========================================================================
 	// Logger and Action DBs
 
-	dbActions, err := actiondb.New(cfg.ActionsDbFile)
+	dbActions, err := actiondb.New(cfg.ActionsDBFile)
 	if err != nil {
 		log.Printf("Error opening actions db: %s", err)
-		os.Exit(ExitCodeActionsDb)
+		os.Exit(ExitCodeActionsDB)
 	}
 	defer func() {
 		if dbActions != nil {
@@ -40,10 +40,10 @@ func Serve(cfg config.Config) {
 		}
 	}()
 
-	dbLogs, err := logsDb.New(cfg.LogsDbFile)
+	dbLogs, err := logsDb.New(cfg.LogsDBFile)
 	if err != nil {
 		log.Printf("Error opening logs db: %s", err)
-		os.Exit(ExitCodeLoggerDb)
+		os.Exit(ExitCodeLoggerDB)
 	}
 	defer func() {
 		if dbLogs != nil {
@@ -54,7 +54,7 @@ func Serve(cfg config.Config) {
 	logger, err := logger.SetupLogger(cfg.LogLevel, dbLogs)
 	if err != nil {
 		log.Printf("Error setting up the logger: %s", err)
-		os.Exit(ExitCodeLoggerDb)
+		os.Exit(ExitCodeLoggerDB)
 	}
 	logger.Debug("configuration loaded", slog.Any("config", cfg.MaskSensitiveData()))
 
@@ -67,8 +67,8 @@ func Serve(cfg config.Config) {
 		logger.Error("Error creating the server", slog.Any("error", err))
 		os.Exit(ExitReadConfig)
 	}
-	if !cfg.DisableApi {
-		basicAuth := middleware.NewBasicAuth(cfg.ApiUser, cfg.ApiPassword, logger)
+	if !cfg.DisableAPI {
+		basicAuth := middleware.NewBasicAuth(cfg.APIUser, cfg.APIPassword, logger)
 		if dbActions != nil {
 			logger.Debug("Web admin enabled for pipelines")
 			mux.HandleFunc("GET /pipelines", basicAuth(admin.ListPipelines(dbActions, logger)))

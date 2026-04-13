@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// Nullable string presentation
+// NullString is a nullable string presentation
 type NullString struct {
 	sql.NullString
 }
@@ -27,33 +27,33 @@ func (ts Timestamp) MarshalJSON() ([]byte, error) {
 	return json.Marshal(time.Unix(ts.int64, 0).Format(time.RFC3339))
 }
 
-// Nullable timestamp presentation (as ISO8601/RFC3339)
-type NullTs struct {
+// NullTS is a nullable timestamp presentation (as ISO8601/RFC3339)
+type NullTS struct {
 	sql.NullInt64
 }
 
-func (ns NullTs) MarshalJSON() ([]byte, error) {
+func (ns NullTS) MarshalJSON() ([]byte, error) {
 	if ns.Valid {
 		return json.Marshal(Timestamp{ns.Int64})
 	}
 	return []byte("null"), nil
 }
 
-// JSON data dump presentaion (as JSON)
-type JsonData struct {
-	data map[string]interface{}
+// JSONData is JSON data dump presentation (as JSON)
+type JSONData struct {
+	data map[string]any
 }
 
-func (d JsonData) MarshalJSON() ([]byte, error) {
+func (d JSONData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(d.data)
 }
 
-func NewJsonData(d json.RawMessage) (JsonData, error) {
+func NewJSONData(d json.RawMessage) (JSONData, error) {
 	var result map[string]interface{}
 
 	err := json.Unmarshal(d, &result)
 	if err != nil {
-		return JsonData{}, err
+		return JSONData{}, err
 	}
-	return JsonData{result}, nil
+	return JSONData{result}, nil
 }

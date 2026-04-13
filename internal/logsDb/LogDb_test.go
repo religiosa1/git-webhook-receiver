@@ -12,8 +12,8 @@ import (
 var testEntry = logsDb.LogEntry{
 	Level:      int(slog.LevelInfo),
 	Project:    sql.NullString{Valid: true, String: "testProject"},
-	DeliveryId: sql.NullString{Valid: true, String: "testDeliveryId"},
-	PipeId:     sql.NullString{Valid: true, String: "testPipeId"},
+	DeliveryID: sql.NullString{Valid: true, String: "testDeliveryId"},
+	PipeID:     sql.NullString{Valid: true, String: "testPipeId"},
 	Message:    "testMessage",
 	Data:       `{"test":123}`,
 }
@@ -36,7 +36,7 @@ func TestLogDb(t *testing.T) {
 			t.Errorf("Error while opening a db: %s", err)
 		}
 		if db != nil {
-			t.Errorf("Expeting db to be nill, but got this instead: %v", db)
+			t.Errorf("Expecting db to be nil, but got this instead: %v", db)
 		}
 	})
 
@@ -126,7 +126,7 @@ func TestLogDb(t *testing.T) {
 		CompareEntries(t, testEntry, page1[0])
 		CompareEntries(t, testEntry2, page1[1])
 
-		page2, err := db.GetEntry(logsDb.GetEntryQuery{CursorId: page1[1].Id, CursorTs: page1[1].Ts})
+		page2, err := db.GetEntry(logsDb.GetEntryQuery{CursorID: page1[1].ID, CursorTS: page1[1].TS})
 		if err != nil {
 			t.Errorf("Error while retrieving entries: %s", err)
 		}
@@ -148,10 +148,10 @@ func TestLogDbFiltering(t *testing.T) {
 		projectEntry.Project = sql.NullString{Valid: true, String: "project-search"}
 
 		deliveryEntry := testEntry
-		deliveryEntry.DeliveryId = sql.NullString{Valid: true, String: "delivery-search"}
+		deliveryEntry.DeliveryID = sql.NullString{Valid: true, String: "delivery-search"}
 
 		pipeEntry := testEntry
-		pipeEntry.PipeId = sql.NullString{Valid: true, String: "pipe-search"}
+		pipeEntry.PipeID = sql.NullString{Valid: true, String: "pipe-search"}
 
 		messageEntry := testEntry
 		messageEntry.Message = "message-search"
@@ -179,7 +179,7 @@ func TestLogDbFiltering(t *testing.T) {
 		}
 		CompareEntries(t, projectEntry, s1[0])
 
-		s2, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{DeliveryId: "delivery-search"})
+		s2, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{DeliveryID: "delivery-search"})
 		if err != nil {
 			t.Errorf("Error while retrieving entries: %s", err)
 		}
@@ -188,7 +188,7 @@ func TestLogDbFiltering(t *testing.T) {
 		}
 		CompareEntries(t, deliveryEntry, s2[0])
 
-		s3, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{PipeId: "pipe-search"})
+		s3, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{PipeID: "pipe-search"})
 		if err != nil {
 			t.Errorf("Error while retrieving entries: %s", err)
 		}
@@ -213,18 +213,18 @@ func TestLogDbFiltering(t *testing.T) {
 			t.Errorf("Error while opening a db: %s", err)
 		}
 
-		pipeId := "test-pipeid-search"
+		pipeID := "test-pipeid-search"
 		delivery := "test-delivery-search"
 
 		entryA := testEntry
-		entryA.PipeId = sql.NullString{Valid: true, String: pipeId}
+		entryA.PipeID = sql.NullString{Valid: true, String: pipeID}
 
 		entryB := testEntry
-		entryB.DeliveryId = sql.NullString{Valid: true, String: delivery}
+		entryB.DeliveryID = sql.NullString{Valid: true, String: delivery}
 
 		entryAB := testEntry
-		entryAB.PipeId = sql.NullString{Valid: true, String: pipeId}
-		entryAB.DeliveryId = sql.NullString{Valid: true, String: delivery}
+		entryAB.PipeID = sql.NullString{Valid: true, String: pipeID}
+		entryAB.DeliveryID = sql.NullString{Valid: true, String: delivery}
 
 		allEntries := []logsDb.LogEntry{
 			testEntry,
@@ -239,7 +239,7 @@ func TestLogDbFiltering(t *testing.T) {
 			}
 		}
 
-		s1, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{DeliveryId: delivery, PipeId: pipeId})
+		s1, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{DeliveryID: delivery, PipeID: pipeID})
 		if err != nil {
 			t.Errorf("Error while retrieving entries: %s", err)
 		}
@@ -298,12 +298,12 @@ func CompareEntries(t *testing.T, want logsDb.LogEntry, got logsDb.LogEntry) boo
 		t.Errorf("Wrong Project, want %v got %v", want.Project, got.Project)
 		return false
 	}
-	if want.DeliveryId != got.DeliveryId {
-		t.Errorf("Wrong DeliveryId value, want %v got %v", want.DeliveryId, got.DeliveryId)
+	if want.DeliveryID != got.DeliveryID {
+		t.Errorf("Wrong DeliveryId value, want %v got %v", want.DeliveryID, got.DeliveryID)
 		return false
 	}
-	if want.PipeId != got.PipeId {
-		t.Errorf("Wrong PipeId value, want %v got %v", want.PipeId, got.PipeId)
+	if want.PipeID != got.PipeID {
+		t.Errorf("Wrong PipeId value, want %v got %v", want.PipeID, got.PipeID)
 		return false
 	}
 	if want.Message != got.Message {

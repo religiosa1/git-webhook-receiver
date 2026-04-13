@@ -17,19 +17,19 @@ type LogsArgs struct {
 	Skip       int      `short:"s" default:"0" help:"Skip first N entries"`
 	Levels     []string `short:"e" help:"filter by levels" enum:"debug,info,warn,error"`
 	Project    string   `short:"p" help:"filter by project"`
-	DeliveryId string   `short:"d" help:"filter by deliveryId"`
-	PipeId     string   `short:"a" help:"filter by action's pipeId"`
+	DeliveryID string   `short:"d" help:"filter by deliveryId"`
+	PipeID     string   `short:"a" help:"filter by action's pipeId"`
 	Message    string   `short:"m" help:"filter by message"`
 	Format     string   `short:"f" help:"output format" enum:"simple,jq,json" default:"simple" `
 }
 
 func Logs(cfg config.Config, args LogsArgs) {
 	if args.File == "" {
-		args.File = cfg.LogsDbFile
+		args.File = cfg.LogsDBFile
 	}
 
-	outputFormmater := getLogOutputFormatter(args.Format)
-	if outputFormmater == nil {
+	outputFormatter := getLogOutputFormatter(args.Format)
+	if outputFormatter == nil {
 		fmt.Printf("unknown output format")
 		os.Exit(1)
 	}
@@ -39,8 +39,8 @@ func Logs(cfg config.Config, args LogsArgs) {
 			PageSize: args.Limit,
 		},
 		Project:    args.Project,
-		DeliveryId: args.DeliveryId,
-		PipeId:     args.PipeId,
+		DeliveryID: args.DeliveryID,
+		PipeID:     args.PipeID,
 		Message:    args.Message,
 		Offset:     args.Skip,
 	}
@@ -56,16 +56,16 @@ func Logs(cfg config.Config, args LogsArgs) {
 	dbLogs, err := logsDb.New(args.File)
 	if err != nil {
 		fmt.Printf("Error opening actions db: %s\n", err)
-		os.Exit(ExitCodeLoggerDb)
+		os.Exit(ExitCodeLoggerDB)
 	}
 	defer dbLogs.Close()
 
 	records, err := dbLogs.GetEntryFiltered(query)
 	if err != nil {
 		fmt.Printf("Error retrieving the records: %s", err)
-		os.Exit(ExitCodeLoggerDb)
+		os.Exit(ExitCodeLoggerDB)
 	}
-	outputFormmater(records)
+	outputFormatter(records)
 }
 
 func getLogOutputFormatter(format string) func([]logsDb.LogEntry) {
@@ -75,7 +75,7 @@ func getLogOutputFormatter(format string) func([]logsDb.LogEntry) {
 	case "jq":
 		return formatLogRecordsJq
 	case "json":
-		return formatLogRecordsJson
+		return formatLogRecordsJSON
 	default:
 		return nil
 	}
@@ -83,8 +83,8 @@ func getLogOutputFormatter(format string) func([]logsDb.LogEntry) {
 
 func formatLogRecordsSimple(entries []logsDb.LogEntry) {
 	for _, e := range entries {
-		ts := time.Unix(e.Ts, 0).Format(time.DateTime)
-		fmt.Printf("%s %s %s %s %s %s\n", ts, e.Message, e.Project.String, e.DeliveryId.String, e.PipeId.String, e.Data)
+		ts := time.Unix(e.TS, 0).Format(time.DateTime)
+		fmt.Printf("%s %s %s %s %s %s\n", ts, e.Message, e.Project.String, e.DeliveryID.String, e.PipeID.String, e.Data)
 	}
 }
 
@@ -96,7 +96,7 @@ func formatLogRecordsJq(entries []logsDb.LogEntry) {
 	}
 }
 
-func formatLogRecordsJson(entries []logsDb.LogEntry) {
+func formatLogRecordsJSON(entries []logsDb.LogEntry) {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	enc.Encode(serialization.LogEntries((entries)))

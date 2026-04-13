@@ -24,7 +24,7 @@ func HandleWebhookPost(
 	receiver whreceiver.Receiver,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		// setting nop-closer body, so we can read it multiple times
+		// setting noop-closer body, so we can read it multiple times
 		payload, err := io.ReadAll(req.Body)
 		if err != nil {
 			logger.Error("Error while reading the POST request body", slog.Any("error", err))
@@ -42,7 +42,7 @@ func HandleWebhookPost(
 			return
 		}
 		deliveryLogger := logger.With(slog.String("deliveryId", webhookInfo.DeliveryID))
-		deliveryLogger.Info("Recieved a webhook post", slog.Any("webhookInfo", webhookInfo))
+		deliveryLogger.Info("Received a webhook post", slog.Any("webhookInfo", webhookInfo))
 
 		if project.Authorization != "" {
 			if authed, err := receiver.Authorize(whReq, project.Authorization); err != nil || !authed {
@@ -114,9 +114,9 @@ func getProjectsActionsForWebhookPost(projectName string, project config.Project
 		actions = append(actions, ActionRunner.ActionDescriptor{
 			ActionIdentifier: ActionRunner.ActionIdentifier{
 				Index:      index,
-				PipeId:     ulid.Make().String(),
+				PipeID:     ulid.Make().String(),
 				Project:    projectName,
-				DeliveryId: webhookInfo.DeliveryID,
+				DeliveryID: webhookInfo.DeliveryID,
 			},
 			Action: action,
 		})
@@ -126,31 +126,31 @@ func getProjectsActionsForWebhookPost(projectName string, project config.Project
 
 type ActionOutput struct {
 	ActionRunner.ActionIdentifier
-	Url string `json:"url,omitempty"`
+	URL string `json:"url,omitempty"`
 }
 
 func actionsToOutput(cfg config.Config, actions []ActionRunner.ActionDescriptor) []ActionOutput {
 	output := make([]ActionOutput, len(actions))
-	baseUrl := generatePublicBaseUrl(cfg)
+	baseURL := generatePublicBaseURL(cfg)
 	for idx, action := range actions {
 		var url string
-		if baseUrl != "" {
-			url = baseUrl + action.ActionIdentifier.PipeId
+		if baseURL != "" {
+			url = baseURL + action.PipeID
 		}
 		output[idx] = ActionOutput{
 			ActionIdentifier: action.ActionIdentifier,
-			Url:              url,
+			URL:              url,
 		}
 	}
 	return output
 }
 
-func generatePublicBaseUrl(cfg config.Config) string {
-	if cfg.DisableApi {
+func generatePublicBaseURL(cfg config.Config) string {
+	if cfg.DisableAPI {
 		return ""
 	}
-	if cfg.PublicUrl != "" {
-		return strings.TrimSuffix(cfg.PublicUrl, "/") + "/pipelines/"
+	if cfg.PublicURL != "" {
+		return strings.TrimSuffix(cfg.PublicURL, "/") + "/pipelines/"
 	}
 
 	protocol := "http"
