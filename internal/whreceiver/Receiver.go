@@ -20,9 +20,12 @@ type WebhookPostInfo struct {
 }
 
 type ReceiverCapabilities struct {
-	CanAuthorize       bool
+	// Receiver can authorize requests through the Authorization header
+	CanAuthorize bool
+	// Receiver can verify payload signature in header
 	CanVerifySignature bool
-	HasPing            bool
+	// Receiver supports ping requests to webhook
+	HasPing bool
 }
 
 type Receiver interface {

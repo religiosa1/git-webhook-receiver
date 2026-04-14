@@ -39,19 +39,18 @@ precedence).
 A typical config file may look like this:
 
 ```yaml
-host: example.com
-ssl:
-  cert_file_path: "/etc/letsencrypt/live/example.com/fullchain.pem"
-  key_file_path: "/etc/letsencrypt/live/example.com/privkey.pem"
+# provide it through env API_PASSWORD, if you don't want it readable in config
 api_password: "password for inspection api basic auth"
 projects:
   my_awesome_project:
     repo: "username/reponame"
-    secret: "YourSecretGoesHere" # generate it with `openssl rand -base64 42`
+    # generate it with `openssl rand -base64 42`
+    # to supply through env: PROJECTS__my_awesome_project__SECRET=foo
+    secret: "YourSecretGoesHere"
     actions:
       - on: push
         branch: main
-        user: www-data
+        user: www-data # requires elevated permissions, consider if you need it
         cwd: "/var/www/default"
         script: |
           git fetch && git reset --hard origin/main
@@ -60,6 +59,9 @@ projects:
   my_other_project:
     repo: "username/reponame2"
     secret: "YourSecretGoesHere"
+    # to supply through env: PROJECTS__my_other_project__AUTH=foo
+    auth: "Your Authorization header key if you want"
+    provider: gitea
     actions:
       - cwd: "/var/www/backend" # Anything besides `script` or `run` is optional
         run: ["sh", "./build.sh"]
@@ -82,6 +84,24 @@ authorization and signature verification.
 
 Most of the config values can be provided via ENV variables. Please consider
 if it makes sense for your application to provide secrets in this manner.
+
+### Supported git providers
+
+| Provider | Can Authorize requests | Can Sign payload | Has Ping |
+| -------- | ---------------------- | ---------------- | -------- |
+| github   | false                  | true             | true     |
+| gitea    | true                   | true[^1]         | false    |
+| gitlab   | true                   | false            | false    |
+
+Authorize means capability to provide Authorization header, which is then
+verified by the service.
+
+Sign payload is basically the same thing, but the whole payload is signed as a
+measure to secure against payload MiM tampering.
+
+[^1]:
+    Can be insecure on plain http connections on gitea 1.14 or older because
+    of [this issue](https://github.com/go-gitea/gitea/issues/11755)
 
 ## Installation
 
@@ -206,7 +226,7 @@ Run `get-webhook-receiver ls` to see a list of the last N pipelines.
 Run `get-webhook-receiver logs` to inspect app logs.
 
 <!--
-TODO implement this functionality for actionsDb:
+TODO: implement this functionality for actionsDb:
 
 Only N latest actions are stored in the directory, with N specified in the
 config as `max_output_files` field. When number of output files exceeds this
@@ -238,6 +258,11 @@ create two additional temporary files during operation `<YOUR_FILE>-wal` and
 
 If you have any ideas or suggestions or want to report a bug, feel free to
 write in the issues section or create a PR.
+
+### Testing the project locally without any git integration
+
+If you want to quickly play around with the project, without actually doing
+any kind of git integration, please refer to [this doc](./docs/local-run.md).
 
 ## License
 

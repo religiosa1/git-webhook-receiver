@@ -23,6 +23,8 @@ func executeActionScript(ctx context.Context, action config.Action, sysProcAttr 
 	}
 
 	runner, _ := interp.New(
+		// TODO: there was some reason why I didn't choose ExecHandlers, was that sysProcAttr passing?..
+		// figure out and document, as this all looks weird af
 		interp.ExecHandler(execHandler(30*time.Second, sysProcAttr)),
 		interp.StdIO(nil, output, output),
 		interp.Dir(action.Cwd),
@@ -30,7 +32,27 @@ func executeActionScript(ctx context.Context, action config.Action, sysProcAttr 
 	return runner.Run(ctx, script)
 }
 
-// TODO investigate the possibility of integrating it in interp itself (fork or PRS)
+/* TODO: this is all here to execute a command with timeout cancellation.
+ * Seems to be replaceable with go1.20+ Cancel and WithDelay fields on exec.Cmd:
+ * cmd := exec.Cmd{
+ *    Path:        path,
+ *    Args:        args,
+ *    Dir:         hc.Dir,
+ *    Stdin:       hc.Stdin,
+ *    Stdout:      hc.Stdout,
+ *    Stderr:      hc.Stderr,
+ *    SysProcAttr: sysProcAttr,
+ *    Cancel: func() error {
+ *        if runtime.GOOS == "windows" {
+ *            return cmd.Process.Kill()
+ *        }
+ *        return cmd.Process.Signal(os.Interrupt)
+ *    },
+ *    WaitDelay: killTimeout,
+ * }
+ * https://pkg.go.dev/os/exec#Cmd
+ */
+
 func execHandler(killTimeout time.Duration, sysProcAttr *syscall.SysProcAttr) interp.ExecHandlerFunc {
 	return func(ctx context.Context, args []string) error {
 		hc := interp.HandlerCtx(ctx)

@@ -1,6 +1,6 @@
 ## Nginx configuration
 
-TODO
+TODO:
 
 Example nginx configuration file, prior to launching certbot:
 

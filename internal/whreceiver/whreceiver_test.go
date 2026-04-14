@@ -133,14 +133,14 @@ func TestReceivers(t *testing.T) {
 				}
 			})
 		} else {
-			t.Run(tt.name+": authorizatoin not supported", func(t *testing.T) {
+			t.Run(tt.name+": authorization not supported", func(t *testing.T) {
 				rcvr := whreceiver.New(tt.project)
 				_, err := rcvr.Authorize(MakeWebhookPostRequest(tt.request), tt.authToken)
 				if err == nil {
-					t.Error("Exepcted authorization to throw but it didn't")
+					t.Error("Expected authorization to throw but it didn't")
 				}
 				if !errors.Is(err, whreceiver.ErrAuthNotSupported) {
-					t.Errorf("Unexepcted error type, must be ErrAuthNotSupported, got: %s", err)
+					t.Errorf("Unexpected error type, must be ErrAuthNotSupported, got: %s", err)
 				}
 			})
 		}
@@ -177,11 +177,11 @@ func TestReceivers(t *testing.T) {
 					t.Errorf("Expected signature verification to throw, but it didn't")
 				}
 				if !errors.Is(err, whreceiver.ErrSignNotSupported) {
-					t.Errorf("Unexepcted error type, must be ErrSignNotSupported, got: %s", err)
+					t.Errorf("Unexpected error type, must be ErrSignNotSupported, got: %s", err)
 				}
 			})
 		}
-		// TODO ping tests
+		// TODO: ping tests
 	}
 }
 

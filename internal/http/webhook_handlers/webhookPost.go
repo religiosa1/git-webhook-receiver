@@ -68,7 +68,7 @@ func HandleWebhookPost(
 		actions := getProjectsActionsForWebhookPost(projectName, project, webhookInfo)
 		if len(actions) == 0 {
 			deliveryLogger.Info("No applicable actions found in webhook post")
-			w.WriteHeader(http.StatusOK)
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 
@@ -105,7 +105,7 @@ func getWebhookErrorCode(err error) ErrorInfo {
 func getProjectsActionsForWebhookPost(projectName string, project config.Project, webhookInfo *whreceiver.WebhookPostInfo) []ActionRunner.ActionDescriptor {
 	actions := make([]ActionRunner.ActionDescriptor, 0)
 	for index, action := range project.Actions {
-		if action.Branch != webhookInfo.Branch {
+		if action.Branch != "*" && action.Branch != webhookInfo.Branch {
 			continue
 		}
 		if action.On != "*" && action.On != webhookInfo.Event {

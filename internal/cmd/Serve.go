@@ -185,6 +185,12 @@ func createProjectsMux(actionsCh chan ActionRunner.ActionArgs, cfg config.Config
 			slog.String("repo", project.Repo),
 		)
 	}
+	// fallback route, just for logging out errors
+	mux.HandleFunc("POST /projects/{projectName}", func(w http.ResponseWriter, req *http.Request) {
+		projectName := req.PathValue("projectName")
+		logger.Error("unknown git project passed", slog.String("project", projectName))
+		w.WriteHeader(http.StatusNotFound)
+	})
 	return mux, nil
 }
 

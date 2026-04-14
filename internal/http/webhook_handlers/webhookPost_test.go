@@ -95,7 +95,7 @@ func TestProjectMatching(t *testing.T) {
 		}
 	})
 
-	t.Run("returns 200, if no action matches", func(t *testing.T) {
+	t.Run("returns 204, if no action matches", func(t *testing.T) {
 		prj2 := prj
 		prj2.Actions = makeActionsList(config.Action{Branch: "badbranch"})
 
@@ -105,7 +105,7 @@ func TestProjectMatching(t *testing.T) {
 		handlers.HandleWebhookPost(ch, logger, cfg, projectName, prj2, rcvr)(response, request)
 
 		got := response.Result().StatusCode
-		want := 200
+		want := 204
 
 		if got != want {
 			t.Errorf("got %d, want %d", got, want)
@@ -151,6 +151,81 @@ func TestProjectMatching(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestActionMatching(t *testing.T) {
+	ch := makeChannelDrainer()
+	requestDump := loadMockRequest(t) // branch: "master", event: "push"
+
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	cfg := config.Config{}
+	baseProject := config.Project{
+		GitProvider: "gitea",
+		Repo:        "religiosa/staticus",
+	}
+
+	runHandler := func(t *testing.T, actions []config.Action) int {
+		t.Helper()
+		prj := baseProject
+		prj.Actions = actions
+		rcvr := whreceiver.New(prj)
+		request := requestDump.ToHttpRequest(projectEndPoint)
+		response := httptest.NewRecorder()
+		handlers.HandleWebhookPost(ch, logger, cfg, projectName, prj, rcvr)(response, request)
+		return response.Result().StatusCode
+	}
+
+	t.Run("branch matching", func(t *testing.T) {
+		cases := []struct {
+			name       string
+			branch     string
+			wantStatus int
+		}{
+			{"exact match", "master", 201},
+			{"no match", "other", 204},
+		}
+		for _, tt := range cases {
+			t.Run(tt.name, func(t *testing.T) {
+				got := runHandler(t, []config.Action{{On: "push", Branch: tt.branch, Run: []string{"go", "version"}}})
+				if got != tt.wantStatus {
+					t.Errorf("got %d, want %d", got, tt.wantStatus)
+				}
+			})
+		}
+	})
+
+	t.Run("branch wildcard matches any branch", func(t *testing.T) {
+		got := runHandler(t, []config.Action{{On: "push", Branch: "*", Run: []string{"go", "version"}}})
+		if got != 201 {
+			t.Errorf("got %d, want 201", got)
+		}
+	})
+
+	t.Run("event matching", func(t *testing.T) {
+		cases := []struct {
+			name       string
+			event      string
+			wantStatus int
+		}{
+			{"exact match", "push", 201},
+			{"no match", "release", 204},
+		}
+		for _, tt := range cases {
+			t.Run(tt.name, func(t *testing.T) {
+				got := runHandler(t, []config.Action{{On: tt.event, Branch: "master", Run: []string{"go", "version"}}})
+				if got != tt.wantStatus {
+					t.Errorf("got %d, want %d", got, tt.wantStatus)
+				}
+			})
+		}
+	})
+
+	t.Run("event wildcard matches any event", func(t *testing.T) {
+		got := runHandler(t, []config.Action{{On: "*", Branch: "master", Run: []string{"go", "version"}}})
+		if got != 201 {
+			t.Errorf("got %d, want 201", got)
+		}
+	})
 }
 
 func TestResponseBody(t *testing.T) {
