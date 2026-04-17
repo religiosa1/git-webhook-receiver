@@ -23,100 +23,62 @@ func executeActionScript(ctx context.Context, action config.Action, sysProcAttr 
 	}
 
 	runner, _ := interp.New(
-		// TODO: there was some reason why I didn't choose ExecHandlers, was that sysProcAttr passing?..
-		// figure out and document, as this all looks weird af
-		interp.ExecHandler(execHandler(30*time.Second, sysProcAttr)),
+		interp.ExecHandlers(execHandler(30*time.Second, sysProcAttr)),
 		interp.StdIO(nil, output, output),
 		interp.Dir(action.Cwd),
 	)
 	return runner.Run(ctx, script)
 }
 
-/* TODO: this is all here to execute a command with timeout cancellation.
- * Seems to be replaceable with go1.20+ Cancel and WithDelay fields on exec.Cmd:
- * cmd := exec.Cmd{
- *    Path:        path,
- *    Args:        args,
- *    Dir:         hc.Dir,
- *    Stdin:       hc.Stdin,
- *    Stdout:      hc.Stdout,
- *    Stderr:      hc.Stderr,
- *    SysProcAttr: sysProcAttr,
- *    Cancel: func() error {
- *        if runtime.GOOS == "windows" {
- *            return cmd.Process.Kill()
- *        }
- *        return cmd.Process.Signal(os.Interrupt)
- *    },
- *    WaitDelay: killTimeout,
- * }
- * https://pkg.go.dev/os/exec#Cmd
- */
-
-func execHandler(killTimeout time.Duration, sysProcAttr *syscall.SysProcAttr) interp.ExecHandlerFunc {
-	return func(ctx context.Context, args []string) error {
-		hc := interp.HandlerCtx(ctx)
-		path, err := interp.LookPathDir(hc.Dir, hc.Env, args[0])
-		if err != nil {
-			fmt.Fprintln(hc.Stderr, err)
-			return interp.NewExitStatus(127)
-		}
-		cmd := exec.Cmd{
-			Path: path,
-			Args: args,
-			// Env:         execEnv(hc.Env),
-			Dir:         hc.Dir,
-			Stdin:       hc.Stdin,
-			Stdout:      hc.Stdout,
-			Stderr:      hc.Stderr,
-			SysProcAttr: sysProcAttr,
-		}
-
-		err = cmd.Start()
-		if err == nil {
-			if done := ctx.Done(); done != nil {
-				go func() {
-					<-done
-
-					if killTimeout <= 0 || runtime.GOOS == "windows" {
-						_ = cmd.Process.Signal(os.Kill)
-						return
-					}
-
-					// TODO: don't temporarily leak this goroutine
-					// if the program stops itself with the
-					// interrupt.
-					go func() {
-						time.Sleep(killTimeout)
-						_ = cmd.Process.Signal(os.Kill)
-					}()
-					_ = cmd.Process.Signal(os.Interrupt)
-				}()
+func execHandler(killTimeout time.Duration, sysProcAttr *syscall.SysProcAttr) func(next interp.ExecHandlerFunc) interp.ExecHandlerFunc {
+	return func(next interp.ExecHandlerFunc) interp.ExecHandlerFunc {
+		return func(ctx context.Context, args []string) error {
+			hc := interp.HandlerCtx(ctx)
+			path, err := interp.LookPathDir(hc.Dir, hc.Env, args[0])
+			if err != nil {
+				fmt.Fprintln(hc.Stderr, err)
+				return interp.ExitStatus(127)
 			}
-
-			err = cmd.Wait()
-		}
-
-		switch err := err.(type) {
-		case *exec.ExitError:
-			// started, but errored - default to 1 if OS
-			// doesn't have exit statuses
-			if status, ok := err.Sys().(syscall.WaitStatus); ok {
-				if status.Signaled() {
-					if ctx.Err() != nil {
-						return ctx.Err()
-					}
-					return interp.NewExitStatus(uint8(128 + status.Signal()))
+			cmd := exec.CommandContext(ctx, path, args[1:]...)
+			cmd.Args = args
+			cmd.Dir = hc.Dir
+			cmd.Stdin = hc.Stdin
+			cmd.Stdout = hc.Stdout
+			cmd.Stderr = hc.Stderr
+			cmd.SysProcAttr = sysProcAttr
+			cmd.Cancel = func() error {
+				if killTimeout <= 0 || runtime.GOOS == "windows" {
+					return cmd.Process.Kill()
 				}
-				return interp.NewExitStatus(uint8(status.ExitStatus()))
+				return cmd.Process.Signal(os.Interrupt)
 			}
-			return interp.NewExitStatus(1)
-		case *exec.Error:
-			// did not start
-			fmt.Fprintf(hc.Stderr, "%v\n", err)
-			return interp.NewExitStatus(127)
-		default:
-			return err
+			if killTimeout > 0 {
+				cmd.WaitDelay = killTimeout
+			}
+
+			err = cmd.Run()
+
+			switch err := err.(type) {
+			case *exec.ExitError:
+				// started, but errored - default to 1 if OS
+				// doesn't have exit statuses
+				if status, ok := err.Sys().(syscall.WaitStatus); ok {
+					if status.Signaled() {
+						if ctx.Err() != nil {
+							return ctx.Err()
+						}
+						return interp.ExitStatus(128 + status.Signal())
+					}
+					return interp.ExitStatus(status.ExitStatus())
+				}
+				return interp.ExitStatus(1)
+			case *exec.Error:
+				// did not start
+				fmt.Fprintf(hc.Stderr, "%v\n", err)
+				return interp.ExitStatus(127)
+			default:
+				return err
+			}
 		}
 	}
 }
