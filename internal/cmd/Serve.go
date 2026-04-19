@@ -29,14 +29,14 @@ func Serve(cfg config.Config) {
 	//==========================================================================
 	// Logger and Action DBs
 
-	dbActions, err := actiondb.New(cfg.ActionsDBFile)
+	dbActions, err := actiondb.New(cfg.ActionsDBFile, cfg.MaxActionsStored)
 	if err != nil {
 		log.Printf("Error opening actions db: %s", err)
 		os.Exit(ExitCodeActionsDB)
 	}
 	defer func() {
 		if dbActions != nil {
-			dbActions.Close()
+			_ = dbActions.Close()
 		}
 	}()
 
@@ -47,7 +47,7 @@ func Serve(cfg config.Config) {
 	}
 	defer func() {
 		if dbLogs != nil {
-			dbLogs.Close()
+			_ = dbLogs.Close()
 		}
 	}()
 

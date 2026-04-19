@@ -24,7 +24,7 @@ func Pipeline(cfg config.Config, args PipelineArgs) {
 	if args.File == "" {
 		args.File = cfg.ActionsDBFile
 	}
-	dbActions, err := actiondb.New(cfg.ActionsDBFile)
+	dbActions, err := actiondb.New(args.File, cfg.MaxActionsStored)
 	if err != nil {
 		fmt.Printf("Error opening actions db: %s\n", err)
 		os.Exit(ExitCodeActionsDB)

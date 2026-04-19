@@ -23,9 +23,18 @@ func tmpConfigFile(t *testing.T, contents string) string {
 	return tmpfile.Name()
 }
 
+func loadMockConfig(t *testing.T, contents string) config.Config {
+	configFileName := tmpConfigFile(t, contents)
+	cfg, err := config.Load(configFileName)
+	if err != nil {
+		t.Errorf("Error loading the config file: %s", err)
+	}
+	return cfg
+}
+
 func TestConfigLoad(t *testing.T) {
 	t.Run("loads the test config", func(t *testing.T) {
-		configFileName := tmpConfigFile(t, `
+		cfg := loadMockConfig(t, `
 host: test.example.com
 port: 1234
 actions_db_file: db2.sqlite3
@@ -37,26 +46,21 @@ projects:
       - run: ["node", "--version"]`,
 		)
 
-		config, err := config.Load(configFileName)
-		if err != nil {
-			t.Errorf("Error loading the config file: %s", err)
-		}
-
 		wantHost := "test.example.com"
 		var wantPort int16 = 1234
-		if config.Host != wantHost || config.Port != wantPort {
-			t.Errorf("incorrect values read from config, want %s:%d, got %s:%d", wantHost, wantPort, config.Host, config.Port)
+		if cfg.Host != wantHost || cfg.Port != wantPort {
+			t.Errorf("incorrect values read from config, want %s:%d, got %s:%d", wantHost, wantPort, cfg.Host, cfg.Port)
 		}
 
-		if want, got := "db2.sqlite3", config.ActionsDBFile; want != got {
+		if want, got := "db2.sqlite3", cfg.ActionsDBFile; want != got {
 			t.Errorf("incorrect actions db file read from config, want %s, got %s", want, got)
 		}
 
-		if l := len(config.Projects); l != 1 {
+		if l := len(cfg.Projects); l != 1 {
 			t.Errorf("There must be only one project in config, but got %d", l)
 		}
 
-		project := config.Projects["test-proj"]
+		project := cfg.Projects["test-proj"]
 
 		if l := len(project.Actions); l != 1 {
 			t.Errorf("There must be only one action in test-proj in config, but got %d", l)
@@ -68,7 +72,7 @@ projects:
 	})
 
 	t.Run("sets the default values", func(t *testing.T) {
-		configFileName := tmpConfigFile(t, `
+		cfg := loadMockConfig(t, `
 projects:
   test-proj:
     git_provider: gitea
@@ -76,25 +80,21 @@ projects:
     actions:
       - run: ["node", "--version"]`,
 		)
-		config, err := config.Load(configFileName)
-		if err != nil {
-			t.Error(err)
-		}
 
-		if want, got := "localhost", config.Host; want != got {
+		if want, got := "localhost", cfg.Host; want != got {
 			t.Errorf("incorrect host value read from config, want %s, got %s", want, got)
 		}
 
 		var wantPort int16 = 9090
-		if config.Port != wantPort {
-			t.Errorf("incorrect port value read from config, want %d, got %d", wantPort, config.Port)
+		if cfg.Port != wantPort {
+			t.Errorf("incorrect port value read from config, want %d, got %d", wantPort, cfg.Port)
 		}
 
-		if want, got := "actions.sqlite3", config.ActionsDBFile; want != got {
+		if want, got := "actions.sqlite3", cfg.ActionsDBFile; want != got {
 			t.Errorf("incorrect actions db file read from config, want %s, got %s", want, got)
 		}
 
-		project := config.Projects["test-proj"]
+		project := cfg.Projects["test-proj"]
 		action := project.Actions[0]
 
 		if want, got := "push", action.On; want != got {
@@ -122,18 +122,13 @@ projects:
 		t.Setenv("HOST", overriddenHost)
 		t.Setenv("PORT", fmt.Sprintf("%d", overriddenPort))
 
-		configFileName := tmpConfigFile(t, configContents)
-		config, err := config.Load(configFileName)
-		if err != nil {
-			t.Error(err)
+		cfg := loadMockConfig(t, configContents)
+		if cfg.Host != overriddenHost {
+			t.Errorf("incorrect host value read from config, want %s, got %s", overriddenHost, cfg.Host)
 		}
 
-		if config.Host != overriddenHost {
-			t.Errorf("incorrect host value read from config, want %s, got %s", overriddenHost, config.Host)
-		}
-
-		if config.Port != overriddenPort {
-			t.Errorf("incorrect port value read from config, want %d, got %d", overriddenPort, config.Port)
+		if cfg.Port != overriddenPort {
+			t.Errorf("incorrect port value read from config, want %d, got %d", overriddenPort, cfg.Port)
 		}
 	})
 
@@ -145,15 +140,10 @@ projects:
 		t.Setenv("PROJECTS__test-proj__AUTH", auth)
 		t.Setenv("ACTIONS_DB_FILE", dbFile)
 
-		configFileName := tmpConfigFile(t, configContents)
-		config, err := config.Load(configFileName)
-		if err != nil {
-			t.Error(err)
-		}
+		cfg := loadMockConfig(t, configContents)
+		project := cfg.Projects["test-proj"]
 
-		project := config.Projects["test-proj"]
-
-		if want, got := dbFile, config.ActionsDBFile; want != got {
+		if want, got := dbFile, cfg.ActionsDBFile; want != got {
 			t.Errorf("incorrect action db file read from config, want '%s', got '%s'", want, got)
 		}
 
@@ -172,11 +162,7 @@ projects:
 		t.Setenv("SSL__CERT_FILE_PATH", certFilePath)
 		t.Setenv("SSL__KEY_FILE_PATH", keyFilePath)
 
-		configFileName := tmpConfigFile(t, configContents)
-		config, err := config.Load(configFileName)
-		if err != nil {
-			t.Error(err)
-		}
+		config := loadMockConfig(t, configContents)
 
 		if want, got := certFilePath, config.Ssl.CertFilePath; want != got {
 			t.Errorf("incorrect Cert file path value read from config, want '%s', got '%s'", want, got)
@@ -202,6 +188,7 @@ projects:
 		}
 		return p + "\n        " + cont
 	}
+
 	t.Run("either a run or script must be present in an action", func(t *testing.T) {
 		configFileName := tmpConfigFile(t, prelude(""))
 
@@ -288,6 +275,43 @@ func TestConfigProjectNameValidation(t *testing.T) {
 	}
 }
 
+func TestDefaultMaxActionsStored(t *testing.T) {
+	baseCfg := `
+host: test.example.com
+port: 1234
+projects:
+  test-proj:
+    repo: "username/reponame"
+    actions:
+      - run: ["node", "--version"]
+`
+	makeConfig := func(maxActionsStored int) string {
+		return baseCfg + fmt.Sprintf("\nmax_actions_stored: %d", maxActionsStored)
+	}
+
+	t.Run("default config value is 1_000", func(t *testing.T) {
+		cfg := loadMockConfig(t, baseCfg)
+		if cfg.MaxActionsStored != config.DefaultMaxActionsStored {
+			t.Errorf("want %d, got %d", config.DefaultMaxActionsStored, cfg.MaxActionsStored)
+		}
+	})
+
+	t.Run("explicitly passed values parsed", func(t *testing.T) {
+		want := 42
+		cfg := loadMockConfig(t, makeConfig(want))
+		if cfg.MaxActionsStored != want {
+			t.Errorf("want %d, got %d", want, cfg.MaxActionsStored)
+		}
+	})
+
+	t.Run("explicitly passed zero will be interpreted as the default", func(t *testing.T) {
+		cfg := loadMockConfig(t, makeConfig(0))
+		if cfg.MaxActionsStored != config.DefaultMaxActionsStored {
+			t.Errorf("want %d, got %d", config.DefaultMaxActionsStored, cfg.MaxActionsStored)
+		}
+	})
+}
+
 func TestConfigPossibleLogLevels(t *testing.T) {
 	makeConfig := func(logLevel string) string {
 		p := `
@@ -321,7 +345,7 @@ projects:
 		configFileName := tmpConfigFile(t, makeConfig("warn2"))
 
 		if _, err := config.Load(configFileName); err == nil {
-			t.Errorf("Validation was't trigger when not expected")
+			t.Errorf("Validation wasn't trigger when not expected")
 		}
 	})
 
@@ -400,7 +424,7 @@ func TestSensitiveDataMasking(t *testing.T) {
 		}
 	})
 
-	t.Run("doeesn't change the initial project in any way", func(t *testing.T) {
+	t.Run("doesn't change the initial project in any way", func(t *testing.T) {
 		cfg := makeTestCfg()
 		cfg2 := makeTestCfg()
 		cfg.MaskSensitiveData()

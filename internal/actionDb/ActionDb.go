@@ -26,21 +26,22 @@ type PipeLineRecord struct {
 }
 
 type ActionDb struct {
-	db *sqlx.DB
+	db         *sqlx.DB
+	maxActions int
 }
 
-func New(dbFileName string) (*ActionDb, error) {
+func New(dbFileName string, maxActions int) (*ActionDb, error) {
 	if dbFileName == "" {
 		return nil, nil
 	}
-	db := ActionDb{}
+	db := ActionDb{maxActions: maxActions}
 	pragmas := "?_journal_mode=WAL&_foreign_keys=1&_busy_timeout=5000&_cache_size=2000&_synchronous=NORMAL"
 	d, err := sqlx.Open("sqlite3", dbFileName+pragmas)
 	if err != nil {
 		return nil, err
 	}
 	db.db = d
-	err = db.open() // trying to open and migrate if necessasry the db
+	err = db.open() // trying to open and migrate if necessary the db
 	if err != nil {
 		return nil, err
 	}
@@ -70,8 +71,31 @@ func (d ActionDb) CreateRecord(pipeId string, project string, deliveryId string,
 	if err != nil {
 		return err
 	}
+	tx, err := d.db.Begin()
+	if err != nil {
+		return err
+	}
+
 	query := `INSERT INTO pipeline (pipe_id, project, delivery_id, config) VALUES (?, ?, ?, ?)`
-	_, err = d.db.Exec(query, pipeId, project, deliveryId, configJson)
+	_, err = tx.Exec(query, pipeId, project, deliveryId, configJson)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	// auto-removal of records above max actions config value
+	if d.maxActions > 0 {
+		autoRemoveQuery := `
+DELETE FROM pipeline WHERE pipe_id IN (
+		SELECT pipe_id FROM pipeline ORDER BY created_at DESC LIMIT -1 OFFSET ?
+)`
+		_, err = tx.Exec(autoRemoveQuery, d.maxActions)
+		if err != nil {
+			_ = tx.Rollback()
+			return err
+		}
+	}
+	err = tx.Commit()
 	return err
 }
 
@@ -92,10 +116,10 @@ func (d ActionDb) CloseRecord(pipeId string, actionErr error, output string) err
 	}
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("error while determining result of the pipeline record updagte: %w", err)
+		return fmt.Errorf("error while determining result of the pipeline record update: %w", err)
 	}
 	if rowsAffected == 0 {
-		return fmt.Errorf("unable to find the wor to update: pipeId = %s", pipeId)
+		return fmt.Errorf("unable to find the row to update: pipeId = %s", pipeId)
 	}
 	return err
 }
@@ -119,6 +143,21 @@ const (
 	PipeStatusPending PipeStatus = 3
 )
 
+func ParsePipelineStatus(status string) (PipeStatus, error) {
+	switch status {
+	case "ok":
+		return PipeStatusOk, nil
+	case "error":
+		return PipeStatusError, nil
+	case "pending":
+		return PipeStatusPending, nil
+	case "any":
+		return PipeStatusAny, nil
+	default:
+		return PipeStatusAny, fmt.Errorf("unknown pipe status: '%s'", status)
+	}
+}
+
 type ListPipelineRecordsQuery struct {
 	Offset     int
 	Limit      int
@@ -129,6 +168,7 @@ type ListPipelineRecordsQuery struct {
 
 const maxPageSize int = 200
 
+// TODO: reply with the total count and pagination info here as well
 func (d ActionDb) ListPipelineRecords(search ListPipelineRecordsQuery) ([]PipeLineRecord, error) {
 	if search.Limit <= 0 || search.Limit > maxPageSize {
 		search.Limit = 20
@@ -145,19 +185,7 @@ FROM
 	pipeline
 `)
 
-	fj := filterJoiner{}
-
-	fj.AddLikeFilter(search.DeliveryId, "delivery_id")
-	fj.AddLikeFilter(search.Project, "project")
-
-	switch search.Status {
-	case PipeStatusOk:
-		fj.AddFilter("(ended_at IS NOT NULL AND (error IS NULL OR error = ''))\n")
-	case PipeStatusError:
-		fj.AddFilter("(ended_at IS NOT NULL AND (error IS NOT NULL AND error <> ''))\n")
-	case PipeStatusPending:
-		fj.AddFilter("ended_at IS NULL\n")
-	}
+	fj := createListPipelineWhereQuery(search)
 
 	if fj.HasFilters {
 		qb.WriteString("WHERE\n")
@@ -181,17 +209,39 @@ FROM
 	return records, err
 }
 
-func ParsePipelineStatus(status string) (PipeStatus, error) {
-	switch status {
-	case "ok":
-		return PipeStatusOk, nil
-	case "error":
-		return PipeStatusError, nil
-	case "pending":
-		return PipeStatusPending, nil
-	case "any":
-		return PipeStatusAny, nil
-	default:
-		return PipeStatusAny, fmt.Errorf("unknown pipe status: '%s'", status)
+func (d ActionDb) CountPipelineRecords(search ListPipelineRecordsQuery) (int, error) {
+	args := make([]interface{}, 0)
+	var qb strings.Builder
+	qb.WriteString(`SELECT count(*) FROM pipeline`)
+	fj := createListPipelineWhereQuery(search)
+	if fj.HasFilters {
+		qb.WriteString("\nWHERE\n")
+		qb.WriteString(fj.String())
+		args = append(args, fj.Args()...)
 	}
+	row := d.db.QueryRow(qb.String(), args...)
+	var count int
+	err := row.Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func createListPipelineWhereQuery(search ListPipelineRecordsQuery) filterJoiner {
+	fj := filterJoiner{}
+
+	fj.AddLikeFilter(search.DeliveryId, "delivery_id")
+	fj.AddLikeFilter(search.Project, "project")
+
+	switch search.Status {
+	case PipeStatusOk:
+		fj.AddFilter("(ended_at IS NOT NULL AND (error IS NULL OR error = ''))\n")
+	case PipeStatusError:
+		fj.AddFilter("(ended_at IS NOT NULL AND (error IS NOT NULL AND error <> ''))\n")
+	case PipeStatusPending:
+		fj.AddFilter("ended_at IS NULL\n")
+	}
+
+	return fj
 }

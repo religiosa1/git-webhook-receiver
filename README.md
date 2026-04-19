@@ -99,6 +99,8 @@ verified by the service.
 Sign payload is basically the same thing, but the whole payload is signed as a
 measure to secure against payload MiM tampering.
 
+Gitlab doesn't support payload signature, as per this [issue](https://gitlab.com/gitlab-org/gitlab/-/issues/19367)
+
 [^1]:
     Can be insecure on plain http connections on gitea 1.14 or older because
     of [this issue](https://github.com/go-gitea/gitea/issues/11755)
@@ -225,15 +227,6 @@ git-webhook-receiver pipeline <PIPE_ID>
 Run `get-webhook-receiver ls` to see a list of the last N pipelines.
 Run `get-webhook-receiver logs` to inspect app logs.
 
-<!--
-TODO: implement this functionality for actionsDb:
-
-Only N latest actions are stored in the directory, with N specified in the
-config as `max_output_files` field. When number of output files exceeds this
-number, the oldest actions (by their file LastModified date) are removed.
-`max_output_files` defaults to 10000, setting it as 0 or negative value turns
-off this functionality. -->
-
 ## Logging
 
 By default, action outputs and logs are stored persistently in two SQLite
@@ -253,6 +246,12 @@ Both databases use [Write-Ahead Logging](https://www.sqlite.org/wal.html).
 This means, in addition to the file specified in the config, the app will also
 create two additional temporary files during operation `<YOUR_FILE>-wal` and
 `<YOUR_FILE>-shm`, to ensure data integrity during write operations.
+
+Only N latest actions are stored in the directory, with N specified in the
+config as `max_actions_stored` field. When number of output files exceeds this
+number, the oldest actions (by their file LastModified date) are removed.
+`max_actions_stored` defaults to 1000, setting it to a negative value turns
+off this functionality.
 
 ## Contribution
 
