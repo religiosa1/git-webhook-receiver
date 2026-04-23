@@ -36,7 +36,10 @@ func Serve(cfg config.Config) {
 	}
 	defer func() {
 		if dbActions != nil {
-			_ = dbActions.Close()
+			err := dbActions.Close()
+			if err != nil {
+				log.Printf("Error closing actions db: %s", err)
+			}
 		}
 	}()
 
@@ -47,7 +50,10 @@ func Serve(cfg config.Config) {
 	}
 	defer func() {
 		if dbLogs != nil {
-			_ = dbLogs.Close()
+			err := dbLogs.Close()
+			if err != nil {
+				log.Printf("Error closing logs db: %s", err)
+			}
 		}
 	}()
 
@@ -58,7 +64,11 @@ func Serve(cfg config.Config) {
 	}
 	logger.Debug("configuration loaded", slog.Any("config", cfg.MaskSensitiveData()))
 
-	actionRunner := ActionRunner.New(context.Background(), dbActions, time.Duration(cfg.DefaultTimeoutSeconds)*time.Second)
+	actionRunner := ActionRunner.New(
+		context.Background(),
+		dbActions,
+		time.Duration(cfg.TimeoutSeconds)*time.Second,
+	)
 
 	//==========================================================================
 	// HTTP-Server

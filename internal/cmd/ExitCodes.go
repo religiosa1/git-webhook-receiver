@@ -6,4 +6,6 @@ const (
 	ExitCodeActionsDB int = 4
 	ExitCodeRun       int = 5
 	ExitCodeShutdown  int = 6
+	ExitCodeOutput    int = 7
+	ExitCodeCLI       int = 8
 )

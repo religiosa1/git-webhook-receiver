@@ -18,22 +18,28 @@ type PipelineArgs struct {
 
 func Pipeline(cfg config.Config, args PipelineArgs) {
 	if args.Info && args.OutputOnly {
-		fmt.Println("Unable to specify both header-only and output-only flags")
-		os.Exit(2)
+		fmt.Fprintln(os.Stderr, "Unable to specify both header-only and output-only flags")
+		os.Exit(ExitCodeCLI)
 	}
 	if args.File == "" {
 		args.File = cfg.ActionsDBFile
 	}
 	dbActions, err := actiondb.New(args.File, cfg.MaxActionsStored)
 	if err != nil {
-		fmt.Printf("Error opening actions db: %s\n", err)
+		fmt.Fprintf(os.Stderr, "Error opening actions db: %s\n", err)
 		os.Exit(ExitCodeActionsDB)
 	}
-	defer dbActions.Close()
+	defer func() {
+		err := dbActions.Close()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error closing actions DB: %s\n", err)
+			os.Exit(ExitCodeActionsDB)
+		}
+	}()
 
 	pipe, err := dbActions.GetPipelineRecord(args.PipeID)
 	if err != nil {
-		fmt.Printf("Unable to get the pipeline record: %s\n", err)
+		fmt.Fprintf(os.Stderr, "Unable to get the pipeline record: %s\n", err)
 		os.Exit(ExitCodeActionsDB)
 	}
 

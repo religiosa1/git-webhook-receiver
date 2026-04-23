@@ -55,20 +55,30 @@ func Logs(cfg config.Config, args LogsArgs) {
 
 	dbLogs, err := logsDb.New(args.File)
 	if err != nil {
-		fmt.Printf("Error opening actions db: %s\n", err)
+		fmt.Fprintf(os.Stderr, "Error opening logs db: %s\n", err)
 		os.Exit(ExitCodeLoggerDB)
 	}
-	defer dbLogs.Close()
+	defer func() {
+		err := dbLogs.Close()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error closing logs db: %s\n", err)
+			os.Exit(ExitCodeLoggerDB)
+		}
+	}()
 
 	records, err := dbLogs.GetEntryFiltered(query)
 	if err != nil {
-		fmt.Printf("Error retrieving the records: %s", err)
+		fmt.Fprintf(os.Stderr, "Error retrieving the logs records: %s", err)
 		os.Exit(ExitCodeLoggerDB)
 	}
-	outputFormatter(records)
+	err = outputFormatter(records)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error formatting records: %s\n", err)
+		os.Exit(ExitCodeOutput)
+	}
 }
 
-func getLogOutputFormatter(format string) func([]logsDb.LogEntry) {
+func getLogOutputFormatter(format string) func([]logsDb.LogEntry) error {
 	switch format {
 	case "simple":
 		return formatLogRecordsSimple
@@ -77,27 +87,33 @@ func getLogOutputFormatter(format string) func([]logsDb.LogEntry) {
 	case "json":
 		return formatLogRecordsJSON
 	default:
-		return nil
+		panic(fmt.Errorf("unknown formatter type: '%s'", format))
 	}
 }
 
-func formatLogRecordsSimple(entries []logsDb.LogEntry) {
+func formatLogRecordsSimple(entries []logsDb.LogEntry) error {
 	for _, e := range entries {
 		ts := time.Unix(e.TS, 0).Format(time.DateTime)
 		fmt.Printf("%s %s %s %s %s %s\n", ts, e.Message, e.Project.String, e.DeliveryID.String, e.PipeID.String, e.Data)
 	}
+	return nil
 }
 
-func formatLogRecordsJq(entries []logsDb.LogEntry) {
+func formatLogRecordsJq(entries []logsDb.LogEntry) error {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	for _, entry := range entries {
-		enc.Encode(serialization.LogEntry(entry))
+		err := enc.Encode(serialization.LogEntry(entry))
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func formatLogRecordsJSON(entries []logsDb.LogEntry) {
+func formatLogRecordsJSON(entries []logsDb.LogEntry) error {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
-	enc.Encode(serialization.LogEntries((entries)))
+	err := enc.Encode(serialization.LogEntries((entries)))
+	return err
 }

@@ -26,14 +26,18 @@ func ListPipelines(cfg config.Config, args ListPipelinesArgs) {
 		args.File = cfg.ActionsDBFile
 	}
 
-	outputFormatter := getActionRecordOutputFormatter(args.Format)
-
 	dbActions, err := actiondb.New(args.File, cfg.MaxActionsStored)
 	if err != nil {
-		fmt.Printf("Error opening actions db: %s\n", err)
+		fmt.Fprintf(os.Stderr, "Error opening actions db: %s\n", err)
 		os.Exit(ExitCodeActionsDB)
 	}
-	defer dbActions.Close()
+	defer func() {
+		err := dbActions.Close()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error closing actions DB: %s\n", err)
+			os.Exit(ExitCodeActionsDB)
+		}
+	}()
 
 	query := actiondb.ListPipelineRecordsQuery{
 		Limit:  args.Limit,
@@ -46,14 +50,19 @@ func ListPipelines(cfg config.Config, args ListPipelinesArgs) {
 
 	pipeLines, err := dbActions.ListPipelineRecords(query)
 	if err != nil {
-		fmt.Printf("Error reading actions db: %s\n", err)
+		fmt.Fprintf(os.Stderr, "Error reading actions db: %s\n", err)
 		os.Exit(ExitCodeActionsDB)
 	}
 
-	outputFormatter(pipeLines)
+	outputFormatter := getActionRecordOutputFormatter(args.Format)
+	err = outputFormatter(pipeLines)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error formatting records: %s\n", err)
+		os.Exit(ExitCodeOutput)
+	}
 }
 
-func getActionRecordOutputFormatter(format string) func([]actiondb.PipeLineRecord) {
+func getActionRecordOutputFormatter(format string) func([]actiondb.PipeLineRecord) error {
 	switch format {
 	case "simple":
 		return formatActionRecordsSimple
@@ -62,11 +71,11 @@ func getActionRecordOutputFormatter(format string) func([]actiondb.PipeLineRecor
 	case "json":
 		return formatActionRecordsJSON
 	default:
-		return nil
+		panic(fmt.Errorf("unknown formatter type: '%s'", format))
 	}
 }
 
-func formatActionRecordsSimple(pipelines []actiondb.PipeLineRecord) {
+func formatActionRecordsSimple(pipelines []actiondb.PipeLineRecord) error {
 	for _, pl := range pipelines {
 		createAt := time.Unix(pl.CreatedAt, 0).Format(time.DateTime)
 
@@ -85,18 +94,27 @@ func formatActionRecordsSimple(pipelines []actiondb.PipeLineRecord) {
 		}
 		fmt.Printf("%s-%s %s %s %s %s\n", createAt, endedAt, pl.PipeId, pl.DeliveryId, pl.Project, result)
 	}
+	return nil
 }
 
-func formatActionRecordsJq(pipelines []actiondb.PipeLineRecord) {
+func formatActionRecordsJq(pipelines []actiondb.PipeLineRecord) error {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	for _, pl := range pipelines {
-		enc.Encode(serialization.PipelineRecord(pl))
+		err := enc.Encode(serialization.PipelineRecord(pl))
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func formatActionRecordsJSON(pipelines []actiondb.PipeLineRecord) {
+func formatActionRecordsJSON(pipelines []actiondb.PipeLineRecord) error {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
-	enc.Encode(serialization.PipelineRecords(pipelines))
+	err := enc.Encode(serialization.PipelineRecords(pipelines))
+	if err != nil {
+		return err
+	}
+	return nil
 }
