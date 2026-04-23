@@ -9,21 +9,25 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
-const DefaultMaxActionsStored = 1_000
+const (
+	DefaultMaxActionsStored = 1_000
+	DefaultTimeoutSeconds   = 600
+)
 
 type Config struct {
-	Host             string             `yaml:"host" env:"HOST" env-default:"localhost"`
-	Port             int16              `yaml:"port" env:"PORT" env-default:"9090"`
-	PublicURL        string             `yaml:"public_url" env:"PUBLIC_URL"`
-	DisableAPI       bool               `yaml:"disable_api" env:"DISABLE_API"`
-	APIUser          string             `yaml:"api_user" env:"API_USER" env-default:"admin"`
-	APIPassword      string             `yaml:"api_password" env:"API_PASSWORD"`
-	LogLevel         string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
-	LogsDBFile       string             `yaml:"logs_db_file" env:"LOGS_DB_FILE" env-default:"logs.sqlite3"`
-	ActionsDBFile    string             `yaml:"actions_db_file" env:"ACTIONS_DB_FILE" env-default:"actions.sqlite3"`
-	MaxActionsStored int                `yaml:"max_actions_stored" env:"MAX_ACTIONS_STORED" env-default:"1000"` // the same as DefaultMaxActionsStored
-	Ssl              SslConfig          `yaml:"ssl" env-prefix:"SSL__"`
-	Projects         map[string]Project `yaml:"projects" env-required:"true"`
+	Host                  string             `yaml:"host" env:"HOST" env-default:"localhost"`
+	Port                  int16              `yaml:"port" env:"PORT" env-default:"9090"`
+	PublicURL             string             `yaml:"public_url" env:"PUBLIC_URL"`
+	DisableAPI            bool               `yaml:"disable_api" env:"DISABLE_API"`
+	APIUser               string             `yaml:"api_user" env:"API_USER" env-default:"admin"`
+	APIPassword           string             `yaml:"api_password" env:"API_PASSWORD"`
+	LogLevel              string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
+	LogsDBFile            string             `yaml:"logs_db_file" env:"LOGS_DB_FILE" env-default:"logs.sqlite3"`
+	ActionsDBFile         string             `yaml:"actions_db_file" env:"ACTIONS_DB_FILE" env-default:"actions.sqlite3"`
+	MaxActionsStored      int                `yaml:"max_actions_stored" env:"MAX_ACTIONS_STORED" env-default:"1000"` // the same as DefaultMaxActionsStored
+	DefaultTimeoutSeconds int                `yaml:"default_timeout_seconds" env:"DEFAULT_TIMEOUT_SECONDS" env-default:"600"`
+	Ssl                   SslConfig          `yaml:"ssl" env-prefix:"SSL__"`
+	Projects              map[string]Project `yaml:"projects" env-required:"true"`
 }
 
 type SslConfig struct {
@@ -74,6 +78,10 @@ func Load(configPath string) (Config, error) {
 	}
 
 	cfg.Projects = projectsWithDefaults
+
+	if cfg.DefaultTimeoutSeconds < 0 {
+		return cfg, fmt.Errorf("'default_timeout_seconds' must be a non-negative integer")
+	}
 
 	return cfg, nil
 }

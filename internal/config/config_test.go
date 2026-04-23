@@ -312,6 +312,50 @@ projects:
 	})
 }
 
+func TestDefaultTimeoutSeconds(t *testing.T) {
+	baseCfg := `
+host: test.example.com
+port: 1234
+projects:
+  test-proj:
+    repo: "username/reponame"
+    actions:
+      - run: ["node", "--version"]
+`
+	makeConfig := func(timeoutSeconds int) string {
+		return baseCfg + fmt.Sprintf("\ndefault_timeout_seconds: %d", timeoutSeconds)
+	}
+
+	t.Run("default config value is DefaultTimeoutSeconds", func(t *testing.T) {
+		cfg := loadMockConfig(t, baseCfg)
+		if cfg.DefaultTimeoutSeconds != config.DefaultTimeoutSeconds {
+			t.Errorf("want %d, got %d", config.DefaultTimeoutSeconds, cfg.DefaultTimeoutSeconds)
+		}
+	})
+
+	t.Run("explicitly passed positive value is used", func(t *testing.T) {
+		want := 120
+		cfg := loadMockConfig(t, makeConfig(want))
+		if cfg.DefaultTimeoutSeconds != want {
+			t.Errorf("want %d, got %d", want, cfg.DefaultTimeoutSeconds)
+		}
+	})
+
+	t.Run("zero falls back to default (cleanenv treats zero as unset)", func(t *testing.T) {
+		cfg := loadMockConfig(t, makeConfig(0))
+		if cfg.DefaultTimeoutSeconds != config.DefaultTimeoutSeconds {
+			t.Errorf("want %d, got %d", config.DefaultTimeoutSeconds, cfg.DefaultTimeoutSeconds)
+		}
+	})
+
+	t.Run("negative value is rejected", func(t *testing.T) {
+		configFileName := tmpConfigFile(t, makeConfig(-1))
+		if _, err := config.Load(configFileName); err == nil {
+			t.Errorf("expected error for default_timeout_seconds=-1, got nil")
+		}
+	})
+}
+
 func TestConfigPossibleLogLevels(t *testing.T) {
 	makeConfig := func(logLevel string) string {
 		p := `

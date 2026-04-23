@@ -1,6 +1,7 @@
 package ActionRunner
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log/slog"
@@ -28,7 +29,12 @@ func (runner ActionRunner) executeAction(
 		pipeLogger.Error("Error creating temporary file to capture action's output", slog.Any("error", err))
 		return
 	}
-	defer output.Close()
+	defer func() {
+		err := output.Close()
+		if err != nil {
+			pipeLogger.Error("Error closing action output", slog.Any("error", err))
+		}
+	}()
 
 	sysProcAttr, err := getSysProcAttr(action.User)
 	if err != nil {
@@ -40,13 +46,16 @@ func (runner ActionRunner) executeAction(
 		logger.Debug("Running from a user", slog.String("user", action.User))
 	}
 
+	actionCtx, cancelAction := context.WithTimeout(runner.ctx, runner.defaultTimeout)
+	defer cancelAction()
+
 	var actionErr error
 	if len(action.Run) > 0 {
 		logger.Debug("Running the command", slog.Any("command", action.Run))
-		actionErr = executeActionRun(runner.ctx, action, sysProcAttr, output)
+		actionErr = executeActionRun(actionCtx, action, sysProcAttr, output)
 	} else {
 		logger.Debug("Running the script", slog.String("script", action.Script))
-		actionErr = executeActionScript(runner.ctx, action, sysProcAttr, output)
+		actionErr = executeActionScript(actionCtx, action, sysProcAttr, output)
 	}
 
 	if actionErr != nil {

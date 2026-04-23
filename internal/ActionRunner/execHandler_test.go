@@ -38,7 +38,7 @@ func TestHelperProcess(t *testing.T) {
 func newExecHandlerRunner(t *testing.T, sysProcAttr *syscall.SysProcAttr, stdout, stderr io.Writer) *interp.Runner {
 	t.Helper()
 	runner, err := interp.New(
-		interp.ExecHandlers(execHandler(5*time.Second, sysProcAttr)),
+		interp.ExecHandlers(execHandler(sysProcAttr)),
 		interp.StdIO(nil, stdout, stderr),
 	)
 	if err != nil {

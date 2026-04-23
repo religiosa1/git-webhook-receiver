@@ -58,7 +58,7 @@ func Serve(cfg config.Config) {
 	}
 	logger.Debug("configuration loaded", slog.Any("config", cfg.MaskSensitiveData()))
 
-	actionRunner := ActionRunner.New(context.Background(), dbActions)
+	actionRunner := ActionRunner.New(context.Background(), dbActions, time.Duration(cfg.DefaultTimeoutSeconds)*time.Second)
 
 	//==========================================================================
 	// HTTP-Server

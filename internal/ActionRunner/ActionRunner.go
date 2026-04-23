@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"sync"
+	"time"
 
 	actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
 )
@@ -14,18 +15,20 @@ type ActionArgs struct {
 }
 
 type ActionRunner struct {
-	ch        chan ActionArgs
-	wg        *sync.WaitGroup
-	ctx       context.Context
-	cancel    func()
-	actionsDB *actiondb.ActionDb
+	ch             chan ActionArgs
+	wg             *sync.WaitGroup
+	ctx            context.Context
+	cancel         func()
+	actionsDB      *actiondb.ActionDb
+	defaultTimeout time.Duration
 }
 
-func New(ctx context.Context, actionsDB *actiondb.ActionDb) (runner ActionRunner) {
+func New(ctx context.Context, actionsDB *actiondb.ActionDb, defaultTimeout time.Duration) (runner ActionRunner) {
 	runner.ch = make(chan ActionArgs)
 	runner.ctx, runner.cancel = context.WithCancel(ctx)
 	runner.wg = &sync.WaitGroup{}
 	runner.actionsDB = actionsDB
+	runner.defaultTimeout = defaultTimeout
 	go runner.listen()
 	return runner
 }

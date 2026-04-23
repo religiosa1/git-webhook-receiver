@@ -41,3 +41,5 @@ logs_db_file: "logs.sqlite3"
 # max amount of actions to be stored in the actions DB. After exceeding this value,
 # older entries will be deleted. Negative values disable this functionality
 max_actions_stored: 1000
+# overall default actions timeout. Must be a positive int, 0 will result in the default timeout value
+default_timeout_seconds: 600
