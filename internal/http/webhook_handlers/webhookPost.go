@@ -179,5 +179,5 @@ func generatePublicBaseURL(cfg config.Config) string {
 		protocol = "https"
 	}
 
-	return fmt.Sprintf("%s://%s:%d/pipelines/", protocol, cfg.Host, cfg.Port)
+	return fmt.Sprintf("%s://%s/pipelines/", protocol, cfg.Addr)
 }

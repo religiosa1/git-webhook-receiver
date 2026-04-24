@@ -24,19 +24,18 @@ go run .
 
 And try out sending a payload:
 
-```http
-POST http://localhost:9090/projects/test
-X-GitHub-Event: push
-X-GitHub-Delivery: blah
-Content-Type: application/json
-
-{
-	"ref": "refs/heads/master",
-	"after": "92bcfadb4199556415be69b9c31c0dc72343fea2",
+```sh
+curl  -v -s -X 'POST' \
+  'http://localhost:9090/projects/test' \
+  -H 'X-GitHub-Event:push' \
+  -H 'X-GitHub-Delivery:blah' \
+  -H 'Content-Type:application/json' --data '{
+  "ref": "refs/heads/master",
+  "after": "92bcfadb4199556415be69b9c31c0dc72343fea2",
   "repository": {
-		"full_name": "username/reponame"
+    "full_name": "username/reponame"
   }
-}
+}'
 ```
 
 Please note, that branch name in ref must match branch name in config (unless "\*" is used in the config)

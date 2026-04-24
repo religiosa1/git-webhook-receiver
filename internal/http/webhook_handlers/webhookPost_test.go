@@ -296,24 +296,24 @@ func TestResponseBody(t *testing.T) {
 	t.Run("contains pipeId of run action", func(t *testing.T) {
 		actionResponse := getActionResponse(t, cfg)
 
-		if pipeId, ok := actionResponse["pipeId"].(string); !ok || pipeId == "" {
+		if pipeID, ok := actionResponse["pipeId"].(string); !ok || pipeID == "" {
 			t.Errorf("No pipeId is present in the response: %v", actionResponse)
 		}
 	})
 
-	noPublicUrlTests := []struct {
+	noPublicURLTests := []struct {
 		name   string
 		url    string
 		config config.Config
 	}{
-		{"default generation value", "http://localhost:9090/", config.Config{Host: "localhost", Port: 9090}},
-		{"host value", "http://example.com:9090/", config.Config{Host: "example.com", Port: 9090}},
-		{"port value", "http://localhost:32167/", config.Config{Host: "localhost", Port: 32167}},
-		{"partial ssl no cert", "http://localhost:9090/", config.Config{Host: "localhost", Port: 9090, Ssl: config.SslConfig{KeyFilePath: "foo"}}},
-		{"partial ssl no key", "http://localhost:9090/", config.Config{Host: "localhost", Port: 9090, Ssl: config.SslConfig{CertFilePath: "bar"}}},
-		{"full ssl", "https://localhost:9090/", config.Config{Host: "localhost", Port: 9090, Ssl: config.SslConfig{KeyFilePath: "foo", CertFilePath: "bar"}}},
+		{"default generation value", "http://localhost:9090/", config.Config{Addr: "localhost:9090"}},
+		{"host value", "http://example.com:9090/", config.Config{Addr: "example.com:9090"}},
+		{"port value", "http://localhost:32167/", config.Config{Addr: "localhost:32167"}},
+		{"partial ssl no cert", "http://localhost:9090/", config.Config{Addr: "localhost:9090", Ssl: config.SslConfig{KeyFilePath: "foo"}}},
+		{"partial ssl no key", "http://localhost:9090/", config.Config{Addr: "localhost:9090", Ssl: config.SslConfig{CertFilePath: "bar"}}},
+		{"full ssl", "https://localhost:9090/", config.Config{Addr: "localhost:9090", Ssl: config.SslConfig{KeyFilePath: "foo", CertFilePath: "bar"}}},
 	}
-	for _, tt := range noPublicUrlTests {
+	for _, tt := range noPublicURLTests {
 		t.Run("contains url field, filled with data from the config protocol, host, and port: "+tt.name, func(t *testing.T) {
 			actionResponse := getActionResponse(t, tt.config)
 			url, ok := actionResponse["url"].(string)
@@ -331,15 +331,15 @@ func TestResponseBody(t *testing.T) {
 	}
 
 	t.Run("if public url is present, then it overrides values in the url field", func(t *testing.T) {
-		publicUrl := "ftp://example.com/"
-		actionResponse := getActionResponse(t, config.Config{Host: "localhost", Port: 9090, PublicURL: publicUrl})
+		publicURL := "ftp://example.com/"
+		actionResponse := getActionResponse(t, config.Config{Addr: "localhost:9090", PublicURL: publicURL})
 		url, ok := actionResponse["url"].(string)
 
 		if !ok || url == "" {
 			t.Errorf("No url field is present in the response: %v", actionResponse)
 		}
 
-		want := publicUrl + "pipelines/"
+		want := publicURL + "pipelines/"
 
 		if !strings.HasPrefix(url, want) {
 			t.Errorf("Unexpected url value, want prefix: '%s', got '%s'", want, url)
@@ -347,15 +347,15 @@ func TestResponseBody(t *testing.T) {
 	})
 
 	t.Run("trailing slash is optional for the public url", func(t *testing.T) {
-		publicUrl := "ftp://example.com"
-		actionResponse := getActionResponse(t, config.Config{Host: "localhost", Port: 9090, PublicURL: publicUrl})
+		publicURL := "ftp://example.com"
+		actionResponse := getActionResponse(t, config.Config{Addr: "localhost:9090", PublicURL: publicURL})
 		url, ok := actionResponse["url"].(string)
 
 		if !ok || url == "" {
 			t.Errorf("No url field is present in the response: %v", actionResponse)
 		}
 
-		want := publicUrl + "/" + "pipelines/"
+		want := publicURL + "/" + "pipelines/"
 
 		if !strings.HasPrefix(url, want) {
 			t.Errorf("Unexpected url value, want prefix: '%s', got '%s'", want, url)
@@ -364,13 +364,12 @@ func TestResponseBody(t *testing.T) {
 
 	t.Run("no url is present if inspection API is disabled", func(t *testing.T) {
 		actionResponse := getActionResponse(t, config.Config{
-			Host:       "example.com",
-			Port:       9090,
+			Addr:       "example.com:9090",
 			DisableAPI: true,
 		})
 
 		if url, ok := actionResponse["url"].(string); ok || url != "" {
-			t.Errorf("There should be no url field if web admin is disbaled, but got: %s", url)
+			t.Errorf("There should be no url field if web admin is disabled, but got: %s", url)
 		}
 	})
 }

@@ -62,9 +62,9 @@ func displayPipeDetails(pipe actiondb.PipeLineRecord) {
 		endedAt = ""
 	}
 
-	fmt.Printf("pipeId        : %s\n", pipe.PipeId)
+	fmt.Printf("pipeId        : %s\n", pipe.PipeID)
 	fmt.Printf("project       : %s\n", pipe.Project)
-	fmt.Printf("deliveryId    : %s\n", pipe.DeliveryId)
+	fmt.Printf("deliveryId    : %s\n", pipe.DeliveryID)
 	fmt.Printf("config        : %s\n", pipe.Config)
 	fmt.Printf("error         : %s\n", pipe.Error.String)
 	fmt.Printf("output length : %s\n", formatLength(pipe.Output))

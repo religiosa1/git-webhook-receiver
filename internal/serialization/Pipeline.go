@@ -18,9 +18,9 @@ func PipelineRecord(r actiondb.PipeLineRecord) PrettyPipelineRecord {
 	config, _ := NewJSONData(r.Config)
 
 	return PrettyPipelineRecord{
-		PipeID:     r.PipeId,
+		PipeID:     r.PipeID,
 		Project:    r.Project,
-		DeliveryID: r.DeliveryId,
+		DeliveryID: r.DeliveryID,
 		Config:     config,
 		Error:      NullString{r.Error},
 		CreatedAt:  Timestamp{r.CreatedAt},

@@ -12,7 +12,7 @@ In a nutshell:
 - [Deploy](#installation) it to your server.
 - (Optional but recommended) Install an SSL certificate or wrap it with a
   [reverse proxy](./docs/ssl-or-nginx-setup.md#nginx-configuration), such as
-  Nginx or Caddy, to enable encryption.
+  Nginx or caddy, to enable encryption.
 - Create a [config file](#config-file) and add your projects along with their
   corresponding build scripts/actions, either as standalone scripts or
   [cross-platform inline scripts](#inline-scripts-and-standalone-scripts)
@@ -187,7 +187,7 @@ status/output of a pipeline, list pipelines, or view the app logs.
 GET /pipelines/{:pipeId} # To see the pipeline status
 GET /pipelines/{:pipeId}/output # To see the pipe output
 GET /pipelines # To list last pipelines
-GET /logs # To see the logs result
+GET /logs # To see the logs result, must have logsdb on in config
 ```
 
 You can find the full documentation for endpoints and params they accept
@@ -229,18 +229,20 @@ Run `get-webhook-receiver logs` to inspect app logs.
 
 ## Logging
 
-By default, action outputs and logs are stored persistently in two SQLite
-databases: one for app logs and one for actions and their output.
-By default, actions db filename is `actions.sqlite3`, logs db filename is
-`logs.sqlite3`. This filenames are controlled by the `actions_db_file` and
-`logs_db_file` fields in the config correspondingly.
+By default, action outputs are stored in a SQLITE database. Logs by default are
+only output to stdout to be captured by journalctl, but they can also be stored
+persistently in a separate db, in case you want to expose them through an
+endpoint. This is controlled with the `logs_db_file` config option.
+
+By default, actions db filename is `actions.sqlite3`. This filenames are
+controlled by the `actions_db_file`.
+
+Actions' output is stored in the db once the action is completed.
+While the action is still in progress, data is stored in a temporary file.
 
 Setting those config values to an empty string will disable the persistent on
 storage of this information and in turn will also disable the corresponding
 HTTP-API and/or CLI subcommands.
-
-Actions' output is stored in the db once the action is completed.
-While the action is still in progress, data is stored in a temporary file.
 
 Both databases use [Write-Ahead Logging](https://www.sqlite.org/wal.html).
 This means, in addition to the file specified in the config, the app will also

@@ -35,8 +35,7 @@ func loadMockConfig(t *testing.T, contents string) config.Config {
 func TestConfigLoad(t *testing.T) {
 	t.Run("loads the test config", func(t *testing.T) {
 		cfg := loadMockConfig(t, `
-host: test.example.com
-port: 1234
+addr: "test.example.com:1234"
 actions_db_file: db2.sqlite3
 projects:
   test-proj:
@@ -46,10 +45,9 @@ projects:
       - run: ["node", "--version"]`,
 		)
 
-		wantHost := "test.example.com"
-		var wantPort int16 = 1234
-		if cfg.Host != wantHost || cfg.Port != wantPort {
-			t.Errorf("incorrect values read from config, want %s:%d, got %s:%d", wantHost, wantPort, cfg.Host, cfg.Port)
+		want := "test.example.com:1234"
+		if cfg.Addr != want {
+			t.Errorf("incorrect addr values read from config, want %s, got %s", want, cfg.Addr)
 		}
 
 		if want, got := "db2.sqlite3", cfg.ActionsDBFile; want != got {
@@ -81,13 +79,8 @@ projects:
       - run: ["node", "--version"]`,
 		)
 
-		if want, got := "localhost", cfg.Host; want != got {
-			t.Errorf("incorrect host value read from config, want %s, got %s", want, got)
-		}
-
-		var wantPort int16 = 9090
-		if cfg.Port != wantPort {
-			t.Errorf("incorrect port value read from config, want %d, got %d", wantPort, cfg.Port)
+		if want, got := "localhost:9090", cfg.Addr; want != got {
+			t.Errorf("incorrect addr value read from config, want %s, got %s", want, got)
 		}
 
 		if want, got := "actions.sqlite3", cfg.ActionsDBFile; want != got {
@@ -117,18 +110,12 @@ projects:
       - run: ["node", "--version"]`
 
 	t.Run("allows to override config values with env", func(t *testing.T) {
-		overriddenHost := "test2.example.com"
-		var overriddenPort int16 = 32167
-		t.Setenv("HOST", overriddenHost)
-		t.Setenv("PORT", fmt.Sprintf("%d", overriddenPort))
+		overriddenAddr := "test3.example.com:32167"
+		t.Setenv("ADDR", overriddenAddr)
 
 		cfg := loadMockConfig(t, configContents)
-		if cfg.Host != overriddenHost {
-			t.Errorf("incorrect host value read from config, want %s, got %s", overriddenHost, cfg.Host)
-		}
-
-		if cfg.Port != overriddenPort {
-			t.Errorf("incorrect port value read from config, want %d, got %d", overriddenPort, cfg.Port)
+		if cfg.Addr != overriddenAddr {
+			t.Errorf("incorrect addr value read from config, want %s, got %s", overriddenAddr, cfg.Addr)
 		}
 	})
 
@@ -261,7 +248,7 @@ func TestConfigProjectNameValidation(t *testing.T) {
 		name string
 	}{
 		{"can't start with _", "_bad"},
-		{"can't contain 2 consequitive _", "bad__name"},
+		{"can't contain 2 consecutive _", "bad__name"},
 		{"can't contain chars outside of ascii range", "a:b"},
 	}
 	for _, tt := range badNames {

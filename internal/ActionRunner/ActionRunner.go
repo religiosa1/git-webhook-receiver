@@ -18,10 +18,10 @@ type ActionRunner struct {
 	wg        *sync.WaitGroup
 	ctx       context.Context
 	cancel    func()
-	actionsDB *actiondb.ActionDb
+	actionsDB *actiondb.ActionDB
 }
 
-func New(ctx context.Context, actionsDB *actiondb.ActionDb) (runner ActionRunner) {
+func New(ctx context.Context, actionsDB *actiondb.ActionDB) (runner ActionRunner) {
 	runner.ch = make(chan ActionArgs)
 	runner.ctx, runner.cancel = context.WithCancel(ctx)
 	runner.wg = &sync.WaitGroup{}
@@ -53,11 +53,9 @@ func (runner ActionRunner) listen() {
 		case <-runner.ctx.Done():
 			return
 		case args := <-runner.ch:
-			runner.wg.Add(1)
-			go func() {
-				defer runner.wg.Done()
+			runner.wg.Go(func() {
 				runner.executeAction(args.Logger, args.Action)
-			}()
+			})
 		}
 	}
 }

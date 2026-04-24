@@ -44,9 +44,13 @@ func ListPipelines(cfg config.Config, args ListPipelinesArgs) {
 		Offset: args.Skip,
 
 		Project:    args.Project,
-		DeliveryId: args.DeliveryID,
+		DeliveryID: args.DeliveryID,
 	}
-	query.Status, _ = actiondb.ParsePipelineStatus(args.Status)
+	query.Status, err = actiondb.ParsePipelineStatus(args.Status)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing pipeline state: %s\n", err)
+		// not aborting the execution here, just logging out
+	}
 
 	pipeLines, err := dbActions.ListPipelineRecords(query)
 	if err != nil {
@@ -92,7 +96,7 @@ func formatActionRecordsSimple(pipelines []actiondb.PipeLineRecord) error {
 		} else {
 			result = "ok"
 		}
-		fmt.Printf("%s-%s %s %s %s %s\n", createAt, endedAt, pl.PipeId, pl.DeliveryId, pl.Project, result)
+		fmt.Printf("%s-%s %s %s %s %s\n", createAt, endedAt, pl.PipeID, pl.DeliveryID, pl.Project, result)
 	}
 	return nil
 }

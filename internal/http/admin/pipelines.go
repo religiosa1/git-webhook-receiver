@@ -11,7 +11,7 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/serialization"
 )
 
-func ListPipelines(db *actiondb.ActionDb, logger *slog.Logger) http.HandlerFunc {
+func ListPipelines(db *actiondb.ActionDB, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		queryParams := req.URL.Query()
 
@@ -22,9 +22,14 @@ func ListPipelines(db *actiondb.ActionDb, logger *slog.Logger) http.HandlerFunc 
 			Offset:     offset,
 			Limit:      limit,
 			Project:    queryParams.Get("project"),
-			DeliveryId: queryParams.Get("deliveryId"),
+			DeliveryID: queryParams.Get("deliveryId"),
 		}
-		query.Status, _ = actiondb.ParsePipelineStatus(queryParams.Get("status"))
+		var err error
+		query.Status, err = actiondb.ParsePipelineStatus(queryParams.Get("status"))
+		if err != nil {
+			logger.Warn("Error parsing pipeline state", slog.Any("error", err))
+			// just logging out, no execution abort here
+		}
 
 		records, err := db.ListPipelineRecords(query)
 		if err != nil {
@@ -32,11 +37,14 @@ func ListPipelines(db *actiondb.ActionDb, logger *slog.Logger) http.HandlerFunc 
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(serialization.PipelineRecords(records))
+		err = json.NewEncoder(w).Encode(serialization.PipelineRecords(records))
+		if err != nil {
+			logger.Error("Error writing output", slog.Any("error", err))
+		}
 	}
 }
 
-func GetPipeline(db *actiondb.ActionDb, logger *slog.Logger) http.HandlerFunc {
+func GetPipeline(db *actiondb.ActionDB, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		pipeID := req.PathValue("pipeId")
 		record, err := db.GetPipelineRecord(pipeID)
@@ -46,15 +54,21 @@ func GetPipeline(db *actiondb.ActionDb, logger *slog.Logger) http.HandlerFunc {
 		} else if err != nil {
 			logger.Error("Error processing GetPipeline request", slog.Any("error", err))
 			w.WriteHeader(500)
-			w.Write([]byte(err.Error()))
+			_, err = w.Write([]byte(err.Error()))
+			if err != nil {
+				logger.Error("Error writing error output", slog.Any("error", err))
+			}
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(serialization.PipelineRecord(record))
+		err = json.NewEncoder(w).Encode(serialization.PipelineRecord(record))
+		if err != nil {
+			logger.Error("Error writing output", slog.Any("error", err))
+		}
 	}
 }
 
-func GetPipelineOutput(db *actiondb.ActionDb, logger *slog.Logger) http.HandlerFunc {
+func GetPipelineOutput(db *actiondb.ActionDB, logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		pipeID := req.PathValue("pipeId")
 		record, err := db.GetPipelineRecord(pipeID)
@@ -64,10 +78,16 @@ func GetPipelineOutput(db *actiondb.ActionDb, logger *slog.Logger) http.HandlerF
 		} else if err != nil {
 			logger.Error("Error processing GetPipelineOutput request", slog.Any("error", err))
 			w.WriteHeader(500)
-			w.Write([]byte(err.Error()))
+			_, err := w.Write([]byte(err.Error()))
+			if err != nil {
+				logger.Error("Error writing error output", slog.Any("error", err))
+			}
 			return
 		}
 		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte(record.Output.String))
+		_, err = w.Write([]byte(record.Output.String))
+		if err != nil {
+			logger.Error("Error writing output", slog.Any("error", err))
+		}
 	}
 }

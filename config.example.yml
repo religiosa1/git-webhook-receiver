@@ -1,13 +1,12 @@
 # All fields are optional, unless stated otherwise
-host: example.com # defaults to localhost
-port: 9090 # defaults to 9090
+addr: 0.0.0.0:9090 # address to listen on, TCP addr with port
 # Public URL to use in the post output for pipeline url generation
 # If not specified public url will be a combination of protocol + host + port
-public_url: https://example.com:9090/
-log_level: "debug" # defaults to 'info', other options are 'warn' and 'error'
-disable_api: true # Disable Inspection HTTP API
-api_user: "admin" # Basic auth user for the inspection API. Defaults to "admin"
-api_password: "" # Basic auth user for the inspection API. Defaults to empty string (disabled)
+public_url: https://example.com:9090/ # default is empty, here only for example
+log_level: "info" # other options are  'debug', 'warn' and 'error'
+disable_api: false # Disable Inspection HTTP API
+api_user: "admin" # Basic auth user for the inspection API.
+api_password: "" # Basic auth user for the inspection API. Empty string means disabled
 # SSL config: (optional, but recommended, unless you're using a reverse proxy)
 ssl:
   cert_file_path: "./your/certfile/path/fullchain.pem"
@@ -25,19 +24,20 @@ projects:
       - on: push
         # defaults to master, can be '*' to denote any; incoming branch name can be empty for tags or notes events
         branch: master
-        user: www-data # user from which action will be run, requires the elevated permissions
-        cwd: "/var/www/yourproject" # root dir in which action will be run
-        # each action MUST have either a script or run field (but not both):
+        # user from which action will be run, requires the elevated permissions, default to empty string
+        user: www-data
+        cwd: "/var/www/yourproject" # root dir in which action will be run, defaults to empty
+        # each action MUST have either a `script` or `run` field (but not both):
         # To run a script:
         script: |
           git fetch && git reset --hard origin/master
           npm ci
           npm run build
-        # Or to execute a script or program:
+        # or to execute a script or program:
         # run: ["node", "--version"]
-        # Per-action timeout, defaults to 0, meaning the global timeout value will be used
+        # per-action timeout, defaults to 0, meaning the global timeout value will be used
         timeout_seconds: 0
-        # Per-action graceful shutdown timeout, defaults to 0, meaning the global value will be used
+        # per-action graceful shutdown timeout, defaults to 0, meaning the global value will be used
         graceful_shutdown_ms: 0
 # pipeline results db filename, defaults to `actions.sqlite3` use empty string or null to disable
 actions_db_file: "actions.sqlite3"
@@ -47,8 +47,8 @@ logs_db_file: "logs.sqlite3"
 # older entries will be deleted. Negative values disable this functionality
 max_actions_stored: 1000
 # global actions timeout. After this amount of seconds we're sending SIGINT on unix/SIGKILL on windows
-# to the action process.
-# Must be a positive int, 0 will result in the default timeout value
+# to the action process;
+# must be a positive int, 0 will result in the default timeout value
 timeout_seconds: 600
 # global graceful shutdown duration AFTER the timeout value is reached. We're waiting for this amount of
 # ms after timeout for the process to clean up and exit, otherwise we're hard killing it

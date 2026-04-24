@@ -16,9 +16,9 @@ import (
 const defaultMaxActionsStored = 100
 
 const (
-	pipeId      = "123"
+	pipeID      = "123"
 	projectName = "testProj"
-	deliveryId  = "321"
+	deliveryID  = "321"
 )
 
 var action = config.Action{
@@ -42,20 +42,20 @@ func TestActionDb(t *testing.T) {
 			t.Errorf("Unable to create a db: %s", err)
 		}
 
-		err = db.CreateRecord(pipeId, projectName, deliveryId, action)
+		err = db.CreateRecord(pipeID, projectName, deliveryID, action)
 		if err != nil {
 			t.Errorf("Unable to create a pipeline record: %s", err)
 		}
 
-		record, err := db.GetPipelineRecord(pipeId)
+		record, err := db.GetPipelineRecord(pipeID)
 		if err != nil {
 			t.Errorf("Unable to retrieve the created record: %s", err)
 		}
 
 		want := actiondb.PipeLineRecord{
-			PipeId:     pipeId,
+			PipeID:     pipeID,
 			Project:    projectName,
-			DeliveryId: deliveryId,
+			DeliveryID: deliveryID,
 		}
 
 		compareRecord(t, want, record)
@@ -69,25 +69,25 @@ func TestActionDb(t *testing.T) {
 			t.Errorf("Unable to create a db: %s", err)
 		}
 
-		err = db.CreateRecord(pipeId, projectName, deliveryId, action)
+		err = db.CreateRecord(pipeID, projectName, deliveryID, action)
 		if err != nil {
 			t.Errorf("Unable to create a pipeline record: %s", err)
 		}
 
-		err = db.CloseRecord(pipeId, nil, actionOutput)
+		err = db.CloseRecord(pipeID, nil, actionOutput)
 		if err != nil {
 			t.Errorf("Unable to close a pipeline record: %s", err)
 		}
 
-		record, err := db.GetPipelineRecord(pipeId)
+		record, err := db.GetPipelineRecord(pipeID)
 		if err != nil {
 			t.Errorf("Unable to retrieve the created record: %s", err)
 		}
 
 		want := actiondb.PipeLineRecord{
-			PipeId:     pipeId,
+			PipeID:     pipeID,
 			Project:    projectName,
-			DeliveryId: deliveryId,
+			DeliveryID: deliveryID,
 			Output:     sql.NullString{Valid: true, String: actionOutput},
 			Error:      sql.NullString{Valid: false},
 			EndedAt:    sql.NullInt64{Valid: true},
@@ -104,25 +104,25 @@ func TestActionDb(t *testing.T) {
 			t.Errorf("Unable to create a db: %s", err)
 		}
 
-		err = db.CreateRecord(pipeId, projectName, deliveryId, action)
+		err = db.CreateRecord(pipeID, projectName, deliveryID, action)
 		if err != nil {
 			t.Errorf("Unable to create a pipeline record: %s", err)
 		}
 
-		err = db.CloseRecord(pipeId, actionErr, actionOutput)
+		err = db.CloseRecord(pipeID, actionErr, actionOutput)
 		if err != nil {
 			t.Errorf("Unable to close a pipeline record: %s", err)
 		}
 
-		record, err := db.GetPipelineRecord(pipeId)
+		record, err := db.GetPipelineRecord(pipeID)
 		if err != nil {
 			t.Errorf("Unable to retrieve the created record: %s", err)
 		}
 
 		want := actiondb.PipeLineRecord{
-			PipeId:     pipeId,
+			PipeID:     pipeID,
 			Project:    projectName,
-			DeliveryId: deliveryId,
+			DeliveryID: deliveryID,
 			Output:     sql.NullString{Valid: true, String: actionOutput},
 			Error:      sql.NullString{Valid: true, String: actionErr.Error()},
 			EndedAt:    sql.NullInt64{Valid: true},
@@ -137,17 +137,17 @@ func TestActionDb(t *testing.T) {
 			t.Errorf("Unable to create a db: %s", err)
 		}
 
-		err = db.CreateRecord(pipeId, projectName, deliveryId, action)
+		err = db.CreateRecord(pipeID, projectName, deliveryID, action)
 		if err != nil {
 			t.Errorf("Unable to create a pipeline record: %s", err)
 		}
 
-		err = db.CloseRecord(pipeId, nil, "")
+		err = db.CloseRecord(pipeID, nil, "")
 		if err != nil {
 			t.Errorf("Unable to close a pipeline record: %s", err)
 		}
 
-		err = db.CloseRecord(pipeId, nil, "")
+		err = db.CloseRecord(pipeID, nil, "")
 		if err == nil {
 			t.Errorf("Repeated closing of an action was supposed to end with an error, but it didn't!")
 		}
@@ -167,7 +167,7 @@ func TestActionDb(t *testing.T) {
 			t.Errorf("Unable to create a db: %s", err)
 		}
 
-		err = db.CreateRecord(pipeId, projectName, deliveryId, action)
+		err = db.CreateRecord(pipeID, projectName, deliveryID, action)
 		if err != nil {
 			t.Errorf("Unable to create a record: %s", err)
 		}
@@ -182,15 +182,15 @@ func TestActionDb(t *testing.T) {
 			t.Errorf("Unable to open the db for the second time: %s", err)
 		}
 
-		record, err := db2.GetPipelineRecord(pipeId)
+		record, err := db2.GetPipelineRecord(pipeID)
 		if err != nil {
 			t.Errorf("Unable to retrieve the created record: %s", err)
 		}
 
 		want := actiondb.PipeLineRecord{
-			PipeId:     pipeId,
+			PipeID:     pipeID,
 			Project:    projectName,
-			DeliveryId: deliveryId,
+			DeliveryID: deliveryID,
 		}
 
 		compareRecord(t, want, record)
@@ -199,22 +199,22 @@ func TestActionDb(t *testing.T) {
 }
 
 func TestAutoRemoval(t *testing.T) {
-	createRecord := func(t *testing.T, db *actiondb.ActionDb) string {
+	createRecord := func(t *testing.T, db *actiondb.ActionDB) string {
 		t.Helper()
-		pipeId := ulid.Make().String()
-		err := db.CreateRecord(pipeId, projectName, deliveryId, action)
+		pipeID := ulid.Make().String()
+		err := db.CreateRecord(pipeID, projectName, deliveryID, action)
 		if err != nil {
 			t.Errorf("Unable to create a pipeline record: %s", err)
 		}
 
-		err = db.CloseRecord(pipeId, nil, "test")
+		err = db.CloseRecord(pipeID, nil, "test")
 		if err != nil {
 			t.Errorf("Unable to close a pipeline record: %s", err)
 		}
-		return pipeId
+		return pipeID
 	}
 
-	countRecords := func(t *testing.T, db *actiondb.ActionDb) int {
+	countRecords := func(t *testing.T, db *actiondb.ActionDB) int {
 		count, err := db.CountPipelineRecords(actiondb.ListPipelineRecordsQuery{})
 		if err != nil {
 			t.Errorf("Failed to count pipelines: %s", err)
@@ -228,20 +228,20 @@ func TestAutoRemoval(t *testing.T) {
 		if err != nil {
 			t.Errorf("Unable to create a db: %s", err)
 		}
-		for i := 0; i < maxRecords; i++ {
+		for range maxRecords {
 			_ = createRecord(t, db)
 		}
 
-		var lastPipeId string
-		for i := 0; i < maxRecords; i++ {
-			lastPipeId = createRecord(t, db)
+		var lastPipeID string
+		for range maxRecords {
+			lastPipeID = createRecord(t, db)
 		}
 
 		if got := countRecords(t, db); got != maxRecords {
 			t.Errorf("Unexpected amount of records after auto-removal; want %d, got %d", maxRecords, got)
 		}
 
-		_, err = db.GetPipelineRecord(lastPipeId)
+		_, err = db.GetPipelineRecord(lastPipeID)
 		if err != nil {
 			t.Errorf("Unable to retrieve last pipeline: %s", err)
 		}
@@ -265,7 +265,7 @@ func TestAutoRemoval(t *testing.T) {
 			if err != nil {
 				t.Errorf("Unable to create a db: %s", err)
 			}
-			for i := 0; i < nRecords; i++ {
+			for range nRecords {
 				_ = createRecord(t, db)
 			}
 			if got := countRecords(t, db); got != nRecords {
@@ -293,14 +293,14 @@ func compareAction(t *testing.T, action config.Action, record actiondb.PipeLineR
 func compareRecord(t *testing.T, want actiondb.PipeLineRecord, got actiondb.PipeLineRecord) {
 	t.Helper()
 
-	if want.PipeId != got.PipeId {
-		t.Errorf("Bad pipeId: want %s, got %s,", want.PipeId, got.PipeId)
+	if want.PipeID != got.PipeID {
+		t.Errorf("Bad pipeId: want %s, got %s,", want.PipeID, got.PipeID)
 	}
 	if want.Project != got.Project {
 		t.Errorf("Bad project: want %s, got %s,", want.Project, got.Project)
 	}
-	if want.DeliveryId != got.DeliveryId {
-		t.Errorf("Bad deliveryId, want %s, got %s", want.DeliveryId, got.DeliveryId)
+	if want.DeliveryID != got.DeliveryID {
+		t.Errorf("Bad deliveryId, want %s, got %s", want.DeliveryID, got.DeliveryID)
 	}
 	if want.Output != got.Output {
 		t.Errorf("Unexpected output in pipeline: want %v, got %v", want.Output, got.Output)

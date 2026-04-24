@@ -95,7 +95,7 @@ func Serve(cfg config.Config) {
 	}
 
 	srv := &http.Server{
-		Addr:    fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+		Addr:    cfg.Addr,
 		Handler: mux,
 	}
 
