@@ -8,6 +8,8 @@ import (
 // constantTimeComparer of string or []bytes values, with hashing of
 // provided values, so we're comparing against the same values length
 //
+// It's here just so we don't care if string lengths are the same or not.
+//
 // @see https://github.com/golang/go/issues/18936
 type constantTimeComparer struct {
 	targetValueHash [32]byte
@@ -16,6 +18,7 @@ type constantTimeComparer struct {
 func NewConstantTimeComparerBytes(targetValue []byte) constantTimeComparer {
 	return constantTimeComparer{sha256.Sum256(targetValue)}
 }
+
 func NewConstantTimeComparer(targetValue string) constantTimeComparer {
 	return NewConstantTimeComparerBytes([]byte(targetValue))
 }

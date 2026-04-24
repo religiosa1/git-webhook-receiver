@@ -45,21 +45,27 @@ func verifyPayloadSignature(payload []byte, signature string, secret string) (bo
 		return false, fmt.Errorf("failed to decode signature: %w", err)
 	}
 
-	payloadSignature := GetPayloadSignature(secret, payload)
+	payloadSignature := getPayloadSignature(secret, payload)
 
 	return cryptoutils.NewConstantTimeComparerBytes(headSig).EqBytes((payloadSignature)), nil
 }
 
 func getBranchFromRefName(ref string) string {
 	parts := strings.Split(ref, "/")
-	if len(parts) < 3 {
-		return ref
+	var refType, refName string
+	if len(parts) >= 2 {
+		refType = parts[1]
 	}
-	branchName := strings.Join(parts[2:], "/")
-	return branchName
+	if len(parts) >= 3 {
+		refName = strings.Join(parts[2:], "/")
+	}
+	if refType != "heads" {
+		return ""
+	}
+	return refName
 }
 
-func GetPayloadSignature(secret string, payload []byte) []byte {
+func getPayloadSignature(secret string, payload []byte) []byte {
 	h := hmac.New(sha256.New, []byte(secret))
 	h.Write(payload)
 	payloadSignature := h.Sum(nil)

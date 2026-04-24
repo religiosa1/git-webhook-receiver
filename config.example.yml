@@ -23,7 +23,8 @@ projects:
     actions:
       # defaults to "push", use "*" to handle any event, or use a specific one, e.g. "release"
       - on: push
-        branch: master # defaults to master, can be '*' to denote any
+        # defaults to master, can be '*' to denote any; incoming branch name can be empty for tags or notes events
+        branch: master
         user: www-data # user from which action will be run, requires the elevated permissions
         cwd: "/var/www/yourproject" # root dir in which action will be run
         # each action MUST have either a script or run field (but not both):

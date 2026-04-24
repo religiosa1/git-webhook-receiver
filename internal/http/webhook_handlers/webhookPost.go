@@ -15,6 +15,9 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/whreceiver"
 )
 
+// 300 KiB max body size
+const maxBodySize int64 = 1024 * 300
+
 func HandleWebhookPost(
 	actionsCh chan ActionRunner.ActionArgs,
 	logger *slog.Logger,
@@ -24,8 +27,14 @@ func HandleWebhookPost(
 	receiver whreceiver.Receiver,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
+		req.Body = http.MaxBytesReader(w, req.Body, maxBodySize)
 		// setting noop-closer body, so we can read it multiple times
 		payload, err := io.ReadAll(req.Body)
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
+			return
+		}
 		if err != nil {
 			logger.Error("Error while reading the POST request body", slog.Any("error", err))
 			w.WriteHeader(http.StatusBadRequest)
@@ -37,12 +46,21 @@ func HandleWebhookPost(
 		if err != nil {
 			errInfo := getWebhookErrorCode(err)
 			logger.Error("Error while parsing the webhook request", slog.String("error", errInfo.Message))
+			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(errInfo.StatusCode)
-			w.Write([]byte("{err}"))
+			writeErr := json.NewEncoder(w).Encode(struct {
+				Error string `json:"error"`
+			}{Error: errInfo.Message})
+			if writeErr != nil {
+				logger.Error("error while writing error status", slog.Any("error", writeErr))
+			}
 			return
 		}
 		deliveryLogger := logger.With(slog.String("deliveryId", webhookInfo.DeliveryID))
 		deliveryLogger.Info("Received a webhook post", slog.Any("webhookInfo", webhookInfo))
+		if webhookInfo.Branch == "" {
+			deliveryLogger.Info("no branch name captured out of the payload ref")
+		}
 
 		if project.Authorization != "" {
 			if authed, err := receiver.Authorize(whReq, project.Authorization); err != nil || !authed {
@@ -80,7 +98,10 @@ func HandleWebhookPost(
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(actionsToOutput(cfg, actions))
+		err = json.NewEncoder(w).Encode(actionsToOutput(cfg, actions))
+		if err != nil {
+			deliveryLogger.Error("Error while encoding action's output", slog.Any("error", err))
+		}
 	}
 }
 
