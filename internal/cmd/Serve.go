@@ -67,7 +67,6 @@ func Serve(cfg config.Config) {
 	actionRunner := ActionRunner.New(
 		context.Background(),
 		dbActions,
-		time.Duration(cfg.TimeoutSeconds)*time.Second,
 	)
 
 	//==========================================================================

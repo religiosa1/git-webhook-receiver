@@ -10,24 +10,26 @@ import (
 )
 
 const (
-	DefaultMaxActionsStored = 1_000
-	DefaultTimeoutSeconds   = 600
+	DefaultMaxActionsStored   = 1_000
+	DefaultTimeoutSeconds     = 600
+	DefaultGracefulShutdownMS = 15_000
 )
 
 type Config struct {
-	Host                  string             `yaml:"host" env:"HOST" env-default:"localhost"`
-	Port                  int16              `yaml:"port" env:"PORT" env-default:"9090"`
-	PublicURL             string             `yaml:"public_url" env:"PUBLIC_URL"`
-	DisableAPI            bool               `yaml:"disable_api" env:"DISABLE_API"`
-	APIUser               string             `yaml:"api_user" env:"API_USER" env-default:"admin"`
-	APIPassword           string             `yaml:"api_password" env:"API_PASSWORD"`
-	LogLevel              string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
-	LogsDBFile            string             `yaml:"logs_db_file" env:"LOGS_DB_FILE" env-default:"logs.sqlite3"`
-	ActionsDBFile         string             `yaml:"actions_db_file" env:"ACTIONS_DB_FILE" env-default:"actions.sqlite3"`
-	MaxActionsStored      int                `yaml:"max_actions_stored" env:"MAX_ACTIONS_STORED" env-default:"1000"` // the same as DefaultMaxActionsStored
-	DefaultTimeoutSeconds int                `yaml:"default_timeout_seconds" env:"DEFAULT_TIMEOUT_SECONDS" env-default:"600"`
-	Ssl                   SslConfig          `yaml:"ssl" env-prefix:"SSL__"`
-	Projects              map[string]Project `yaml:"projects" env-required:"true"`
+	Host               string             `yaml:"host" env:"HOST" env-default:"localhost"`
+	Port               int16              `yaml:"port" env:"PORT" env-default:"9090"`
+	PublicURL          string             `yaml:"public_url" env:"PUBLIC_URL"`
+	DisableAPI         bool               `yaml:"disable_api" env:"DISABLE_API"`
+	APIUser            string             `yaml:"api_user" env:"API_USER" env-default:"admin"`
+	APIPassword        string             `yaml:"api_password" env:"API_PASSWORD"`
+	LogLevel           string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
+	LogsDBFile         string             `yaml:"logs_db_file" env:"LOGS_DB_FILE" env-default:"logs.sqlite3"`
+	ActionsDBFile      string             `yaml:"actions_db_file" env:"ACTIONS_DB_FILE" env-default:"actions.sqlite3"`
+	MaxActionsStored   int                `yaml:"max_actions_stored" env:"MAX_ACTIONS_STORED" env-default:"1000"` // the same as DefaultMaxActionsStored
+	TimeoutSeconds     int                `yaml:"timeout_seconds" env:"TIMEOUT_SECONDS" env-default:"600"`
+	GracefulShutdownMS int                `yaml:"graceful_shutdown_ms" env:"GRACEFUL_SHUTDOWN_MS" env-default:"15000"`
+	Ssl                SslConfig          `yaml:"ssl" env-prefix:"SSL__"`
+	Projects           map[string]Project `yaml:"projects" env-required:"true"`
 }
 
 type SslConfig struct {
@@ -47,12 +49,14 @@ type Project struct {
 }
 
 type Action struct {
-	On     string   `yaml:"on" env-default:"push" json:"on,omitempty"`
-	Branch string   `yaml:"branch" env-default:"master" json:"branch,omitempty"`
-	Cwd    string   `yaml:"cwd" json:"cwd,omitempty"`
-	User   string   `yaml:"user" json:"user,omitempty"`
-	Script string   `yaml:"script" json:"script,omitempty"`
-	Run    []string `yaml:"run" json:"run,omitempty"`
+	On                 string   `yaml:"on" env-default:"push" json:"on,omitempty"`
+	Branch             string   `yaml:"branch" env-default:"master" json:"branch,omitempty"`
+	Cwd                string   `yaml:"cwd" json:"cwd,omitempty"`
+	User               string   `yaml:"user" json:"user,omitempty"`
+	Script             string   `yaml:"script" json:"script,omitempty"`
+	Run                []string `yaml:"run" json:"run,omitempty"`
+	TimeoutSeconds     int      `yaml:"timeout_seconds"`
+	GracefulShutdownMS int      `yaml:"graceful_shutdown_ms"`
 }
 
 func Load(configPath string) (Config, error) {
@@ -72,21 +76,33 @@ func Load(configPath string) (Config, error) {
 		return cfg, fmt.Errorf("incorrect LogLevel value '%s'. Possible values are 'debug', 'info', 'warn', and 'error", cfg.LogLevel)
 	}
 
-	projectsWithDefaults, err := validateAndSetDefaultsConfigProjects(cfg.Projects)
+	// zeros are overwritten here by clean-env `env-default` so we don't particularly care about them
+	if cfg.TimeoutSeconds < 0 {
+		return cfg, fmt.Errorf("'timeout_seconds' must be a non-negative integer")
+	} else if cfg.TimeoutSeconds == 0 {
+		panic("global timeout value should've been set by the env-default in config parsing")
+	}
+	if cfg.GracefulShutdownMS < 0 {
+		return cfg, fmt.Errorf("'graceful_shutdown_ms' must be a non-negative integer")
+	} else if cfg.GracefulShutdownMS == 0 {
+		panic("global gracefulShutdownMs value should've been set by the env-default in config parsing")
+	}
+
+	projectsWithDefaults, err := validateAndSetDefaultsConfigProjects(cfg.Projects, cfg.TimeoutSeconds, cfg.GracefulShutdownMS)
 	if err != nil {
 		return cfg, fmt.Errorf("configs projects validation failed: %w", err)
 	}
 
 	cfg.Projects = projectsWithDefaults
 
-	if cfg.DefaultTimeoutSeconds < 0 {
-		return cfg, fmt.Errorf("'default_timeout_seconds' must be a non-negative integer")
-	}
-
 	return cfg, nil
 }
 
-func validateAndSetDefaultsConfigProjects(projects map[string]Project) (map[string]Project, error) {
+func validateAndSetDefaultsConfigProjects(
+	projects map[string]Project,
+	globalTimeoutSeconds int,
+	globalGracefulShutdownMS int,
+) (map[string]Project, error) {
 	for projectName, project := range projects {
 		if err := setDefaultAndCheckRequired(&project); err != nil {
 			return nil, fmt.Errorf("project '%s' has issue with its fields: %w", projectName, err)
@@ -104,7 +120,7 @@ func validateAndSetDefaultsConfigProjects(projects map[string]Project) (map[stri
 			)
 		}
 
-		actionsWithDefaults, err := validateAndSetDefaultConfigActions(projectName, project.Actions)
+		actionsWithDefaults, err := validateAndSetDefaultConfigActions(projectName, project.Actions, globalTimeoutSeconds, globalGracefulShutdownMS)
 		if err != nil {
 			return nil, fmt.Errorf("action validation failed: %w", err)
 		}
@@ -114,7 +130,7 @@ func validateAndSetDefaultsConfigProjects(projects map[string]Project) (map[stri
 	return projects, nil
 }
 
-func validateAndSetDefaultConfigActions(projectName string, actions []Action) ([]Action, error) {
+func validateAndSetDefaultConfigActions(projectName string, actions []Action, globalTimeoutSeconds int, globalGracefulShutdownMS int) ([]Action, error) {
 	for i, action := range actions {
 		wrapActionErr := func(err error) error {
 			return fmt.Errorf(
@@ -141,6 +157,18 @@ func validateAndSetDefaultConfigActions(projectName string, actions []Action) ([
 				return nil, wrapActionErr(fmt.Errorf("has a user field = '%s', but this user can't be found: %w", action.User, err))
 			}
 		}
+
+		if action.TimeoutSeconds == 0 {
+			action.TimeoutSeconds = globalTimeoutSeconds
+		} else if action.TimeoutSeconds < 0 {
+			return nil, wrapActionErr(fmt.Errorf("'timeout_seconds' cannot be a negative value"))
+		}
+		if action.GracefulShutdownMS == 0 {
+			action.GracefulShutdownMS = globalGracefulShutdownMS
+		} else if action.GracefulShutdownMS < 0 {
+			return nil, wrapActionErr(fmt.Errorf("'graceful_shutdown_ms' cannot be a negative value"))
+		}
+
 		actions[i] = action
 	}
 	return actions, nil

@@ -34,6 +34,10 @@ projects:
           npm run build
         # Or to execute a script or program:
         # run: ["node", "--version"]
+        # Per-action timeout, defaults to 0, meaning the global timeout value will be used
+        timeout_seconds: 0
+        # Per-action graceful shutdown timeout, defaults to 0, meaning the global value will be used
+        graceful_shutdown_ms: 0
 # pipeline results db filename, defaults to `actions.sqlite3` use empty string or null to disable
 actions_db_file: "actions.sqlite3"
 # application logs db filename, default to `logs.sqlite3`. Use empty string or null to disable
@@ -41,5 +45,10 @@ logs_db_file: "logs.sqlite3"
 # max amount of actions to be stored in the actions DB. After exceeding this value,
 # older entries will be deleted. Negative values disable this functionality
 max_actions_stored: 1000
-# overall default actions timeout. Must be a positive int, 0 will result in the default timeout value
-default_timeout_seconds: 600
+# global actions timeout. After this amount of seconds we're sending SIGINT on unix/SIGKILL on windows
+# to the action process.
+# Must be a positive int, 0 will result in the default timeout value
+timeout_seconds: 600
+# global graceful shutdown duration AFTER the timeout value is reached. We're waiting for this amount of
+# ms after timeout for the process to clean up and exit, otherwise we're hard killing it
+graceful_shutdown_ms: 15000

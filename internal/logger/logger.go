@@ -12,9 +12,9 @@ import (
 func SetupLogger(logLevel string, db *logsDb.LogsDB) (*slog.Logger, error) {
 	programLevel := new(slog.LevelVar)
 	programLevel.Set(strLogLevelToEnumValue(logLevel))
-	hdlrOpts := &slog.HandlerOptions{Level: programLevel}
+	handlerOpts := &slog.HandlerOptions{Level: programLevel}
 
-	textHandler := slog.NewTextHandler(os.Stdout, hdlrOpts)
+	textHandler := slog.NewTextHandler(os.Stdout, handlerOpts)
 
 	if db == nil {
 		return slog.New(textHandler), nil
@@ -22,7 +22,7 @@ func SetupLogger(logLevel string, db *logsDb.LogsDB) (*slog.Logger, error) {
 
 	logger := slog.New(slogmulti.Fanout(
 		textHandler,
-		NewDBLogger(db, hdlrOpts),
+		NewDBLogger(db, handlerOpts),
 	))
 
 	return logger, nil

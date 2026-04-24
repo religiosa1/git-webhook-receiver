@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
 	"mvdan.cc/sh/v3/interp"
@@ -19,15 +20,16 @@ func executeActionScript(ctx context.Context, action config.Action, sysProcAttr 
 		return fmt.Errorf("error parsing actions's script: %w", err)
 	}
 
+	gracefulKillTimeout := time.Duration(action.GracefulShutdownMS) * time.Millisecond
 	runner, _ := interp.New(
-		interp.ExecHandlers(execHandler(sysProcAttr)),
+		interp.ExecHandlers(execHandler(sysProcAttr, gracefulKillTimeout)),
 		interp.StdIO(nil, output, output),
 		interp.Dir(action.Cwd),
 	)
 	return runner.Run(ctx, script)
 }
 
-func execHandler(sysProcAttr *syscall.SysProcAttr) func(next interp.ExecHandlerFunc) interp.ExecHandlerFunc {
+func execHandler(sysProcAttr *syscall.SysProcAttr, gracefulKillTimeout time.Duration) func(next interp.ExecHandlerFunc) interp.ExecHandlerFunc {
 	return func(next interp.ExecHandlerFunc) interp.ExecHandlerFunc {
 		return func(ctx context.Context, args []string) error {
 			hc := interp.HandlerCtx(ctx)
@@ -36,7 +38,7 @@ func execHandler(sysProcAttr *syscall.SysProcAttr) func(next interp.ExecHandlerF
 				_, _ = fmt.Fprintln(hc.Stderr, err)
 				return interp.ExitStatus(127)
 			}
-			cmd := newCmd(ctx, path, args[1:], sysProcAttr)
+			cmd := newCmd(ctx, path, args[1:], sysProcAttr, gracefulKillTimeout)
 			// cmd.Args defaults to [path, args[1:]...]; override to show the shell-visible
 			// command name (args[0]) instead of the resolved path in process listings.
 			cmd.Args = args
