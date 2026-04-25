@@ -1,7 +1,6 @@
 package whreceiver
 
 import (
-	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -27,7 +26,7 @@ type CommonWebhookRepo struct {
 // with the headers information down the line.
 func getJSONPayloadInfo(payload []byte, repo string) (*WebhookPostInfo, error) {
 	var whPayload CommonWebhookPayload
-	if err := json.NewDecoder(bytes.NewBuffer(payload)).Decode(&whPayload); err != nil {
+	if err := json.Unmarshal(payload, &whPayload); err != nil {
 		return nil, err
 	}
 	if whPayload.Repository.FullName != repo {

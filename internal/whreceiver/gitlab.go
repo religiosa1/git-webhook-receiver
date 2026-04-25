@@ -1,7 +1,6 @@
 package whreceiver
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -49,7 +48,7 @@ type gitlabWebhookPayload struct {
 func (rcvr GitlabReceiver) GetWebhookInfo(req WebhookPostRequest) (*WebhookPostInfo, error) {
 	var postInfo WebhookPostInfo
 	var whPayload gitlabWebhookPayload
-	if err := json.NewDecoder(bytes.NewBuffer(req.Payload)).Decode(&whPayload); err != nil {
+	if err := json.Unmarshal(req.Payload, &whPayload); err != nil {
 		return nil, err
 	}
 	repo := whPayload.Project.PathWithNamespace

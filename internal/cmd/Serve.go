@@ -137,8 +137,10 @@ func Serve(cfg config.Config) {
 	actionRunner.Wait()
 }
 
-func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig, logger *slog.Logger) (err error) {
+func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig, logger *slog.Logger) error {
+	errCh := make(chan error, 1)
 	go func() {
+		var err error
 		if sslConfig.CertFilePath != "" && sslConfig.KeyFilePath != "" {
 			logger.Info("Running the server with SSL",
 				slog.String("addr", srv.Addr),
@@ -153,18 +155,23 @@ func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig
 		if err == http.ErrServerClosed {
 			err = nil
 		}
+		errCh <- err
 	}()
 
-	<-ctx.Done()
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+	}
 
 	ctxShutDown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err = srv.Shutdown(ctxShutDown); err != nil {
-		err = ErrShutdown{err}
+	if err := srv.Shutdown(ctxShutDown); err != nil {
+		return ErrShutdown{err}
 	}
 
-	return err
+	return <-errCh
 }
 
 func createProjectsMux(actionsCh chan ActionRunner.ActionArgs, cfg config.Config, logger *slog.Logger) (*http.ServeMux, error) {

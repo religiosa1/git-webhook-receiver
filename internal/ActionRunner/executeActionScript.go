@@ -21,11 +21,14 @@ func executeActionScript(ctx context.Context, action config.Action, sysProcAttr 
 	}
 
 	gracefulKillTimeout := time.Duration(action.GracefulShutdownMS) * time.Millisecond
-	runner, _ := interp.New(
+	runner, err := interp.New(
 		interp.ExecHandlers(execHandler(sysProcAttr, gracefulKillTimeout)),
 		interp.StdIO(nil, output, output),
 		interp.Dir(action.Cwd),
 	)
+	if err != nil {
+		return err
+	}
 	return runner.Run(ctx, script)
 }
 
