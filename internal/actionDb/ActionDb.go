@@ -4,14 +4,19 @@ import (
 	"database/sql"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
-	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
+)
+
+var (
+	ErrCursorAndOffset = errors.New("cursor and offset pagination supplied simultaneously")
+	ErrBadCursor       = errors.New("bad cursor")
 )
 
 type PipeLineRecord struct {
@@ -131,128 +136,6 @@ func (d ActionDB) CloseRecord(pipeID string, actionErr error, output io.Reader) 
 	return err
 }
 
-func (d ActionDB) GetPipelineRecord(pipeID string) (PipeLineRecord, error) {
-	var record PipeLineRecord
-	if pipeID == "" {
-		err := d.db.Get(&record, "SELECT * FROM pipeline ORDER BY created_at DESC LIMIT 1;")
-		return record, err
-	}
-	err := d.db.Get(&record, "SELECT * FROM pipeline WHERE pipe_id=?;", pipeID)
-	return record, err
-}
-
-type PipeStatus int
-
-const (
-	PipeStatusAny     PipeStatus = 0
-	PipeStatusOk      PipeStatus = 1
-	PipeStatusError   PipeStatus = 2
-	PipeStatusPending PipeStatus = 3
-)
-
-func ParsePipelineStatus(status string) (PipeStatus, error) {
-	switch status {
-	case "ok":
-		return PipeStatusOk, nil
-	case "error":
-		return PipeStatusError, nil
-	case "pending":
-		return PipeStatusPending, nil
-	case "any":
-		return PipeStatusAny, nil
-	default:
-		return PipeStatusAny, fmt.Errorf("unknown pipe status: '%s'", status)
-	}
-}
-
-type ListPipelineRecordsQuery struct {
-	Offset     int
-	Limit      int
-	Status     PipeStatus
-	Project    string
-	DeliveryID string
-}
-
-const maxPageSize int = 200
-
-// TODO: reply with the total count and pagination info here as well
-func (d ActionDB) ListPipelineRecords(search ListPipelineRecordsQuery) ([]PipeLineRecord, error) {
-	if search.Limit <= 0 || search.Limit > maxPageSize {
-		search.Limit = 20
-	}
-
-	var qb strings.Builder
-	args := make([]any, 0)
-
-	qb.WriteString(`
-SELECT * FROM (
-SELECT 
-	id, pipe_id, project, delivery_id, config, error, created_at, ended_at 
-FROM 
-	pipeline
-`)
-
-	fj := createListPipelineWhereQuery(search)
-
-	if fj.HasFilters {
-		qb.WriteString("WHERE\n")
-		qb.WriteString(fj.String())
-		args = append(args, fj.Args()...)
-	}
-
-	qb.WriteString("ORDER BY created_at DESC\n")
-	qb.WriteString("LIMIT ?\n")
-	args = append(args, search.Limit)
-
-	if search.Offset != 0 {
-		qb.WriteString("OFFSET ?\n")
-		args = append(args, search.Offset)
-	}
-
-	qb.WriteString(") ORDER BY created_at ASC;")
-
-	var records []PipeLineRecord
-	err := d.db.Select(&records, qb.String(), args...)
-	return records, err
-}
-
-func (d ActionDB) CountPipelineRecords(search ListPipelineRecordsQuery) (int, error) {
-	args := make([]any, 0)
-	var qb strings.Builder
-	qb.WriteString(`SELECT count(*) FROM pipeline`)
-	fj := createListPipelineWhereQuery(search)
-	if fj.HasFilters {
-		qb.WriteString("\nWHERE\n")
-		qb.WriteString(fj.String())
-		args = append(args, fj.Args()...)
-	}
-	row := d.db.QueryRow(qb.String(), args...)
-	var count int
-	err := row.Scan(&count)
-	if err != nil {
-		return 0, err
-	}
-	return count, nil
-}
-
-func createListPipelineWhereQuery(search ListPipelineRecordsQuery) filterJoiner {
-	fj := filterJoiner{}
-
-	fj.AddLikeFilter(search.DeliveryID, "delivery_id")
-	fj.AddLikeFilter(search.Project, "project")
-
-	switch search.Status {
-	case PipeStatusOk:
-		fj.AddFilter("(ended_at IS NOT NULL AND (error IS NULL OR error = ''))\n")
-	case PipeStatusError:
-		fj.AddFilter("(ended_at IS NOT NULL AND (error IS NOT NULL AND error <> ''))\n")
-	case PipeStatusPending:
-		fj.AddFilter("ended_at IS NULL\n")
-	}
-
-	return fj
-}
-
 func readOutput(r io.Reader, maxBytes int) (string, error) {
 	if maxBytes <= 0 {
 		buf, err := io.ReadAll(r)
@@ -266,4 +149,14 @@ func readOutput(r io.Reader, maxBytes int) (string, error) {
 		return string(buf[:maxBytes]) + fmt.Sprintf("\n[output truncated at %d bytes]", maxBytes), nil
 	}
 	return string(buf), nil
+}
+
+func (d ActionDB) GetPipelineRecord(pipeID string) (PipeLineRecord, error) {
+	var record PipeLineRecord
+	if pipeID == "" {
+		err := d.db.Get(&record, "SELECT * FROM pipeline ORDER BY created_at DESC LIMIT 1;")
+		return record, err
+	}
+	err := d.db.Get(&record, "SELECT * FROM pipeline WHERE pipe_id=?;", pipeID)
+	return record, err
 }

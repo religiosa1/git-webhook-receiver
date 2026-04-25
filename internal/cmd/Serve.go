@@ -81,7 +81,7 @@ func Serve(cfg config.Config) {
 		basicAuth := middleware.NewBasicAuth(cfg.APIUser, cfg.APIPassword, logger)
 		if dbActions != nil {
 			logger.Debug("Web admin enabled for pipelines")
-			mux.HandleFunc("GET /pipelines", basicAuth(admin.ListPipelines(dbActions, logger)))
+			mux.HandleFunc("GET /pipelines", basicAuth(admin.ListPipelines(dbActions, logger, cfg.PublicURL)))
 			mux.HandleFunc("GET /pipelines/{pipeId}", basicAuth(admin.GetPipeline(dbActions, logger)))
 			mux.HandleFunc("GET /pipelines/{pipeId}/output", basicAuth(admin.GetPipelineOutput(dbActions, logger)))
 		} else {

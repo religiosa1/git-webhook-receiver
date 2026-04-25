@@ -12,12 +12,13 @@ import (
 
 func TestReceivers(t *testing.T) {
 	receivers := []struct {
-		name      string
-		project   config.Project
-		request   requestmock.RequestMock
-		postInfo  whreceiver.WebhookPostInfo
-		authToken string
-		secret    string
+		name        string
+		project     config.Project
+		request     requestmock.RequestMock
+		postInfo    whreceiver.WebhookPostInfo
+		authToken   string
+		secret      string
+		pingRequest *whreceiver.WebhookPostRequest
 	}{
 		{
 			name: "gitea",
@@ -62,6 +63,10 @@ func TestReceivers(t *testing.T) {
 			},
 			authToken: "",
 			secret:    "3216732167",
+			pingRequest: &whreceiver.WebhookPostRequest{
+				Headers: http.Header{"X-Github-Event": []string{"ping"}},
+				Payload: []byte(`{}`),
+			},
 		},
 		{
 			name: "gitlab",
@@ -181,7 +186,24 @@ func TestReceivers(t *testing.T) {
 				}
 			})
 		}
-		// TODO: ping tests
+		if capabilities.HasPing {
+			t.Run(tt.name+": IsPingRequest true for ping event", func(t *testing.T) {
+				if !rcvr.IsPingRequest(*tt.pingRequest) {
+					t.Error("expected IsPingRequest to return true for ping request")
+				}
+			})
+			t.Run(tt.name+": IsPingRequest false for non-ping event", func(t *testing.T) {
+				if rcvr.IsPingRequest(MakeWebhookPostRequest(tt.request)) {
+					t.Error("expected IsPingRequest to return false for push request")
+				}
+			})
+		} else {
+			t.Run(tt.name+": IsPingRequest returns false", func(t *testing.T) {
+				if rcvr.IsPingRequest(MakeWebhookPostRequest(tt.request)) {
+					t.Error("expected IsPingRequest to return false")
+				}
+			})
+		}
 	}
 }
 

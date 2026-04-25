@@ -108,6 +108,7 @@ type GetEntryFilteredQuery struct {
 	Offset     int
 }
 
+// TODO: total count and cursor similar to actions DB, rmeove weird order reversal
 func (d LogsDB) GetEntryFiltered(search GetEntryFilteredQuery) ([]LogEntry, error) {
 	if search.PageSize <= 0 || search.PageSize > maxPageSize {
 		search.PageSize = defaultPageSize

@@ -52,14 +52,14 @@ func ListPipelines(cfg config.Config, args ListPipelinesArgs) {
 		// not aborting the execution here, just logging out
 	}
 
-	pipeLines, err := dbActions.ListPipelineRecords(query)
+	page, err := dbActions.ListPipelineRecords(query)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading actions db: %s\n", err)
 		os.Exit(ExitCodeActionsDB)
 	}
 
 	outputFormatter := getActionRecordOutputFormatter(args.Format)
-	err = outputFormatter(pipeLines)
+	err = outputFormatter(page.Items)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error formatting records: %s\n", err)
 		os.Exit(ExitCodeOutput)

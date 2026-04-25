@@ -2,6 +2,7 @@ package serialization
 
 import (
 	actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/models"
 )
 
 type PrettyPipelineRecord struct {
@@ -34,4 +35,11 @@ func PipelineRecords(rs []actiondb.PipeLineRecord) []PrettyPipelineRecord {
 		records[i] = PipelineRecord(r)
 	}
 	return records
+}
+
+func PipelinePage(pagedPipeLineRecords models.PagedDB[actiondb.PipeLineRecord]) models.Paged[PrettyPipelineRecord] {
+	var result models.Paged[PrettyPipelineRecord]
+	result.TotalCount = pagedPipeLineRecords.TotalCount
+	result.Items = PipelineRecords(pagedPipeLineRecords.Items)
+	return result
 }

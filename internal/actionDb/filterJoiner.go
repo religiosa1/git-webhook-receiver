@@ -22,6 +22,12 @@ func (fj *filterJoiner) AddFilter(filter string) {
 	fj.qb.WriteString(filter)
 }
 
+func (fj *filterJoiner) AddParamFilter(filter string, args ...any) {
+	fj.checkHasFilter()
+	fj.qb.WriteString(filter)
+	fj.args = append(fj.args, args...)
+}
+
 func (fj *filterJoiner) checkHasFilter() {
 	if !fj.HasFilters {
 		fj.HasFilters = true

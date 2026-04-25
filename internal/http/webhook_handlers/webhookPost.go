@@ -12,6 +12,7 @@ import (
 	"github.com/oklog/ulid/v2"
 	"github.com/religiosa1/git-webhook-receiver/internal/ActionRunner"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
+	"github.com/religiosa1/git-webhook-receiver/internal/http/utils"
 	"github.com/religiosa1/git-webhook-receiver/internal/whreceiver"
 )
 
@@ -46,13 +47,8 @@ func HandleWebhookPost(
 		if err != nil {
 			errInfo := getWebhookErrorCode(err)
 			logger.Error("Error while parsing the webhook request", slog.String("error", errInfo.Message))
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(errInfo.StatusCode)
-			writeErr := json.NewEncoder(w).Encode(struct {
-				Error string `json:"error"`
-			}{Error: errInfo.Message})
-			if writeErr != nil {
-				logger.Error("error while writing error status", slog.Any("error", writeErr))
+			if writeErr := utils.WriteErrorResponse(w, errInfo.StatusCode, errInfo.Message); writeErr != nil {
+				logger.Error("error while writing error message", slog.Any("error", writeErr))
 			}
 			return
 		}

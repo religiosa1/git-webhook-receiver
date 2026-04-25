@@ -3,15 +3,18 @@ package admin
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 
 	actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/http/utils"
 	"github.com/religiosa1/git-webhook-receiver/internal/serialization"
 )
 
-func ListPipelines(db *actiondb.ActionDB, logger *slog.Logger) http.HandlerFunc {
+func ListPipelines(db *actiondb.ActionDB, logger *slog.Logger, publicURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		queryParams := req.URL.Query()
 
@@ -23,6 +26,7 @@ func ListPipelines(db *actiondb.ActionDB, logger *slog.Logger) http.HandlerFunc 
 			Limit:      limit,
 			Project:    queryParams.Get("project"),
 			DeliveryID: queryParams.Get("deliveryId"),
+			Cursor:     queryParams.Get("cursor"),
 		}
 		var err error
 		query.Status, err = actiondb.ParsePipelineStatus(queryParams.Get("status"))
@@ -31,17 +35,48 @@ func ListPipelines(db *actiondb.ActionDB, logger *slog.Logger) http.HandlerFunc 
 			// just logging out, no execution abort here
 		}
 
-		records, err := db.ListPipelineRecords(query)
+		pages, err := db.ListPipelineRecords(query)
 		if err != nil {
-			w.WriteHeader(500)
+			statusCode := 500
+			if errors.Is(err, actiondb.ErrBadCursor) || errors.Is(err, actiondb.ErrCursorAndOffset) {
+				statusCode = 400
+			}
+			if writeErr := utils.WriteErrorResponse(w, statusCode, err.Error()); writeErr != nil {
+				logger.Error("error while writing error message", slog.Any("error", writeErr))
+			}
 			return
 		}
+
+		output := serialization.PipelinePage(pages)
+		if pages.Cursor != nil {
+			nextPage := buildNextPageURL(req, publicURL, *pages.Cursor)
+			output.NextPage = &nextPage
+		}
 		w.Header().Set("Content-Type", "application/json")
-		err = json.NewEncoder(w).Encode(serialization.PipelineRecords(records))
+		err = json.NewEncoder(w).Encode(output)
 		if err != nil {
 			logger.Error("Error writing output", slog.Any("error", err))
 		}
 	}
+}
+
+// TODO: merge with a similar function in webhook and move to utils
+func buildNextPageURL(req *http.Request, publicURL string, cursor string) string {
+	params := req.URL.Query()
+	params.Set("cursor", cursor)
+	params.Del("offset")
+
+	var base string
+	if publicURL != "" {
+		base = strings.TrimRight(publicURL, "/") + req.URL.Path
+	} else {
+		scheme := "http"
+		if req.TLS != nil {
+			scheme = "https"
+		}
+		base = scheme + "://" + req.Host + req.URL.Path
+	}
+	return base + "?" + params.Encode()
 }
 
 func GetPipeline(db *actiondb.ActionDB, logger *slog.Logger) http.HandlerFunc {
