@@ -57,6 +57,45 @@ journalctl -u git-webhook-receiver.service
 
 Consult to systemd documentation for more.
 
+## Unix socket setup
+
+To listen on a Unix socket instead of a TCP port, set `addr` in your config:
+
+```yaml
+addr: unix:///var/run/git-webhook-receiver.sock
+```
+
+The recommended approach is to place the socket in a directory owned by the
+group shared between this service and your reverse proxy (e.g. `www-data`),
+with mode `0750`:
+
+```sh
+sudo mkdir -p /var/run/git-webhook-receiver
+sudo chown git-webhook-receiver:www-data /var/run/git-webhook-receiver
+sudo chmod 750 /var/run/git-webhook-receiver
+```
+
+Then point the config at a socket inside that directory:
+
+```yaml
+addr: unix:///var/run/git-webhook-receiver/webhook.sock
+```
+
+Update the systemd unit to give the service write access to that directory and
+set a `UMask` so the socket is created with `0660`:
+
+```
+[Service]
+User=git-webhook-receiver
+Group=git-webhook-receiver
+UMask=0117
+ReadWritePaths=/var/www /var/run/git-webhook-receiver
+```
+
+Your reverse proxy (nginx, caddy, etc.) must run as a user in the
+`git-webhook-receiver` group, or the directory must be world-executable (`0751`)
+so the proxy can reach the socket.
+
 ### To change your systemd editor:
 
 - add `export SYSTEMD_EDITOR=vim` to your `~/.bashrc` (vim for example)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -138,6 +139,27 @@ func Serve(cfg config.Config) {
 }
 
 func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig, logger *slog.Logger) error {
+	network, address := config.ParseAddr(srv.Addr)
+
+	if network == "unix" {
+		// remove stale socket file if present, silently erroring otherwise
+		_ = os.Remove(address)
+	}
+
+	ln, err := net.Listen(network, address)
+	if err != nil {
+		return fmt.Errorf("failed to listen on %s: %w", srv.Addr, err)
+	}
+
+	if network == "unix" {
+		defer func() {
+			err := os.Remove(address)
+			if err != nil {
+				logger.Error("error removing unix socket path", slog.Any("error", err), slog.String("addr", srv.Addr))
+			}
+		}()
+	}
+
 	errCh := make(chan error, 1)
 	go func() {
 		var err error
@@ -147,10 +169,10 @@ func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig
 				slog.String("cert file", sslConfig.CertFilePath),
 				slog.String("key file", sslConfig.KeyFilePath),
 			)
-			err = srv.ListenAndServeTLS(sslConfig.CertFilePath, sslConfig.KeyFilePath)
+			err = srv.ServeTLS(ln, sslConfig.CertFilePath, sslConfig.KeyFilePath)
 		} else {
 			logger.Info("Running the server", slog.String("addr", srv.Addr))
-			err = srv.ListenAndServe()
+			err = srv.Serve(ln)
 		}
 		if err == http.ErrServerClosed {
 			err = nil

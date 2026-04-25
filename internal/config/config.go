@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os/user"
 	"runtime"
+	"strings"
 	"unicode"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -196,6 +197,19 @@ func isValidProjectName(s string) error {
 	}
 
 	return nil
+}
+
+// ParseAddr splits an addr string into network and address.
+// Addresses prefixed with "unix://" or "unix:" are treated as Unix socket paths;
+// everything else is treated as a TCP address.
+func ParseAddr(addr string) (network, address string) {
+	if path, found := strings.CutPrefix(addr, "unix://"); found {
+		return "unix", path
+	}
+	if path, found := strings.CutPrefix(addr, "unix:"); found {
+		return "unix", path
+	}
+	return "tcp", addr
 }
 
 const maskValue = "********"

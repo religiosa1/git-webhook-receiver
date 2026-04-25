@@ -534,6 +534,31 @@ func TestGracefulShutdownPropagationToActions(t *testing.T) {
 	})
 }
 
+func TestParseAddr(t *testing.T) {
+	tests := []struct {
+		input       string
+		wantNetwork string
+		wantAddress string
+	}{
+		{"localhost:9090", "tcp", "localhost:9090"},
+		{"0.0.0.0:8080", "tcp", "0.0.0.0:8080"},
+		{"unix:/tmp/webhook.sock", "unix", "/tmp/webhook.sock"},
+		{"unix:///tmp/webhook.sock", "unix", "/tmp/webhook.sock"},
+		{"unix://relative.sock", "unix", "relative.sock"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			gotNetwork, gotAddress := config.ParseAddr(tt.input)
+			if gotNetwork != tt.wantNetwork {
+				t.Errorf("network: want %q, got %q", tt.wantNetwork, gotNetwork)
+			}
+			if gotAddress != tt.wantAddress {
+				t.Errorf("address: want %q, got %q", tt.wantAddress, gotAddress)
+			}
+		})
+	}
+}
+
 func TestSensitiveDataMasking(t *testing.T) {
 	makeTestCfg := func() config.Config {
 		cfg := config.Config{

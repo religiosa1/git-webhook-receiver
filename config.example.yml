@@ -1,5 +1,7 @@
 # All fields are optional, unless stated otherwise
-addr: 0.0.0.0:9090 # address to listen on, TCP addr with port
+# address to listen on, TCP addr with port, or a unix socket
+# For unix socket, prefix it with 'unix://' or "unix:", e.g. "unix:///var/run/git-webhook-receiver.sock"
+addr: 0.0.0.0:9090
 # Public URL to use in the post output for pipeline url generation
 # If not specified public url will be a combination of protocol + host + port
 public_url: https://example.com:9090/ # default is empty, here only for example
