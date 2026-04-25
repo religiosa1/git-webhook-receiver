@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -26,15 +27,16 @@ type PipeLineRecord struct {
 }
 
 type ActionDB struct {
-	db         *sqlx.DB
-	maxActions int
+	db             *sqlx.DB
+	maxActions     int
+	maxOutputBytes int
 }
 
-func New(dbFileName string, maxActions int) (*ActionDB, error) {
+func New(dbFileName string, maxActions int, maxOutputBytes int) (*ActionDB, error) {
 	if dbFileName == "" {
 		return nil, nil
 	}
-	db := ActionDB{maxActions: maxActions}
+	db := ActionDB{maxActions: maxActions, maxOutputBytes: maxOutputBytes}
 	pragmas := "?_journal_mode=WAL&_foreign_keys=1&_busy_timeout=5000&_cache_size=2000&_synchronous=NORMAL"
 	d, err := sqlx.Open("sqlite3", dbFileName+pragmas)
 	if err != nil {
@@ -99,7 +101,7 @@ DELETE FROM pipeline WHERE pipe_id IN (
 	return err
 }
 
-func (d ActionDB) CloseRecord(pipeID string, actionErr error, output string) error {
+func (d ActionDB) CloseRecord(pipeID string, actionErr error, output io.Reader) error {
 	var actionErrValue sql.NullString
 
 	if actionErr == nil {
@@ -109,8 +111,13 @@ func (d ActionDB) CloseRecord(pipeID string, actionErr error, output string) err
 		actionErrValue.String = actionErr.Error()
 	}
 
+	outputStr, err := readOutput(output, d.maxOutputBytes)
+	if err != nil {
+		return fmt.Errorf("error reading action output: %w", err)
+	}
+
 	query := `UPDATE pipeline SET error = ?, output = ?, ended_at = ? WHERE pipe_id = ? AND ended_at IS NULL;`
-	result, err := d.db.Exec(query, actionErrValue, output, time.Now().UTC().Unix(), pipeID)
+	result, err := d.db.Exec(query, actionErrValue, outputStr, time.Now().UTC().Unix(), pipeID)
 	if err != nil {
 		return fmt.Errorf("error while updating pipeline record: %w", err)
 	}
@@ -244,4 +251,19 @@ func createListPipelineWhereQuery(search ListPipelineRecordsQuery) filterJoiner 
 	}
 
 	return fj
+}
+
+func readOutput(r io.Reader, maxBytes int) (string, error) {
+	if maxBytes <= 0 {
+		buf, err := io.ReadAll(r)
+		return string(buf), err
+	}
+	buf, err := io.ReadAll(io.LimitReader(r, int64(maxBytes)+1))
+	if err != nil {
+		return "", err
+	}
+	if len(buf) > maxBytes {
+		return string(buf[:maxBytes]) + fmt.Sprintf("\n[output truncated at %d bytes]", maxBytes), nil
+	}
+	return string(buf), nil
 }

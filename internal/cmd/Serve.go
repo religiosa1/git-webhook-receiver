@@ -29,7 +29,7 @@ func Serve(cfg config.Config) {
 	//==========================================================================
 	// Logger and Action DBs
 
-	dbActions, err := actiondb.New(cfg.ActionsDBFile, cfg.MaxActionsStored)
+	dbActions, err := actiondb.New(cfg.ActionsDBFile, cfg.MaxActionsStored, cfg.MaxOutputBytes)
 	if err != nil {
 		log.Printf("Error opening actions db: %s", err)
 		os.Exit(ExitCodeActionsDB)

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/oklog/ulid/v2"
@@ -31,13 +32,13 @@ var action = config.Action{
 
 func TestActionDb(t *testing.T) {
 	t.Run("successfully creates a db", func(t *testing.T) {
-		_, err := actiondb.New(":memory:", defaultMaxActionsStored)
+		_, err := actiondb.New(":memory:", defaultMaxActionsStored, 0)
 		if err != nil {
 			t.Error((err))
 		}
 	})
 	t.Run("creates a record", func(t *testing.T) {
-		db, err := actiondb.New(":memory:", defaultMaxActionsStored)
+		db, err := actiondb.New(":memory:", defaultMaxActionsStored, 0)
 		if err != nil {
 			t.Errorf("Unable to create a db: %s", err)
 		}
@@ -64,7 +65,7 @@ func TestActionDb(t *testing.T) {
 
 	t.Run("Close successful action", func(t *testing.T) {
 		actionOutput := "test output"
-		db, err := actiondb.New(":memory:", defaultMaxActionsStored)
+		db, err := actiondb.New(":memory:", defaultMaxActionsStored, 0)
 		if err != nil {
 			t.Errorf("Unable to create a db: %s", err)
 		}
@@ -74,7 +75,7 @@ func TestActionDb(t *testing.T) {
 			t.Errorf("Unable to create a pipeline record: %s", err)
 		}
 
-		err = db.CloseRecord(pipeID, nil, actionOutput)
+		err = db.CloseRecord(pipeID, nil, strings.NewReader(actionOutput))
 		if err != nil {
 			t.Errorf("Unable to close a pipeline record: %s", err)
 		}
@@ -99,7 +100,7 @@ func TestActionDb(t *testing.T) {
 	t.Run("Close errored action", func(t *testing.T) {
 		actionErr := errors.New("some error blah blah")
 		actionOutput := "test output"
-		db, err := actiondb.New(":memory:", defaultMaxActionsStored)
+		db, err := actiondb.New(":memory:", defaultMaxActionsStored, 0)
 		if err != nil {
 			t.Errorf("Unable to create a db: %s", err)
 		}
@@ -109,7 +110,7 @@ func TestActionDb(t *testing.T) {
 			t.Errorf("Unable to create a pipeline record: %s", err)
 		}
 
-		err = db.CloseRecord(pipeID, actionErr, actionOutput)
+		err = db.CloseRecord(pipeID, actionErr, strings.NewReader(actionOutput))
 		if err != nil {
 			t.Errorf("Unable to close a pipeline record: %s", err)
 		}
@@ -132,7 +133,7 @@ func TestActionDb(t *testing.T) {
 	})
 
 	t.Run("An action can only be closed once", func(t *testing.T) {
-		db, err := actiondb.New(":memory:", defaultMaxActionsStored)
+		db, err := actiondb.New(":memory:", defaultMaxActionsStored, 0)
 		if err != nil {
 			t.Errorf("Unable to create a db: %s", err)
 		}
@@ -142,12 +143,12 @@ func TestActionDb(t *testing.T) {
 			t.Errorf("Unable to create a pipeline record: %s", err)
 		}
 
-		err = db.CloseRecord(pipeID, nil, "")
+		err = db.CloseRecord(pipeID, nil, strings.NewReader(""))
 		if err != nil {
 			t.Errorf("Unable to close a pipeline record: %s", err)
 		}
 
-		err = db.CloseRecord(pipeID, nil, "")
+		err = db.CloseRecord(pipeID, nil, strings.NewReader(""))
 		if err == nil {
 			t.Errorf("Repeated closing of an action was supposed to end with an error, but it didn't!")
 		}
@@ -162,7 +163,7 @@ func TestActionDb(t *testing.T) {
 		defer func() {
 			_ = tmpfile.Close()
 		}()
-		db, err := actiondb.New(tmpfile.Name(), defaultMaxActionsStored)
+		db, err := actiondb.New(tmpfile.Name(), defaultMaxActionsStored, 0)
 		if err != nil {
 			t.Errorf("Unable to create a db: %s", err)
 		}
@@ -177,7 +178,7 @@ func TestActionDb(t *testing.T) {
 			t.Errorf("Unable to close the db: %s", err)
 		}
 
-		db2, err := actiondb.New(tmpfile.Name(), defaultMaxActionsStored)
+		db2, err := actiondb.New(tmpfile.Name(), defaultMaxActionsStored, 0)
 		if err != nil {
 			t.Errorf("Unable to open the db for the second time: %s", err)
 		}
@@ -207,7 +208,7 @@ func TestAutoRemoval(t *testing.T) {
 			t.Errorf("Unable to create a pipeline record: %s", err)
 		}
 
-		err = db.CloseRecord(pipeID, nil, "test")
+		err = db.CloseRecord(pipeID, nil, strings.NewReader("test"))
 		if err != nil {
 			t.Errorf("Unable to close a pipeline record: %s", err)
 		}
@@ -224,7 +225,7 @@ func TestAutoRemoval(t *testing.T) {
 
 	t.Run("removes old record", func(t *testing.T) {
 		const maxRecords = 3
-		db, err := actiondb.New(":memory:", maxRecords)
+		db, err := actiondb.New(":memory:", maxRecords, 0)
 		if err != nil {
 			t.Errorf("Unable to create a db: %s", err)
 		}
@@ -261,7 +262,7 @@ func TestAutoRemoval(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// hitting over the default limit
 			const nRecords = config.DefaultMaxActionsStored + 5
-			db, err := actiondb.New(":memory:", tt.amount)
+			db, err := actiondb.New(":memory:", tt.amount, 0)
 			if err != nil {
 				t.Errorf("Unable to create a db: %s", err)
 			}
@@ -270,6 +271,68 @@ func TestAutoRemoval(t *testing.T) {
 			}
 			if got := countRecords(t, db); got != nRecords {
 				t.Errorf("Unexpected amount of records; want %d, got %d", nRecords, got)
+			}
+		})
+	}
+}
+
+func TestOutputTruncation(t *testing.T) {
+	cases := []struct {
+		name           string
+		maxOutputBytes int
+		input          string
+		wantOutput     string
+	}{
+		{
+			name:           "output under limit is stored as-is",
+			maxOutputBytes: 20,
+			input:          "hello",
+			wantOutput:     "hello",
+		},
+		{
+			name:           "output at exact limit is stored as-is",
+			maxOutputBytes: 5,
+			input:          "hello",
+			wantOutput:     "hello",
+		},
+		{
+			name:           "output over limit is truncated with suffix",
+			maxOutputBytes: 5,
+			input:          "hello world",
+			wantOutput:     "hello\n[output truncated at 5 bytes]",
+		},
+		{
+			name:           "negative limit means no truncation",
+			maxOutputBytes: -1,
+			input:          "hello world",
+			wantOutput:     "hello world",
+		},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			db, err := actiondb.New(":memory:", defaultMaxActionsStored, tt.maxOutputBytes)
+			if err != nil {
+				t.Fatalf("Unable to create a db: %s", err)
+			}
+
+			err = db.CreateRecord(pipeID, projectName, deliveryID, action)
+			if err != nil {
+				t.Fatalf("Unable to create a pipeline record: %s", err)
+			}
+
+			err = db.CloseRecord(pipeID, nil, strings.NewReader(tt.input))
+			if err != nil {
+				t.Fatalf("Unable to close a pipeline record: %s", err)
+			}
+
+			record, err := db.GetPipelineRecord(pipeID)
+			if err != nil {
+				t.Fatalf("Unable to retrieve the created record: %s", err)
+			}
+
+			if got := record.Output.String; got != tt.wantOutput {
+				t.Errorf("unexpected output: want %q, got %q", tt.wantOutput, got)
 			}
 		})
 	}

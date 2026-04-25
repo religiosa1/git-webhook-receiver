@@ -2,10 +2,10 @@ package ActionRunner
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -34,6 +34,10 @@ func (runner ActionRunner) executeAction(
 		err := output.Close()
 		if err != nil {
 			pipeLogger.Error("Error closing action output", slog.Any("error", err))
+		}
+		err = os.Remove(output.Name())
+		if err != nil {
+			pipeLogger.Error("Error removing action output tmp file", slog.Any("error", err))
 		}
 	}()
 
@@ -65,25 +69,18 @@ func (runner ActionRunner) executeAction(
 		logger.Info("Action successfully finished")
 	}
 
-	content, err := readOutputFile(output)
-	if err != nil {
-		logger.Error("Error while reading output file's content", slog.Any("error", err))
-	}
-
 	if runner.actionsDB != nil {
-		err := runner.actionsDB.CloseRecord(actionDescriptor.PipeID, actionErr, content)
+		var outputForDb io.Reader
+		if _, err := output.Seek(0, io.SeekStart); err != nil {
+			logger.Error("Error seeking output file", slog.Any("error", err))
+			outputForDb = strings.NewReader("CORRUPTED")
+		} else {
+			outputForDb = output
+		}
+		err := runner.actionsDB.CloseRecord(actionDescriptor.PipeID, actionErr, outputForDb)
 		if err != nil {
 			pipeLogger.Error("Error closing action's db record", slog.Any("error", err))
 			return
 		}
 	}
-}
-
-func readOutputFile(output *os.File) (string, error) {
-	_, err := output.Seek(0, io.SeekStart)
-	if err != nil {
-		return "", fmt.Errorf("seeking error: %w", err)
-	}
-	content, err := io.ReadAll(output)
-	return string(content), err
 }

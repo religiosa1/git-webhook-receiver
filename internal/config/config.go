@@ -11,6 +11,7 @@ import (
 
 const (
 	DefaultMaxActionsStored   = 1_000
+	DefaultMaxOutputBytes     = 1_048_576 // 1 MiB
 	DefaultTimeoutSeconds     = 600
 	DefaultGracefulShutdownMS = 15_000
 )
@@ -25,6 +26,7 @@ type Config struct {
 	LogsDBFile         string             `yaml:"logs_db_file" env:"LOGS_DB_FILE"`
 	ActionsDBFile      string             `yaml:"actions_db_file" env:"ACTIONS_DB_FILE" env-default:"actions.sqlite3"`
 	MaxActionsStored   int                `yaml:"max_actions_stored" env:"MAX_ACTIONS_STORED" env-default:"1000"` // the same as DefaultMaxActionsStored
+	MaxOutputBytes     int                `yaml:"max_output_bytes" env:"MAX_OUTPUT_BYTES" env-default:"1048576"`  // the same as DefaultMaxOutputBytes
 	TimeoutSeconds     int                `yaml:"timeout_seconds" env:"TIMEOUT_SECONDS" env-default:"600"`
 	GracefulShutdownMS int                `yaml:"graceful_shutdown_ms" env:"GRACEFUL_SHUTDOWN_MS" env-default:"15000"`
 	Ssl                SslConfig          `yaml:"ssl" env-prefix:"SSL__"`

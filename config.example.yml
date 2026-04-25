@@ -53,3 +53,7 @@ timeout_seconds: 600
 # global graceful shutdown duration AFTER the timeout value is reached. We're waiting for this amount of
 # ms after timeout for the process to clean up and exit, otherwise we're hard killing it
 graceful_shutdown_ms: 15000
+# maximum size of the action output stored in the DB
+# anything above that is truncated and a text suffix denoting that truncation happened is appended
+# 0 means use the default value, negative values disable output restriction
+max_output_bytes: 1048576
