@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/logsDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/models"
 )
 
 type PrettyLogEntry struct {
@@ -48,4 +49,11 @@ func LogEntries(les []logsDb.LogEntry) []PrettyLogEntry {
 		entries[i] = LogEntry(e)
 	}
 	return entries
+}
+
+func LogEntriesPage(page models.PagedDB[logsDb.LogEntry]) models.Paged[PrettyLogEntry] {
+	var result models.Paged[PrettyLogEntry]
+	result.Items = LogEntries(page.Items)
+	result.TotalCount = page.TotalCount
+	return result
 }

@@ -35,9 +35,7 @@ func Logs(cfg config.Config, args LogsArgs) {
 	}
 
 	query := logsDb.GetEntryFilteredQuery{
-		GetEntryQuery: logsDb.GetEntryQuery{
-			PageSize: args.Limit,
-		},
+		PageSize:   args.Limit,
 		Project:    args.Project,
 		DeliveryID: args.DeliveryID,
 		PipeID:     args.PipeID,
@@ -71,7 +69,7 @@ func Logs(cfg config.Config, args LogsArgs) {
 		fmt.Fprintf(os.Stderr, "Error retrieving the logs records: %s", err)
 		os.Exit(ExitCodeLoggerDB)
 	}
-	err = outputFormatter(records)
+	err = outputFormatter(records.Items)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error formatting records: %s\n", err)
 		os.Exit(ExitCodeOutput)

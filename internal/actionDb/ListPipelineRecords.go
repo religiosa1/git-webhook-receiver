@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/models"
+	sqlfilterbuilder "github.com/religiosa1/git-webhook-receiver/internal/sqlFilterBuilder"
 )
 
 type ListPipelineRecordsQuery struct {
@@ -28,13 +29,9 @@ func (d ActionDB) ListPipelineRecords(search ListPipelineRecordsQuery) (models.P
 		return result, ErrCursorAndOffset
 	}
 
-	var cursor *paginationCursor
-	if search.Cursor != "" {
-		c, err := decodeCursor(search.Cursor)
-		if err != nil {
-			return result, err
-		}
-		cursor = &c
+	cursor, err := newCursorFromStr(search.Cursor)
+	if err != nil {
+		return result, err
 	}
 
 	var qb strings.Builder
@@ -50,13 +47,10 @@ FROM
 
 	fj := createListPipelineWhereQuery(search)
 	if cursor != nil {
-		fj.AddParamFilter(
-			"(created_at < ? OR (created_at = ? AND id < ?))\n",
-			cursor.CreatedAt, cursor.CreatedAt, cursor.ID,
-		)
+		fj.AddParamFilter("(created_at, id) < (?, ?)\n", cursor.CreatedAt, cursor.ID)
 	}
 
-	if fj.HasFilters {
+	if fj.HasFilters() {
 		qb.WriteString("WHERE\n")
 		qb.WriteString(fj.String())
 		args = append(args, fj.Args()...)
@@ -72,7 +66,7 @@ FROM
 	}
 
 	var rows []PipeLineRecord
-	err := d.db.Select(&rows, qb.String(), args...)
+	err = d.db.Select(&rows, qb.String(), args...)
 	if err != nil {
 		return result, err
 	}
@@ -84,10 +78,10 @@ FROM
 
 	if len(rows) > search.Limit {
 		lastReturnedRow := rows[search.Limit-1]
-		c := encodeCursor(paginationCursor{
+		c := paginationCursor{
 			CreatedAt: lastReturnedRow.CreatedAt,
 			ID:        lastReturnedRow.ID,
-		})
+		}.String()
 		result.Cursor = &c
 	}
 	return result, nil
@@ -99,11 +93,11 @@ func (d ActionDB) CountPipelineRecords(search ListPipelineRecordsQuery) (int, er
 	args := make([]any, 0)
 	var qb strings.Builder
 	qb.WriteString(`SELECT count(*) FROM pipeline`)
-	fj := createListPipelineWhereQuery(search)
-	if fj.HasFilters {
+	fb := createListPipelineWhereQuery(search)
+	if fb.HasFilters() {
 		qb.WriteString("\nWHERE\n")
-		qb.WriteString(fj.String())
-		args = append(args, fj.Args()...)
+		qb.WriteString(fb.String())
+		args = append(args, fb.Args()...)
 	}
 	row := d.db.QueryRow(qb.String(), args...)
 	var count int
@@ -114,21 +108,21 @@ func (d ActionDB) CountPipelineRecords(search ListPipelineRecordsQuery) (int, er
 	return count, nil
 }
 
-func createListPipelineWhereQuery(search ListPipelineRecordsQuery) filterJoiner {
-	fj := filterJoiner{}
+func createListPipelineWhereQuery(search ListPipelineRecordsQuery) *sqlfilterbuilder.Builder {
+	fb := sqlfilterbuilder.New()
 
 	// TODO: do we really need LIKE filter here instead of just '='?
-	fj.AddLikeFilter(search.DeliveryID, "delivery_id")
-	fj.AddLikeFilter(search.Project, "project")
+	fb.AddLikeFilter("delivery_id", search.DeliveryID)
+	fb.AddLikeFilter("project", search.Project)
 
 	switch search.Status {
 	case PipeStatusOk:
-		fj.AddFilter("(ended_at IS NOT NULL AND (error IS NULL OR error = ''))\n")
+		fb.AddFilter("(ended_at IS NOT NULL AND (error IS NULL OR error = ''))\n")
 	case PipeStatusError:
-		fj.AddFilter("(ended_at IS NOT NULL AND (error IS NOT NULL AND error <> ''))\n")
+		fb.AddFilter("(ended_at IS NOT NULL AND (error IS NOT NULL AND error <> ''))\n")
 	case PipeStatusPending:
-		fj.AddFilter("ended_at IS NULL\n")
+		fb.AddFilter("ended_at IS NULL\n")
 	}
 
-	return fj
+	return fb
 }

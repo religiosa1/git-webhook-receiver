@@ -19,6 +19,9 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/http/middleware"
 )
 
+// TODO: a lot of stuff here is testing repo-layer functionality. We need to move
+// all of pagination and overlap tests to the ActionDb_test.go
+
 var testAction = config.Action{
 	On:     "push",
 	Branch: "main",
@@ -377,11 +380,9 @@ func TestListPipelinesPagination(t *testing.T) {
 		}
 	})
 
-	t.Run("nextPage URL uses request host when no publicURL", func(t *testing.T) {
-		const host = "myserver.local:9000"
+	t.Run("nextPage URL is relative when no publicURL", func(t *testing.T) {
 		h := admin.ListPipelines(db, newTestLogger(), "")
 		req := httptest.NewRequest(http.MethodGet, "/pipelines?limit=10", nil)
-		req.Host = host
 		rec := httptest.NewRecorder()
 		h(rec, req)
 		resp := decodeListResponse(t, rec.Body)
@@ -392,8 +393,8 @@ func TestListPipelinesPagination(t *testing.T) {
 		if resp.NextPage == nil {
 			t.Fatal("expected nextPage")
 		}
-		if !strings.Contains(*resp.NextPage, host) {
-			t.Errorf("nextPage %q should contain request host %q", *resp.NextPage, host)
+		if strings.HasPrefix(*resp.NextPage, "http") {
+			t.Errorf("nextPage %q should be a relative URL when no publicURL is set", *resp.NextPage)
 		}
 	})
 

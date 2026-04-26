@@ -3,12 +3,15 @@ package logsDb
 import (
 	"database/sql"
 	_ "embed"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/religiosa1/git-webhook-receiver/internal/models"
+	sqlfilterbuilder "github.com/religiosa1/git-webhook-receiver/internal/sqlFilterBuilder"
 )
 
 type LogsDB struct {
@@ -72,7 +75,15 @@ type LogEntry struct {
 
 func (d LogsDB) CreateEntry(entry LogEntry) error {
 	query := "INSERT INTO logs (level, project, delivery_id, pipe_id, message, data) VALUES (?, ?, ?, ?, ?, ?)"
-	_, err := d.db.Exec(query, entry.Level, entry.Project, entry.DeliveryID, entry.PipeID, entry.Message, entry.Data)
+	_, err := d.db.Exec(
+		query,
+		entry.Level,
+		entry.Project,
+		entry.DeliveryID,
+		entry.PipeID,
+		entry.Message,
+		entry.Data,
+	)
 	return err
 }
 
@@ -81,99 +92,120 @@ const (
 	defaultPageSize int = 20
 )
 
-type GetEntryQuery struct {
-	CursorID int64 `json:"cursorId"`
-	CursorTS int64 `json:"cursorTs"`
-	PageSize int   `json:"pageSize"`
-}
-
-func (d LogsDB) GetEntry(search GetEntryQuery) ([]LogEntry, error) {
-	if search.PageSize <= 0 || search.PageSize > maxPageSize {
-		search.PageSize = defaultPageSize
-	}
-
-	rows := []LogEntry{}
-	query := `SELECT * FROM (SELECT * from logs where (ts, id) > (?, ?) ORDER BY ts DESC, id LIMIT ?) ORDER BY ts ASC, id;`
-	err := d.db.Select(&rows, query, search.CursorTS, search.CursorID, search.PageSize)
-	return rows, err
-}
+var (
+	ErrBadCursor       = errors.New("bad cursor")
+	ErrCursorAndOffset = errors.New("cursor and offset cannot be supplied simultaneously")
+)
 
 type GetEntryFilteredQuery struct {
-	GetEntryQuery
 	Levels     []int  `json:"levels"`
 	Project    string `json:"project"`
 	DeliveryID string `json:"deliveryId"`
 	PipeID     string `json:"pipeId"`
 	Message    string `json:"message"`
-	Offset     int
+	Offset     int    `json:"offset"`
+	PageSize   int    `json:"pageSize"`
+	Cursor     string `json:"cursor"`
 }
 
-// TODO: total count and cursor similar to actions DB, rmeove weird order reversal
-func (d LogsDB) GetEntryFiltered(search GetEntryFilteredQuery) ([]LogEntry, error) {
+func (d LogsDB) GetEntryFiltered(search GetEntryFilteredQuery) (models.PagedDB[LogEntry], error) {
 	if search.PageSize <= 0 || search.PageSize > maxPageSize {
 		search.PageSize = defaultPageSize
 	}
-	if len(search.Levels) == 0 {
-		search.Levels = make([]int, 4)
-		search.Levels[0] = int(slog.LevelDebug)
-		search.Levels[1] = int(slog.LevelInfo)
-		search.Levels[2] = int(slog.LevelWarn)
-		search.Levels[3] = int(slog.LevelError)
+	var result models.PagedDB[LogEntry]
+
+	if search.Offset != 0 && search.Cursor != "" {
+		return result, ErrCursorAndOffset
 	}
-	rows := []LogEntry{}
+
+	if len(search.Levels) == 0 {
+		search.Levels = []int{
+			int(slog.LevelDebug),
+			int(slog.LevelInfo),
+			int(slog.LevelWarn),
+			int(slog.LevelError),
+		}
+	}
 
 	var qb strings.Builder
-	qb.WriteString("SELECT * FROM (")
-	qb.WriteString("SELECT * from logs where (ts, id) > (?, ?)\n")
+	qb.WriteString("SELECT * from logs\n")
+	args := []any{}
 
-	args := make([]any, 2)
-	args[0] = search.CursorTS
-	args[1] = search.CursorID
+	fb := buildWhereClauses(search)
 
-	if len(search.Levels) > 0 {
-		query, listArgs, err := sqlx.In("AND level IN (?)\n", search.Levels)
-		if err != nil {
-			return rows, err
-		}
-		query = d.db.Rebind(query)
-		qb.WriteString(query)
-		args = append(args, listArgs...)
+	cursor, err := newCursorFromStr(search.Cursor)
+	if err != nil {
+		return result, err
+	}
+	if cursor != nil {
+		fb.AddParamFilter("(ts, id) < (?, ?)", cursor.TS, cursor.ID)
+	}
+	if fb.HasFilters() {
+		qb.WriteString("WHERE\n")
+		qb.WriteString(fb.String())
+		args = fb.Args()
 	}
 
-	if search.Project != "" {
-		qb.WriteString("AND project LIKE ?\n")
-		args = append(args, "%"+search.Project+"%")
-	}
-
-	if search.DeliveryID != "" {
-		qb.WriteString("AND delivery_id LIKE ?\n")
-		args = append(args, "%"+search.DeliveryID+"%")
-	}
-
-	if search.PipeID != "" {
-		qb.WriteString("AND pipe_id LIKE ?\n")
-		args = append(args, "%"+search.PipeID+"%")
-	}
-
-	if search.Message != "" {
-		qb.WriteString("AND message LIKE ?\n")
-		args = append(args, "%"+search.Message+"%")
-	}
-
-	qb.WriteString("ORDER BY ts DESC, id\n")
-
+	qb.WriteString("ORDER BY ts DESC, id DESC\n")
 	qb.WriteString("LIMIT ?\n")
-	args = append(args, search.PageSize)
+	args = append(args, search.PageSize+1)
 
 	if search.Offset != 0 {
 		qb.WriteString("OFFSET ?\n")
 		args = append(args, search.Offset)
 	}
 
-	qb.WriteString(") ORDER BY ts ASC, id;")
+	err = d.db.Select(&result.Items, qb.String(), args...)
+	if err != nil {
+		return result, err
+	}
+	result.TotalCount, err = d.CountEntries(search)
+	if err != nil {
+		return result, err
+	}
+	if len(result.Items) > search.PageSize {
+		lastRow := result.Items[search.PageSize-1]
+		cursorStr := paginationCursor{TS: lastRow.TS, ID: lastRow.ID}.String()
+		result.Cursor = &cursorStr
+		result.Items = result.Items[0:search.PageSize]
+	}
+	return result, err
+}
 
-	err := d.db.Select(&rows, qb.String(), args...)
-	return rows, err
+func buildWhereClauses(search GetEntryFilteredQuery) *sqlfilterbuilder.Builder {
+	fb := sqlfilterbuilder.New()
+	// TODO: do we really need like columns here as well?
+	fb.AddLikeFilter("project", search.Project)
+	fb.AddLikeFilter("delivery_id", search.DeliveryID)
+	fb.AddLikeFilter("pipe_id", search.PipeID)
+
+	// that's probably the only place where we really need LIKE
+	fb.AddLikeFilter("message", search.Message)
+
+	fb.AddInFilter("level", search.Levels)
+
+	return fb
+}
+
+func (d LogsDB) CountEntries(search GetEntryFilteredQuery) (int, error) {
+	var qb strings.Builder
+	qb.WriteString("SELECT count(*) from logs\n")
+	args := []any{}
+
+	fb := buildWhereClauses(search)
+
+	if fb.HasFilters() {
+		qb.WriteString("WHERE\n")
+		qb.WriteString(fb.String())
+		args = append(args, fb.Args()...)
+	}
+	row := d.db.QueryRow(qb.String(), args...)
+	var count int
+	err := row.Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 func ParseLogLevel(level string) (int, error) {

@@ -1,4 +1,4 @@
-package actiondb
+package logsDb
 
 import (
 	"fmt"
@@ -6,14 +6,13 @@ import (
 	"strings"
 )
 
-// paginationCursor is a db cursor used in list pipeline records
 type paginationCursor struct {
-	CreatedAt int64
-	ID        int64
+	TS int64
+	ID int64
 }
 
 func (c paginationCursor) String() string {
-	return fmt.Sprintf("%d_%d", c.CreatedAt, c.ID)
+	return fmt.Sprintf("%d_%d", c.TS, c.ID)
 }
 
 func newCursorFromStr(s string) (*paginationCursor, error) {
@@ -24,7 +23,7 @@ func newCursorFromStr(s string) (*paginationCursor, error) {
 	if i < 0 || i == 0 || i == len(s)-1 {
 		return nil, ErrBadCursor
 	}
-	createdAt, err := strconv.ParseInt(s[:i], 10, 64)
+	ts, err := strconv.ParseInt(s[:i], 10, 64)
 	if err != nil {
 		return nil, ErrBadCursor
 	}
@@ -32,5 +31,5 @@ func newCursorFromStr(s string) (*paginationCursor, error) {
 	if err != nil {
 		return nil, ErrBadCursor
 	}
-	return &paginationCursor{CreatedAt: createdAt, ID: id}, nil
+	return &paginationCursor{TS: ts, ID: id}, nil
 }

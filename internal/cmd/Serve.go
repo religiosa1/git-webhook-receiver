@@ -64,6 +64,9 @@ func Serve(cfg config.Config) {
 		os.Exit(ExitCodeLoggerDB)
 	}
 	logger.Debug("configuration loaded", slog.Any("config", cfg.MaskSensitiveData()))
+	if cfg.PublicURL == "" {
+		logger.Warn("PublicURL is not set in the config, URL generation in responses will be falling back to relative paths")
+	}
 
 	actionRunner := ActionRunner.New(
 		context.Background(),
@@ -89,7 +92,7 @@ func Serve(cfg config.Config) {
 		}
 		if dbLogs != nil {
 			logger.Debug("Web admin enabled for logs")
-			mux.HandleFunc("GET /logs", basicAuth(admin.GetLogs(dbLogs, logger)))
+			mux.HandleFunc("GET /logs", basicAuth(admin.GetLogs(dbLogs, logger, cfg.PublicURL)))
 		} else {
 			logger.Warn("logs_db_file config value is an empty string. Logs inspection won't be available")
 		}

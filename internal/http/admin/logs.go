@@ -2,15 +2,17 @@ package admin
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
 
+	"github.com/religiosa1/git-webhook-receiver/internal/http/utils"
 	"github.com/religiosa1/git-webhook-receiver/internal/logsDb"
 	"github.com/religiosa1/git-webhook-receiver/internal/serialization"
 )
 
-func GetLogs(db *logsDb.LogsDB, logger *slog.Logger) http.HandlerFunc {
+func GetLogs(db *logsDb.LogsDB, logger *slog.Logger, publicURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		queryParams := req.URL.Query()
@@ -18,15 +20,9 @@ func GetLogs(db *logsDb.LogsDB, logger *slog.Logger) http.HandlerFunc {
 		offset, _ := strconv.Atoi(queryParams.Get("offset"))
 		limit, _ := strconv.Atoi(queryParams.Get("limit"))
 
-		cursorID, _ := strconv.ParseInt(queryParams.Get("cursorId"), 10, 64)
-		cursorTS, _ := strconv.ParseInt(queryParams.Get("cursorTs"), 10, 64)
-
 		query := logsDb.GetEntryFilteredQuery{
-			GetEntryQuery: logsDb.GetEntryQuery{
-				CursorID: cursorID,
-				CursorTS: cursorTS,
-				PageSize: limit,
-			},
+			PageSize:   limit,
+			Cursor:     queryParams.Get("cursor"),
 			Levels:     parseLevels(queryParams["level"]),
 			Project:    queryParams.Get("project"),
 			DeliveryID: queryParams.Get("deliveryId"),
@@ -35,15 +31,25 @@ func GetLogs(db *logsDb.LogsDB, logger *slog.Logger) http.HandlerFunc {
 			Offset:     offset,
 		}
 
-		logs, err := db.GetEntryFiltered(query)
+		page, err := db.GetEntryFiltered(query)
 		if err != nil {
+			statusCode := 500
+			if errors.Is(err, logsDb.ErrBadCursor) || errors.Is(err, logsDb.ErrCursorAndOffset) {
+				statusCode = 400
+			}
 			logger.Error("Error processing GetLogs request", slog.Any("error", err))
-			w.WriteHeader(500)
-			_, _ = w.Write([]byte(err.Error()))
+			if writeErr := utils.WriteErrorResponse(w, statusCode, err.Error()); writeErr != nil {
+				logger.Error("error while writing error message", slog.Any("error", writeErr))
+			}
 			return
 		}
 
-		_ = json.NewEncoder(w).Encode(serialization.LogEntries(logs))
+		output := serialization.LogEntriesPage(page)
+		output.NextPage = utils.BuildNextPageURL(req, publicURL, page.Cursor)
+		err = json.NewEncoder(w).Encode(output)
+		if err != nil {
+			logger.Error("Error writing output", slog.Any("error", err))
+		}
 	}
 }
 
