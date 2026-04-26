@@ -3,7 +3,6 @@ package webhookhandlers_test
 import (
 	"encoding/json"
 	"io"
-	"log/slog"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -72,8 +71,6 @@ func TestProjectMatching(t *testing.T) {
 	ch := makeChannelDrainer()
 	requestDump := loadMockRequest(t)
 
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-
 	cfg := config.Config{}
 	prj := config.Project{
 		GitProvider: "gitea",
@@ -85,7 +82,7 @@ func TestProjectMatching(t *testing.T) {
 	t.Run("returns 201 if some of the actions matches", func(t *testing.T) {
 		request := requestDump.ToHttpRequest(projectEndPoint)
 		response := httptest.NewRecorder()
-		handlers.HandleWebhookPost(ch, logger, cfg, projectName, prj, rcvr)(response, request)
+		handlers.Webhook{ActionsCh: ch, Config: cfg, ProjectName: projectName, Project: prj, Receiver: rcvr}.ServeHTTP(response, request)
 
 		got := response.Result().StatusCode
 		want := 201
@@ -102,7 +99,7 @@ func TestProjectMatching(t *testing.T) {
 		request := requestDump.ToHttpRequest(projectEndPoint)
 		response := httptest.NewRecorder()
 
-		handlers.HandleWebhookPost(ch, logger, cfg, projectName, prj2, rcvr)(response, request)
+		handlers.Webhook{ActionsCh: ch, Config: cfg, ProjectName: projectName, Project: prj2, Receiver: rcvr}.ServeHTTP(response, request)
 
 		got := response.Result().StatusCode
 		want := 204
@@ -142,7 +139,7 @@ func TestProjectMatching(t *testing.T) {
 			request := requestDump.ToHttpRequest(projectEndPoint)
 			response := httptest.NewRecorder()
 
-			handlers.HandleWebhookPost(ch, logger, cfg, projectName, prj2, rcvr)(response, request)
+			handlers.Webhook{ActionsCh: ch, Config: cfg, ProjectName: projectName, Project: prj2, Receiver: rcvr}.ServeHTTP(response, request)
 
 			gotStatus := response.Result().StatusCode
 
@@ -157,7 +154,6 @@ func TestActionMatching(t *testing.T) {
 	ch := makeChannelDrainer()
 	requestDump := loadMockRequest(t) // branch: "master", event: "push"
 
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	cfg := config.Config{}
 	baseProject := config.Project{
 		GitProvider: "gitea",
@@ -171,7 +167,7 @@ func TestActionMatching(t *testing.T) {
 		rcvr := whreceiver.New(prj)
 		request := requestDump.ToHttpRequest(projectEndPoint)
 		response := httptest.NewRecorder()
-		handlers.HandleWebhookPost(ch, logger, cfg, projectName, prj, rcvr)(response, request)
+		handlers.Webhook{ActionsCh: ch, Config: cfg, ProjectName: projectName, Project: prj, Receiver: rcvr}.ServeHTTP(response, request)
 		return response.Result().StatusCode
 	}
 
@@ -232,8 +228,6 @@ func TestResponseBody(t *testing.T) {
 	ch := makeChannelDrainer()
 	requestDump := loadMockRequest(t)
 
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-
 	cfg := config.Config{}
 	prj := config.Project{
 		GitProvider: "gitea",
@@ -254,7 +248,7 @@ func TestResponseBody(t *testing.T) {
 		rcvr := whreceiver.New(prj)
 		request := requestDump.ToHttpRequest(projectEndPoint)
 		response := httptest.NewRecorder()
-		handlers.HandleWebhookPost(ch, logger, cfg, projectName, prj, rcvr)(response, request)
+		handlers.Webhook{ActionsCh: ch, Config: cfg, ProjectName: projectName, Project: prj, Receiver: rcvr}.ServeHTTP(response, request)
 
 		result := response.Result()
 

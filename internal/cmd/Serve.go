@@ -81,18 +81,21 @@ func Serve(cfg config.Config) {
 		os.Exit(ExitReadConfig)
 	}
 	if !cfg.DisableAPI {
-		basicAuth := middleware.NewBasicAuth(cfg.APIUser, cfg.APIPassword, logger)
+		middlewares := middleware.Chain(
+			middleware.WithLogger(logger),
+			middleware.WithBasicAuth(cfg.APIUser, cfg.APIPassword),
+		)
 		if dbActions != nil {
 			logger.Debug("Web admin enabled for pipelines")
-			mux.HandleFunc("GET /pipelines", basicAuth(admin.ListPipelines(dbActions, logger, cfg.PublicURL)))
-			mux.HandleFunc("GET /pipelines/{pipeId}", basicAuth(admin.GetPipeline(dbActions, logger)))
-			mux.HandleFunc("GET /pipelines/{pipeId}/output", basicAuth(admin.GetPipelineOutput(dbActions, logger)))
+			mux.Handle("GET /pipelines", middlewares(admin.ListPipelines{DB: dbActions, PublicURL: cfg.PublicURL}))
+			mux.Handle("GET /pipelines/{pipeId}", middlewares(admin.GetPipeline{DB: dbActions}))
+			mux.Handle("GET /pipelines/{pipeId}/output", middlewares(admin.GetPipelineOutput{DB: dbActions}))
 		} else {
 			logger.Warn("actions_db_file config value is an empty string. All of /pipeline API endpoints won't be available")
 		}
 		if dbLogs != nil {
 			logger.Debug("Web admin enabled for logs")
-			mux.HandleFunc("GET /logs", basicAuth(admin.GetLogs(dbLogs, logger, cfg.PublicURL)))
+			mux.Handle("GET /logs", middlewares(admin.GetLogs{DB: dbLogs, PublicURL: cfg.PublicURL}))
 		} else {
 			logger.Warn("logs_db_file config value is an empty string. Logs inspection won't be available")
 		}
@@ -216,9 +219,17 @@ func createProjectsMux(actionsCh chan ActionRunner.ActionArgs, cfg config.Config
 		}
 
 		projectLogger := logger.With(slog.String("project", projectName))
-		mux.HandleFunc(
-			fmt.Sprintf("POST /projects/%s", projectName),
-			handlers.HandleWebhookPost(actionsCh, projectLogger, cfg, projectName, project, receiver),
+		path := fmt.Sprintf("POST /projects/%s", projectName)
+		handler := handlers.Webhook{
+			ActionsCh:   actionsCh,
+			Config:      cfg,
+			ProjectName: projectName,
+			Project:     project,
+			Receiver:    receiver,
+		}
+		mux.Handle(
+			path,
+			middleware.WithLogger(projectLogger)(handler),
 		)
 		logger.Debug("Registered project",
 			slog.String("projectName", projectName),

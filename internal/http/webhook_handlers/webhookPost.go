@@ -12,6 +12,7 @@ import (
 	"github.com/oklog/ulid/v2"
 	"github.com/religiosa1/git-webhook-receiver/internal/ActionRunner"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
+	"github.com/religiosa1/git-webhook-receiver/internal/http/middleware"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/utils"
 	"github.com/religiosa1/git-webhook-receiver/internal/whreceiver"
 )
@@ -19,85 +20,85 @@ import (
 // 300 KiB max body size
 const maxBodySize int64 = 1024 * 300
 
-func HandleWebhookPost(
-	actionsCh chan ActionRunner.ActionArgs,
-	logger *slog.Logger,
-	cfg config.Config,
-	projectName string,
-	project config.Project,
-	receiver whreceiver.Receiver,
-) http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		req.Body = http.MaxBytesReader(w, req.Body, maxBodySize)
-		// setting noop-closer body, so we can read it multiple times
-		payload, err := io.ReadAll(req.Body)
-		var maxBytesErr *http.MaxBytesError
-		if errors.As(err, &maxBytesErr) {
-			w.WriteHeader(http.StatusRequestEntityTooLarge)
+type Webhook struct {
+	ActionsCh   chan ActionRunner.ActionArgs
+	Config      config.Config
+	ProjectName string
+	Project     config.Project
+	Receiver    whreceiver.Receiver
+}
+
+func (h Webhook) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	logger := middleware.GetLogger(req.Context())
+	req.Body = http.MaxBytesReader(w, req.Body, maxBodySize)
+	// setting noop-closer body, so we can read it multiple times
+	payload, err := io.ReadAll(req.Body)
+	var maxBytesErr *http.MaxBytesError
+	if errors.As(err, &maxBytesErr) {
+		w.WriteHeader(http.StatusRequestEntityTooLarge)
+		return
+	}
+	if err != nil {
+		logger.Error("Error while reading the POST request body", slog.Any("error", err))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	whReq := whreceiver.WebhookPostRequest{Payload: payload, Headers: req.Header}
+
+	webhookInfo, err := h.Receiver.GetWebhookInfo(whReq)
+	if err != nil {
+		errInfo := getWebhookErrorCode(err)
+		logger.Error("Error while parsing the webhook request", slog.String("error", errInfo.Message))
+		if writeErr := utils.WriteErrorResponse(w, errInfo.StatusCode, errInfo.Message); writeErr != nil {
+			logger.Error("error while writing error message", slog.Any("error", writeErr))
+		}
+		return
+	}
+	deliveryLogger := logger.With(slog.String("deliveryId", webhookInfo.DeliveryID))
+	deliveryLogger.Info("Received a webhook post", slog.Any("webhookInfo", webhookInfo))
+	if webhookInfo.Branch == "" {
+		deliveryLogger.Info("no branch name captured out of the payload ref")
+	}
+
+	if h.Project.Authorization != "" {
+		if authed, err := h.Receiver.Authorize(whReq, h.Project.Authorization); err != nil || !authed {
+			deliveryLogger.Warn("Request authentications failed", slog.Any("error", err))
+			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		if err != nil {
-			logger.Error("Error while reading the POST request body", slog.Any("error", err))
-			w.WriteHeader(http.StatusBadRequest)
+	}
+
+	if h.Project.Secret != "" {
+		if verified, err := h.Receiver.VerifySignature(whReq, h.Project.Secret); err != nil || !verified {
+			deliveryLogger.Warn("Request signature is not valid", slog.Any("error", err))
+			w.WriteHeader(http.StatusForbidden)
 			return
 		}
-		whReq := whreceiver.WebhookPostRequest{Payload: payload, Headers: req.Header}
+	}
 
-		webhookInfo, err := receiver.GetWebhookInfo(whReq)
-		if err != nil {
-			errInfo := getWebhookErrorCode(err)
-			logger.Error("Error while parsing the webhook request", slog.String("error", errInfo.Message))
-			if writeErr := utils.WriteErrorResponse(w, errInfo.StatusCode, errInfo.Message); writeErr != nil {
-				logger.Error("error while writing error message", slog.Any("error", writeErr))
-			}
-			return
-		}
-		deliveryLogger := logger.With(slog.String("deliveryId", webhookInfo.DeliveryID))
-		deliveryLogger.Info("Received a webhook post", slog.Any("webhookInfo", webhookInfo))
-		if webhookInfo.Branch == "" {
-			deliveryLogger.Info("no branch name captured out of the payload ref")
-		}
+	if h.Receiver.IsPingRequest(whReq) {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 
-		if project.Authorization != "" {
-			if authed, err := receiver.Authorize(whReq, project.Authorization); err != nil || !authed {
-				deliveryLogger.Warn("Request authentications failed", slog.Any("error", err))
-				w.WriteHeader(http.StatusUnauthorized)
-				return
-			}
-		}
+	actions := getProjectsActionsForWebhookPost(h.ProjectName, h.Project, webhookInfo)
+	if len(actions) == 0 {
+		deliveryLogger.Info("No applicable actions found in webhook post")
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 
-		if project.Secret != "" {
-			if verified, err := receiver.VerifySignature(whReq, project.Secret); err != nil || !verified {
-				deliveryLogger.Warn("Request signature is not valid", slog.Any("error", err))
-				w.WriteHeader(http.StatusForbidden)
-				return
-			}
-		}
+	for _, actionDescriptor := range actions {
+		h.ActionsCh <- ActionRunner.ActionArgs{Logger: deliveryLogger, Action: actionDescriptor}
+	}
 
-		if receiver.IsPingRequest(whReq) {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
+	deliveryLogger.Info("Launched actions", slog.Any("actions", actions))
 
-		actions := getProjectsActionsForWebhookPost(projectName, project, webhookInfo)
-		if len(actions) == 0 {
-			deliveryLogger.Info("No applicable actions found in webhook post")
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-
-		for _, actionDescriptor := range actions {
-			actionsCh <- ActionRunner.ActionArgs{Logger: deliveryLogger, Action: actionDescriptor}
-		}
-
-		deliveryLogger.Info("Launched actions", slog.Any("actions", actions))
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		err = json.NewEncoder(w).Encode(actionsToOutput(cfg, actions))
-		if err != nil {
-			deliveryLogger.Error("Error while encoding action's output", slog.Any("error", err))
-		}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	err = json.NewEncoder(w).Encode(actionsToOutput(h.Config, actions))
+	if err != nil {
+		deliveryLogger.Error("Error while encoding action's output", slog.Any("error", err))
 	}
 }
 

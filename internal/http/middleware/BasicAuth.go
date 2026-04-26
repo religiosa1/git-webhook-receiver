@@ -7,7 +7,7 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/cryptoutils"
 )
 
-func NewBasicAuth(expectedUsername string, expectedPassword string, logger *slog.Logger) func(next http.HandlerFunc) http.HandlerFunc {
+func WithBasicAuth(expectedUsername string, expectedPassword string) Middleware {
 	if expectedUsername == "" || expectedPassword == "" {
 		return noopHandler
 	}
@@ -15,8 +15,9 @@ func NewBasicAuth(expectedUsername string, expectedPassword string, logger *slog
 	userNameComparer := cryptoutils.NewConstantTimeComparer(expectedUsername)
 	passwordComparer := cryptoutils.NewConstantTimeComparer(expectedPassword)
 
-	return func(next http.HandlerFunc) http.HandlerFunc {
+	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			logger := GetLogger(r.Context())
 			username, password, ok := r.BasicAuth()
 			if !ok {
 				if logger != nil {
@@ -35,9 +36,8 @@ func NewBasicAuth(expectedUsername string, expectedPassword string, logger *slog
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		})
 	}
-
 }
 
-func noopHandler(next http.HandlerFunc) http.HandlerFunc {
+func noopHandler(next http.Handler) http.Handler {
 	return next
 }
