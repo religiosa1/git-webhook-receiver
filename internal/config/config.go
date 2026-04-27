@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os/user"
 	"runtime"
 	"strings"
@@ -75,7 +76,13 @@ func Load(configPath string) (Config, error) {
 	case "info", "debug", "warn", "error":
 		// everything is ok, no action needed
 	default:
-		return cfg, fmt.Errorf("incorrect LogLevel value '%s'. Possible values are 'debug', 'info', 'warn', and 'error", cfg.LogLevel)
+		return cfg, fmt.Errorf("incorrect LogLevel value %q. Possible values are 'debug', 'info', 'warn', and 'error", cfg.LogLevel)
+	}
+
+	if cfg.PublicURL != "" {
+		if u, err := url.Parse(cfg.PublicURL); err != nil || u.Scheme == "" || u.Host == "" {
+			return cfg, fmt.Errorf("public_url must be a valid absolute URL (got %q)", cfg.PublicURL)
+		}
 	}
 
 	// zeros are overwritten here by clean-env `env-default` so we don't particularly care about them

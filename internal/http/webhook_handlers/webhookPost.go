@@ -3,11 +3,10 @@ package webhookhandlers
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
-	"strings"
+	"net/url"
 
 	"github.com/oklog/ulid/v2"
 	"github.com/religiosa1/git-webhook-receiver/internal/ActionRunner"
@@ -144,37 +143,40 @@ func getProjectsActionsForWebhookPost(projectName string, project config.Project
 
 type ActionOutput struct {
 	ActionRunner.ActionIdentifier
-	URL string `json:"url,omitempty"`
+	Links *ActionLinks `json:"links,omitempty"`
 }
 
 func actionsToOutput(cfg config.Config, actions []ActionRunner.ActionDescriptor) []ActionOutput {
 	output := make([]ActionOutput, len(actions))
-	baseURL := generatePublicBaseURL(cfg)
 	for idx, action := range actions {
-		var url string
-		if baseURL != "" {
-			url = baseURL + action.PipeID
-		}
 		output[idx] = ActionOutput{
 			ActionIdentifier: action.ActionIdentifier,
-			URL:              url,
+			Links:            generateLinks(cfg.DisableAPI, cfg.PublicURL, action.PipeID),
 		}
 	}
 	return output
 }
 
-func generatePublicBaseURL(cfg config.Config) string {
-	if cfg.DisableAPI {
-		return ""
-	}
-	if cfg.PublicURL != "" {
-		return strings.TrimSuffix(cfg.PublicURL, "/") + "/pipelines/"
-	}
+type ActionLinks struct {
+	Details string `json:"details"`
+	Output  string `json:"output"`
+}
 
-	protocol := "http"
-	if cfg.Ssl.CertFilePath != "" && cfg.Ssl.KeyFilePath != "" {
-		protocol = "https"
+func generateLinks(disableApi bool, publicURL string, pipeID string) *ActionLinks {
+	if disableApi || publicURL == "" {
+		return nil
 	}
-
-	return fmt.Sprintf("%s://%s/pipelines/", protocol, cfg.Addr)
+	pipeID = url.PathEscape(pipeID)
+	details, err := url.JoinPath(publicURL, "pipelines", pipeID)
+	if err != nil {
+		return nil
+	}
+	output, err := url.JoinPath(publicURL, "pipelines", pipeID, "output")
+	if err != nil {
+		return nil
+	}
+	return &ActionLinks{
+		Details: details,
+		Output:  output,
+	}
 }

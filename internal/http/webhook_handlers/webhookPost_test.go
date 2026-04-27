@@ -2,9 +2,11 @@ package webhookhandlers_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"net/http"
 	"net/http/httptest"
-	"strings"
+	"net/url"
 	"testing"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/ActionRunner"
@@ -48,27 +50,52 @@ var (
 	authToken       = "JgHhtuPOISmw3WDCRtz4H6IrT8zWwNkS"
 	secret          = "cc7ec03e-2e09-4bb9-b2fc-388b865200d0"
 	projectName     = "testProj"
-	projectEndPoint = "/" + projectName
+	projectEndPoint = fmt.Sprintf("/project/%s", url.PathEscape(projectName))
 )
 
 func loadMockRequest(t *testing.T) requestmock.RequestMock {
 	return requestmock.LoadRequestMock(t, "../../requestmock/captured-requests/gitea.json")
 }
 
-func makeChannelDrainer() chan ActionRunner.ActionArgs {
-	ch := make(chan ActionRunner.ActionArgs)
+type testHandler struct {
+	handlers.Webhook
+}
 
-	go func() {
-		for range ch {
-			// Do nothing, just drain the channel
-		}
-	}()
+func newTestHandler(cfg config.Config, prj config.Project) testHandler {
+	rcvr := whreceiver.New(prj)
+	h := handlers.Webhook{
+		ActionsCh:   make(chan ActionRunner.ActionArgs, 10),
+		Config:      cfg,
+		ProjectName: projectName,
+		Project:     prj,
+		Receiver:    rcvr,
+	}
+	return testHandler{h}
+}
 
-	return ch
+func (h testHandler) doRequestAndGetAction(t *testing.T, req *http.Request) handlers.ActionOutput {
+	t.Helper()
+	response := httptest.NewRecorder()
+	h.ServeHTTP(response, req)
+
+	result := response.Result()
+	if result.StatusCode != 201 {
+		body, _ := io.ReadAll(result.Body)
+		t.Fatalf("Expected status 201 OK, got %v, %s", result.StatusCode, string(body))
+	}
+
+	actions := make([]handlers.ActionOutput, 0)
+	if err := json.NewDecoder(result.Body).Decode(&actions); err != nil {
+		t.Fatal(err)
+	}
+
+	if l := len(actions); l != 1 {
+		t.Fatalf("unexpected length of actions in the response, want 1, got %d", l)
+	}
+	return actions[0]
 }
 
 func TestProjectMatching(t *testing.T) {
-	ch := makeChannelDrainer()
 	requestDump := loadMockRequest(t)
 
 	cfg := config.Config{}
@@ -77,13 +104,11 @@ func TestProjectMatching(t *testing.T) {
 		Repo:        "religiosa/staticus",
 		Actions:     makeActionsList(config.Action{}),
 	}
-	rcvr := whreceiver.New(prj)
 
 	t.Run("returns 201 if some of the actions matches", func(t *testing.T) {
 		request := requestDump.ToHttpRequest(projectEndPoint)
 		response := httptest.NewRecorder()
-		handlers.Webhook{ActionsCh: ch, Config: cfg, ProjectName: projectName, Project: prj, Receiver: rcvr}.ServeHTTP(response, request)
-
+		newTestHandler(cfg, prj).ServeHTTP(response, request)
 		got := response.Result().StatusCode
 		want := 201
 
@@ -98,8 +123,7 @@ func TestProjectMatching(t *testing.T) {
 
 		request := requestDump.ToHttpRequest(projectEndPoint)
 		response := httptest.NewRecorder()
-
-		handlers.Webhook{ActionsCh: ch, Config: cfg, ProjectName: projectName, Project: prj2, Receiver: rcvr}.ServeHTTP(response, request)
+		newTestHandler(cfg, prj2).ServeHTTP(response, request)
 
 		got := response.Result().StatusCode
 		want := 204
@@ -139,7 +163,7 @@ func TestProjectMatching(t *testing.T) {
 			request := requestDump.ToHttpRequest(projectEndPoint)
 			response := httptest.NewRecorder()
 
-			handlers.Webhook{ActionsCh: ch, Config: cfg, ProjectName: projectName, Project: prj2, Receiver: rcvr}.ServeHTTP(response, request)
+			newTestHandler(cfg, prj2).ServeHTTP(response, request)
 
 			gotStatus := response.Result().StatusCode
 
@@ -151,8 +175,7 @@ func TestProjectMatching(t *testing.T) {
 }
 
 func TestActionMatching(t *testing.T) {
-	ch := makeChannelDrainer()
-	requestDump := loadMockRequest(t) // branch: "master", event: "push"
+	requestDump := loadMockRequest(t)
 
 	cfg := config.Config{}
 	baseProject := config.Project{
@@ -162,12 +185,11 @@ func TestActionMatching(t *testing.T) {
 
 	runHandler := func(t *testing.T, actions []config.Action) int {
 		t.Helper()
+		request := requestDump.ToHttpRequest(projectEndPoint) // branch: "master", event: "push"
 		prj := baseProject
 		prj.Actions = actions
-		rcvr := whreceiver.New(prj)
-		request := requestDump.ToHttpRequest(projectEndPoint)
 		response := httptest.NewRecorder()
-		handlers.Webhook{ActionsCh: ch, Config: cfg, ProjectName: projectName, Project: prj, Receiver: rcvr}.ServeHTTP(response, request)
+		newTestHandler(cfg, prj).ServeHTTP(response, request)
 		return response.Result().StatusCode
 	}
 
@@ -225,145 +247,100 @@ func TestActionMatching(t *testing.T) {
 }
 
 func TestResponseBody(t *testing.T) {
-	ch := makeChannelDrainer()
-	requestDump := loadMockRequest(t)
-
-	cfg := config.Config{}
 	prj := config.Project{
 		GitProvider: "gitea",
 		Repo:        "religiosa/staticus",
-		Actions:     makeActionsList(config.Action{}),
-	}
-
-	prj.Actions = append([]config.Action{
-		{
-			On:     "push",
-			Branch: "non-existing",
-			Run:    []string{"go", "version"},
+		Actions: []config.Action{
+			{
+				On:     "push",
+				Branch: "non-existing",
+				Run:    []string{"go", "version"},
+			},
+			{
+				On:     "push",
+				Branch: "master",
+				Run:    []string{"go", "version"},
+			},
 		},
-	}, prj.Actions...)
-
-	getActionResponse := func(t *testing.T, cfg config.Config) map[string]interface{} {
-		t.Helper()
-		rcvr := whreceiver.New(prj)
-		request := requestDump.ToHttpRequest(projectEndPoint)
-		response := httptest.NewRecorder()
-		handlers.Webhook{ActionsCh: ch, Config: cfg, ProjectName: projectName, Project: prj, Receiver: rcvr}.ServeHTTP(response, request)
-
-		result := response.Result()
-
-		if result.StatusCode != 201 {
-			t.Errorf("Expected status 201 OK, got %v", result.StatusCode)
-		}
-
-		body, err := io.ReadAll(result.Body)
-		if err != nil {
-			t.Fatalf("Failed to read response body: %v", err)
-		}
-
-		var responseBody []map[string]interface{}
-		if err := json.Unmarshal(body, &responseBody); err != nil {
-			t.Fatalf("Failed to unmarshal response body: %v", err)
-		}
-
-		if len(responseBody) != 1 {
-			t.Errorf("Exepecting one action to match")
-		}
-		actionResponse := responseBody[0]
-
-		return actionResponse
 	}
+	request := loadMockRequest(t).ToHttpRequest(projectEndPoint)
+	handler := newTestHandler(config.Config{}, prj)
 
-	t.Run("contains action index and the project name of matched action", func(t *testing.T) {
-		actionResponse := getActionResponse(t, cfg)
+	t.Run("contains action identifier of matched action", func(t *testing.T) {
+		action := handler.doRequestAndGetAction(t, request)
 
-		var wantIndex float64 = 1
-		if actionIndex, ok := actionResponse["actionIdx"].(float64); !ok || actionIndex != wantIndex {
-			t.Errorf("Unexpected action index value, got %v, want %v", actionResponse["actionIdx"], wantIndex)
+		if want, got := 1, action.Index; want != got {
+			t.Errorf("Unexpected action index value, want %d, got %d", want, got)
 		}
 
-		if prjName, ok := actionResponse["project"].(string); !ok || prjName != projectName {
-			t.Errorf("Unexpected project name value, got %v, want %s", actionResponse["project"], projectName)
+		if want, got := projectName, action.Project; want != got {
+			t.Errorf("Unexpected project name value, got %s, want %s", want, got)
+		}
+
+		if action.PipeID == "" {
+			t.Errorf("Unexpected empty PipeID: %v", action)
 		}
 	})
+}
 
-	t.Run("contains pipeId of run action", func(t *testing.T) {
-		actionResponse := getActionResponse(t, cfg)
-
-		if pipeID, ok := actionResponse["pipeId"].(string); !ok || pipeID == "" {
-			t.Errorf("No pipeId is present in the response: %v", actionResponse)
-		}
-	})
-
-	noPublicURLTests := []struct {
-		name   string
-		url    string
-		config config.Config
-	}{
-		{"default generation value", "http://localhost:9090/", config.Config{Addr: "localhost:9090"}},
-		{"host value", "http://example.com:9090/", config.Config{Addr: "example.com:9090"}},
-		{"port value", "http://localhost:32167/", config.Config{Addr: "localhost:32167"}},
-		{"partial ssl no cert", "http://localhost:9090/", config.Config{Addr: "localhost:9090", Ssl: config.SslConfig{KeyFilePath: "foo"}}},
-		{"partial ssl no key", "http://localhost:9090/", config.Config{Addr: "localhost:9090", Ssl: config.SslConfig{CertFilePath: "bar"}}},
-		{"full ssl", "https://localhost:9090/", config.Config{Addr: "localhost:9090", Ssl: config.SslConfig{KeyFilePath: "foo", CertFilePath: "bar"}}},
-	}
-	for _, tt := range noPublicURLTests {
-		t.Run("contains url field, filled with data from the config protocol, host, and port: "+tt.name, func(t *testing.T) {
-			actionResponse := getActionResponse(t, tt.config)
-			url, ok := actionResponse["url"].(string)
-
-			if !ok || url == "" {
-				t.Errorf("No url field is present in the response: %v", actionResponse)
-			}
-
-			want := tt.url + "pipelines/"
-
-			if !strings.HasPrefix(url, want) {
-				t.Errorf("Unexpected url value, want prefix: '%s', got '%s'", want, url)
-			}
-		})
+func TestPublicUrl(t *testing.T) {
+	requestDump := loadMockRequest(t)
+	prj := config.Project{
+		GitProvider: "gitea",
+		Repo:        "religiosa/staticus",
+		Actions: []config.Action{
+			{
+				On:     "push",
+				Branch: "master",
+				Run:    []string{"go", "version"},
+			},
+		},
 	}
 
-	t.Run("if public url is present, then it overrides values in the url field", func(t *testing.T) {
+	t.Run("returns a list of links, if publicURL is present in config", func(t *testing.T) {
 		publicURL := "ftp://example.com/"
-		actionResponse := getActionResponse(t, config.Config{Addr: "localhost:9090", PublicURL: publicURL})
-		url, ok := actionResponse["url"].(string)
-
-		if !ok || url == "" {
-			t.Errorf("No url field is present in the response: %v", actionResponse)
+		cfg := config.Config{PublicURL: publicURL}
+		action := newTestHandler(cfg, prj).doRequestAndGetAction(t, requestDump.ToHttpRequest(projectEndPoint))
+		want := publicURL + "pipelines/" + url.PathEscape(action.PipeID)
+		if action.Links == nil {
+			t.Fatal("unexpected empty links object")
 		}
-
-		want := publicURL + "pipelines/"
-
-		if !strings.HasPrefix(url, want) {
-			t.Errorf("Unexpected url value, want prefix: '%s', got '%s'", want, url)
+		if got := action.Links.Details; want != got {
+			t.Errorf("details link is wrong, want '%s'. got '%s'", want, got)
+		}
+		want = want + "/output"
+		if got := action.Links.Output; want != got {
+			t.Errorf("output link is wrong, want '%s'. got '%s'", want, got)
 		}
 	})
 
 	t.Run("trailing slash is optional for the public url", func(t *testing.T) {
 		publicURL := "ftp://example.com"
-		actionResponse := getActionResponse(t, config.Config{Addr: "localhost:9090", PublicURL: publicURL})
-		url, ok := actionResponse["url"].(string)
-
-		if !ok || url == "" {
-			t.Errorf("No url field is present in the response: %v", actionResponse)
+		cfg := config.Config{PublicURL: publicURL}
+		action := newTestHandler(cfg, prj).doRequestAndGetAction(t, requestDump.ToHttpRequest(projectEndPoint))
+		want := publicURL + "/pipelines/" + url.PathEscape(action.PipeID)
+		if action.Links == nil {
+			t.Fatal("unexpected empty links object")
 		}
-
-		want := publicURL + "/" + "pipelines/"
-
-		if !strings.HasPrefix(url, want) {
-			t.Errorf("Unexpected url value, want prefix: '%s', got '%s'", want, url)
+		if got := action.Links.Details; want != got {
+			t.Errorf("details link is wrong, want '%s'. got '%s'", want, got)
 		}
 	})
 
-	t.Run("no url is present if inspection API is disabled", func(t *testing.T) {
-		actionResponse := getActionResponse(t, config.Config{
-			Addr:       "example.com:9090",
-			DisableAPI: true,
-		})
+	t.Run("no links field is present if inspection API is disabled", func(t *testing.T) {
+		publicURL := "ftp://example.com"
+		cfg := config.Config{PublicURL: publicURL, DisableAPI: true}
+		action := newTestHandler(cfg, prj).doRequestAndGetAction(t, requestDump.ToHttpRequest(projectEndPoint))
+		if action.Links != nil {
+			t.Fatalf("Expected to get empty links, got %v", action.Links)
+		}
+	})
 
-		if url, ok := actionResponse["url"].(string); ok || url != "" {
-			t.Errorf("There should be no url field if web admin is disabled, but got: %s", url)
+	t.Run("no links field is present if publicURL is not configured", func(t *testing.T) {
+		cfg := config.Config{}
+		action := newTestHandler(cfg, prj).doRequestAndGetAction(t, requestDump.ToHttpRequest(projectEndPoint))
+		if action.Links != nil {
+			t.Fatalf("Expected to get empty links, got %v", action.Links)
 		}
 	})
 }

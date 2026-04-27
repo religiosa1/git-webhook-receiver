@@ -21,8 +21,12 @@ type ActionRunner struct {
 	actionsDB *actiondb.ActionDB
 }
 
+// actionChanBufferSize controls how many webhook dispatches can queue before
+// HTTP handlers block waiting for the runner to consume them.
+const actionChanBufferSize = 10
+
 func New(ctx context.Context, actionsDB *actiondb.ActionDB) (runner ActionRunner) {
-	runner.ch = make(chan ActionArgs)
+	runner.ch = make(chan ActionArgs, actionChanBufferSize)
 	runner.ctx, runner.cancel = context.WithCancel(ctx)
 	runner.wg = &sync.WaitGroup{}
 	runner.actionsDB = actionsDB
