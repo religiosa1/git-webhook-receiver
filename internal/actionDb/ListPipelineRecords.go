@@ -37,7 +37,6 @@ func (d ActionDB) ListPipelineRecords(search ListPipelineRecordsQuery) (models.P
 	var qb strings.Builder
 	args := make([]any, 0)
 
-	// TODO: make sense of indexes both in Actions and Logs databases
 	qb.WriteString(`
 SELECT
 	id, pipe_id, project, delivery_id, config, error, created_at, ended_at
@@ -111,9 +110,8 @@ func (d ActionDB) CountPipelineRecords(search ListPipelineRecordsQuery) (int, er
 func createListPipelineWhereQuery(search ListPipelineRecordsQuery) *sqlfilterbuilder.Builder {
 	fb := sqlfilterbuilder.New()
 
-	// TODO: do we really need LIKE filter here instead of just '='?
-	fb.AddLikeFilter("delivery_id", search.DeliveryID)
-	fb.AddLikeFilter("project", search.Project)
+	fb.AddEqFilter("delivery_id", search.DeliveryID)
+	fb.AddEqFilter("project", search.Project)
 
 	switch search.Status {
 	case PipeStatusOk:

@@ -191,13 +191,6 @@ func TestListPipelinesFiltering(t *testing.T) {
 		}
 	})
 
-	t.Run("project partial match", func(t *testing.T) {
-		resp := request(t, "project=project")
-		if resp.TotalCount != total {
-			t.Errorf("totalCount: want %d, got %d", total, resp.TotalCount)
-		}
-	})
-
 	t.Run("deliveryId filter", func(t *testing.T) {
 		resp := request(t, "deliveryId=delivery-a")
 		if resp.TotalCount != nA {

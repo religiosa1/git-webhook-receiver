@@ -174,12 +174,10 @@ func (d LogsDB) GetEntryFiltered(search GetEntryFilteredQuery) (models.PagedDB[L
 
 func buildWhereClauses(search GetEntryFilteredQuery) *sqlfilterbuilder.Builder {
 	fb := sqlfilterbuilder.New()
-	// TODO: do we really need like columns here as well?
-	fb.AddLikeFilter("project", search.Project)
-	fb.AddLikeFilter("delivery_id", search.DeliveryID)
-	fb.AddLikeFilter("pipe_id", search.PipeID)
+	fb.AddEqFilter("project", search.Project)
+	fb.AddEqFilter("delivery_id", search.DeliveryID)
+	fb.AddEqFilter("pipe_id", search.PipeID)
 
-	// that's probably the only place where we really need LIKE
 	fb.AddLikeFilter("message", search.Message)
 
 	fb.AddInFilter("level", search.Levels)

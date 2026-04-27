@@ -14,12 +14,21 @@ func New() *Builder {
 	return &Builder{}
 }
 
+func (fj *Builder) AddEqFilter(columnName string, value string) {
+	if value == "" {
+		return
+	}
+	fj.checkHasFilter()
+	fj.qb.WriteString("`" + columnName + "` = ?\n")
+	fj.args = append(fj.args, value)
+}
+
 func (fj *Builder) AddLikeFilter(columnName string, value string) {
 	if value == "" {
 		return
 	}
 	fj.checkHasFilter()
-	fj.qb.WriteString("`" + columnName + "` LIKE ?\n")
+	fj.qb.WriteString("lower(`" + columnName + "`) LIKE lower(?)\n")
 	fj.args = append(fj.args, "%"+value+"%")
 }
 
