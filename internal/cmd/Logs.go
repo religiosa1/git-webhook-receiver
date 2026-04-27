@@ -85,7 +85,7 @@ func getLogOutputFormatter(format string) func([]logsDb.LogEntry) error {
 	case "json":
 		return formatLogRecordsJSON
 	default:
-		panic(fmt.Errorf("unknown formatter type: '%s'", format))
+		panic(fmt.Errorf("unknown formatter type: %q", format))
 	}
 }
 

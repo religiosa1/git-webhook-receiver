@@ -75,7 +75,7 @@ func getActionRecordOutputFormatter(format string) func([]actiondb.PipeLineRecor
 	case "json":
 		return formatActionRecordsJSON
 	default:
-		panic(fmt.Errorf("unknown formatter type: '%s'", format))
+		panic(fmt.Errorf("unknown formatter type: %q", format))
 	}
 }
 

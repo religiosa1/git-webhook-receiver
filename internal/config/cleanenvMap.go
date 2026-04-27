@@ -86,7 +86,7 @@ func setDefaultAndCheckRequired[T Project | Action](item *T) error {
 			if defaultValue != "" {
 				fieldValue.SetString(defaultValue)
 			} else if isRequired {
-				return fmt.Errorf("required field '%s' is missing", field.Name)
+				return fmt.Errorf("required field %q is missing", field.Name)
 			}
 		}
 	}

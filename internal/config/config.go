@@ -114,16 +114,16 @@ func validateAndSetDefaultsConfigProjects(
 ) (map[string]Project, error) {
 	for projectName, project := range projects {
 		if err := setDefaultAndCheckRequired(&project); err != nil {
-			return nil, fmt.Errorf("project '%s' has issue with its fields: %w", projectName, err)
+			return nil, fmt.Errorf("project %q has issue with its fields: %w", projectName, err)
 		}
 
 		if err := isValidProjectName(projectName); err != nil {
-			return nil, fmt.Errorf("bad project name '%s': %w", projectName, err)
+			return nil, fmt.Errorf("bad project name %q: %w", projectName, err)
 		}
 
 		if len(project.Actions) == 0 {
 			return nil, fmt.Errorf(
-				"project '%s' has no associated actions and can not be executed; "+
+				"project %q has no associated actions and can not be executed; "+
 					"either add 'actions' list to the project or comment the project out",
 				projectName,
 			)
@@ -143,7 +143,7 @@ func validateAndSetDefaultConfigActions(projectName string, actions []Action, gl
 	for i, action := range actions {
 		wrapActionErr := func(err error) error {
 			return fmt.Errorf(
-				"bad action %d (invoked on %s) of project '%s': %w",
+				"bad action %d (invoked on %s) of project %q: %w",
 				i+1,
 				action.On,
 				projectName,
@@ -163,7 +163,7 @@ func validateAndSetDefaultConfigActions(projectName string, actions []Action, gl
 
 		if runtime.GOOS != "windows" && action.User != "" {
 			if _, err := user.Lookup(action.User); err != nil {
-				return nil, wrapActionErr(fmt.Errorf("has a user field = '%s', but this user can't be found: %w", action.User, err))
+				return nil, wrapActionErr(fmt.Errorf("has a user field = %q, but this user can't be found: %w", action.User, err))
 			}
 		}
 

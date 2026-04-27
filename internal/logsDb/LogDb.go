@@ -217,6 +217,6 @@ func ParseLogLevel(level string) (int, error) {
 	case "error":
 		return int(slog.LevelError), nil
 	default:
-		return 0, fmt.Errorf("unknown log level '%s'", level)
+		return 0, fmt.Errorf("unknown log level %q", level)
 	}
 }

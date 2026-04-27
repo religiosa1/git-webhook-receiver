@@ -19,7 +19,7 @@ func getSysProcAttr(username string) (*syscall.SysProcAttr, error) {
 	if username != "" {
 		usr, err := getUnixUserInfo(username)
 		if err != nil {
-			return nil, fmt.Errorf("unable to obtain UID/GID for the specified user '%s', does it exist?: %w", username, err)
+			return nil, fmt.Errorf("unable to obtain UID/GID for the specified user %q, does it exist?: %w", username, err)
 		}
 		sysProcAttr.Credential = &syscall.Credential{Uid: usr.UID, Gid: usr.GID}
 	}

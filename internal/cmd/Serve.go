@@ -207,15 +207,15 @@ func createProjectsMux(actionsCh chan ActionRunner.ActionArgs, cfg config.Config
 	for projectName, project := range cfg.Projects {
 		receiver := whreceiver.New(project)
 		if receiver == nil {
-			return nil, fmt.Errorf("unknown git webhook provider type '%s' in project '%s'", project.GitProvider, projectName)
+			return nil, fmt.Errorf("unknown git webhook provider type %q in project %q", project.GitProvider, projectName)
 		}
 
 		caps := receiver.GetCapabilities()
 		if !caps.CanAuthorize && project.Authorization != "" {
-			return nil, fmt.Errorf("misconfigured project '%s', receiver '%s' does not support authorization, but it was provided", projectName, project.GitProvider)
+			return nil, fmt.Errorf("misconfigured project %q, receiver %q does not support authorization, but it was provided", projectName, project.GitProvider)
 		}
 		if !caps.CanVerifySignature && project.Secret != "" {
-			return nil, fmt.Errorf("misconfigured project '%s', receiver '%s' does not support signature validation, but secret was provided", projectName, project.GitProvider)
+			return nil, fmt.Errorf("misconfigured project %q, receiver %q does not support signature validation, but secret was provided", projectName, project.GitProvider)
 		}
 
 		projectLogger := logger.With(slog.String("project", projectName))

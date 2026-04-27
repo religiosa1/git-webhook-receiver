@@ -18,7 +18,7 @@ func tmpConfigFile(t *testing.T, contents string) string {
 	}
 	err = os.WriteFile(tmpfile.Name(), []byte(contents), 0o775)
 	if err != nil {
-		t.Errorf("Unable to write config file '%s' contents: %s", tmpfile.Name(), err)
+		t.Errorf("Unable to write config file %q contents: %s", tmpfile.Name(), err)
 	}
 	return tmpfile.Name()
 }
@@ -91,11 +91,11 @@ projects:
 		action := project.Actions[0]
 
 		if want, got := "push", action.On; want != got {
-			t.Errorf("Incorrect default on event, want '%s', got '%s'", want, got)
+			t.Errorf("Incorrect default on event, want %q, got %q", want, got)
 		}
 
 		if want, got := "master", action.Branch; want != got {
-			t.Errorf("Incorrect default branch, want '%s', got '%s'", want, got)
+			t.Errorf("Incorrect default branch, want %q, got %q", want, got)
 		}
 	})
 }
@@ -131,15 +131,15 @@ projects:
 		project := cfg.Projects["test-proj"]
 
 		if want, got := dbFile, cfg.ActionsDBFile; want != got {
-			t.Errorf("incorrect action db file read from config, want '%s', got '%s'", want, got)
+			t.Errorf("incorrect action db file read from config, want %q, got %q", want, got)
 		}
 
 		if want, got := secret, project.Secret; want != got {
-			t.Errorf("incorrect secret value read from config, want '%s', got '%s'", want, got)
+			t.Errorf("incorrect secret value read from config, want %q, got %q", want, got)
 		}
 
 		if want, got := auth, project.Authorization; want != got {
-			t.Errorf("incorrect auth value read from config, want '%s', got '%s'", want, got)
+			t.Errorf("incorrect auth value read from config, want %q, got %q", want, got)
 		}
 	})
 
@@ -152,11 +152,11 @@ projects:
 		config := loadMockConfig(t, configContents)
 
 		if want, got := certFilePath, config.Ssl.CertFilePath; want != got {
-			t.Errorf("incorrect Cert file path value read from config, want '%s', got '%s'", want, got)
+			t.Errorf("incorrect Cert file path value read from config, want %q, got %q", want, got)
 		}
 
 		if want, got := keyFilePath, config.Ssl.KeyFilePath; want != got {
-			t.Errorf("incorrect Key file path value read from config, want '%s', got '%s'", want, got)
+			t.Errorf("incorrect Key file path value read from config, want %q, got %q", want, got)
 		}
 	})
 }
@@ -389,7 +389,7 @@ projects:
 		}
 
 		if want, got := "info", config.LogLevel; want != got {
-			t.Errorf("Incorrect default loglevel, want '%s', got '%s'", want, got)
+			t.Errorf("Incorrect default loglevel, want %q, got %q", want, got)
 		}
 	})
 }

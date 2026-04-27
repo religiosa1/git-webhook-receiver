@@ -306,11 +306,11 @@ func TestPublicUrl(t *testing.T) {
 			t.Fatal("unexpected empty links object")
 		}
 		if got := action.Links.Details; want != got {
-			t.Errorf("details link is wrong, want '%s'. got '%s'", want, got)
+			t.Errorf("details link is wrong, want %q. got %q", want, got)
 		}
 		want = want + "/output"
 		if got := action.Links.Output; want != got {
-			t.Errorf("output link is wrong, want '%s'. got '%s'", want, got)
+			t.Errorf("output link is wrong, want %q. got %q", want, got)
 		}
 	})
 
@@ -323,7 +323,7 @@ func TestPublicUrl(t *testing.T) {
 			t.Fatal("unexpected empty links object")
 		}
 		if got := action.Links.Details; want != got {
-			t.Errorf("details link is wrong, want '%s'. got '%s'", want, got)
+			t.Errorf("details link is wrong, want %q. got %q", want, got)
 		}
 	})
 

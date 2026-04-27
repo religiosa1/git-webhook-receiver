@@ -12,7 +12,7 @@ type IncorrectRepoError struct {
 
 func (err IncorrectRepoError) Error() string {
 	return fmt.Sprintf(
-		"Incorrect repo received in the webhook payload, expected '%s' but received '%s'",
+		"Incorrect repo received in the webhook payload, expected %q but received %q",
 		err.Expected,
 		err.Actual,
 	)
@@ -24,7 +24,7 @@ type AuthorizationError struct {
 
 func (err AuthorizationError) Error() string {
 	return fmt.Sprintf(
-		"Incorrect authorization information passed to action: '%s'",
+		"Incorrect authorization information passed to action: %q",
 		err.info,
 	)
 }

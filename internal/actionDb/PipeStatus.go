@@ -22,6 +22,6 @@ func ParsePipelineStatus(status string) (PipeStatus, error) {
 	case "any":
 		return PipeStatusAny, nil
 	default:
-		return PipeStatusAny, fmt.Errorf("unknown pipe status: '%s'", status)
+		return PipeStatusAny, fmt.Errorf("unknown pipe status: %q", status)
 	}
 }
