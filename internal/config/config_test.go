@@ -5,6 +5,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
 )
@@ -24,10 +25,11 @@ func tmpConfigFile(t *testing.T, contents string) string {
 }
 
 func loadMockConfig(t *testing.T, contents string) config.Config {
+	t.Helper()
 	configFileName := tmpConfigFile(t, contents)
 	cfg, err := config.Load(configFileName)
 	if err != nil {
-		t.Errorf("Error loading the config file: %s", err)
+		t.Fatalf("Error loading the config file: %s", err)
 	}
 	return cfg
 }
@@ -273,7 +275,7 @@ projects:
       - run: ["node", "--version"]
 `
 	makeConfig := func(maxActionsStored int) string {
-		return baseCfg + fmt.Sprintf("\nmax_actions_stored: %d", maxActionsStored)
+		return baseCfg + fmt.Sprintf("\n"+"max_actions_stored: %d", maxActionsStored)
 	}
 
 	t.Run("default config value is 1_000", func(t *testing.T) {
@@ -309,34 +311,34 @@ projects:
     actions:
       - run: ["node", "--version"]
 `
-	makeConfig := func(timeoutSeconds int) string {
-		return baseCfg + fmt.Sprintf("\ntimeout_seconds: %d", timeoutSeconds)
+	makeConfig := func(timeout string) string {
+		return baseCfg + fmt.Sprintf("\n"+"actions_timeout: %s", timeout)
 	}
 
 	t.Run("default config value is DefaultTimeoutSeconds", func(t *testing.T) {
 		cfg := loadMockConfig(t, baseCfg)
-		if cfg.TimeoutSeconds != config.DefaultTimeoutSeconds {
-			t.Errorf("want %d, got %d", config.DefaultTimeoutSeconds, cfg.TimeoutSeconds)
+		if cfg.ActionsTimeout != config.DefaultTimeout {
+			t.Errorf("want %s, got %s", config.DefaultTimeout, cfg.ActionsTimeout)
 		}
 	})
 
 	t.Run("explicitly passed positive value is used", func(t *testing.T) {
-		want := 120
-		cfg := loadMockConfig(t, makeConfig(want))
-		if cfg.TimeoutSeconds != want {
-			t.Errorf("want %d, got %d", want, cfg.TimeoutSeconds)
+		want := 120 * time.Second
+		cfg := loadMockConfig(t, makeConfig("120s"))
+		if cfg.ActionsTimeout != want {
+			t.Errorf("want %s, got %s", want, cfg.ActionsTimeout)
 		}
 	})
 
-	t.Run("zero falls back to default (cleanenv treats zero as unset)", func(t *testing.T) {
-		cfg := loadMockConfig(t, makeConfig(0))
-		if cfg.TimeoutSeconds != config.DefaultTimeoutSeconds {
-			t.Errorf("want %d, got %d", config.DefaultTimeoutSeconds, cfg.TimeoutSeconds)
+	t.Run("zero falls back to default", func(t *testing.T) {
+		cfg := loadMockConfig(t, makeConfig("0s"))
+		if cfg.ActionsTimeout != config.DefaultTimeout {
+			t.Errorf("want %s, got %s", config.DefaultTimeout, cfg.ActionsTimeout)
 		}
 	})
 
 	t.Run("negative value is rejected", func(t *testing.T) {
-		configFileName := tmpConfigFile(t, makeConfig(-1))
+		configFileName := tmpConfigFile(t, makeConfig("-1s"))
 		if _, err := config.Load(configFileName); err == nil {
 			t.Errorf("expected error for default_timeout_seconds=-1, got nil")
 		}
@@ -404,34 +406,34 @@ projects:
     actions:
       - run: ["node", "--version"]
 `
-	makeConfig := func(ms int) string {
-		return baseCfg + fmt.Sprintf("\ngraceful_shutdown_ms: %d", ms)
+	makeConfig := func(graceful_shutdown string) string {
+		return baseCfg + fmt.Sprintf("\n"+"actions_graceful_shutdown: %s", graceful_shutdown)
 	}
 
 	t.Run("default config value is DefaultGracefulShutdownMS", func(t *testing.T) {
 		cfg := loadMockConfig(t, baseCfg)
-		if cfg.GracefulShutdownMS != config.DefaultGracefulShutdownMS {
-			t.Errorf("want %d, got %d", config.DefaultGracefulShutdownMS, cfg.GracefulShutdownMS)
+		if cfg.ActionsGracefulShutdown != config.DefaultGracefulShutdown {
+			t.Errorf("want %s, got %s", config.DefaultGracefulShutdown, cfg.ActionsGracefulShutdown)
 		}
 	})
 
 	t.Run("explicitly passed positive value is used", func(t *testing.T) {
-		want := 5000
-		cfg := loadMockConfig(t, makeConfig(want))
-		if cfg.GracefulShutdownMS != want {
-			t.Errorf("want %d, got %d", want, cfg.GracefulShutdownMS)
+		want := 5000 * time.Millisecond
+		cfg := loadMockConfig(t, makeConfig("5000ms"))
+		if cfg.ActionsGracefulShutdown != want {
+			t.Errorf("want %s, got %s", want, cfg.ActionsGracefulShutdown)
 		}
 	})
 
-	t.Run("zero falls back to default (cleanenv treats zero as unset)", func(t *testing.T) {
-		cfg := loadMockConfig(t, makeConfig(0))
-		if cfg.GracefulShutdownMS != config.DefaultGracefulShutdownMS {
-			t.Errorf("want %d, got %d", config.DefaultGracefulShutdownMS, cfg.GracefulShutdownMS)
+	t.Run("zero falls back to default", func(t *testing.T) {
+		cfg := loadMockConfig(t, makeConfig("0ms"))
+		if cfg.ActionsGracefulShutdown != config.DefaultGracefulShutdown {
+			t.Errorf("want %s, got %s", config.DefaultGracefulShutdown, cfg.ActionsGracefulShutdown)
 		}
 	})
 
 	t.Run("negative value is rejected", func(t *testing.T) {
-		configFileName := tmpConfigFile(t, makeConfig(-1))
+		configFileName := tmpConfigFile(t, makeConfig("-1s"))
 		if _, err := config.Load(configFileName); err == nil {
 			t.Errorf("expected error for graceful_shutdown_ms=-1, got nil")
 		}
@@ -439,42 +441,42 @@ projects:
 }
 
 func TestTimeoutPropagationToActions(t *testing.T) {
-	makeConfig := func(globalTimeout, actionTimeout int) string {
+	makeConfig := func(globalTimeout, actionTimeout time.Duration) string {
 		action := "      - run: [\"node\", \"--version\"]"
 		if actionTimeout != 0 {
-			action += fmt.Sprintf("\n        timeout_seconds: %d", actionTimeout)
+			action += fmt.Sprintf("\n        timeout: %s", actionTimeout)
 		}
 		s := "projects:\n  test-proj:\n    repo: \"username/reponame\"\n    actions:\n" + action
 		if globalTimeout != 0 {
-			s = fmt.Sprintf("timeout_seconds: %d\n", globalTimeout) + s
+			s = fmt.Sprintf("actions_timeout: %s\n", globalTimeout) + s
 		}
 		return s
 	}
 
 	t.Run("global timeout propagates to action when action has no timeout", func(t *testing.T) {
-		want := 120
+		want := 120 * time.Second
 		cfg := loadMockConfig(t, makeConfig(want, 0))
 		action := cfg.Projects["test-proj"].Actions[0]
-		if action.TimeoutSeconds != want {
-			t.Errorf("want action timeout %d, got %d", want, action.TimeoutSeconds)
+		if action.Timeout != want {
+			t.Errorf("want action timeout %s, got %s", want, action.Timeout)
 		}
 	})
 
 	t.Run("action-specific timeout overrides global", func(t *testing.T) {
-		globalTimeout := 120
-		actionTimeout := 60
+		globalTimeout := 120 * time.Second
+		actionTimeout := 60 * time.Second
 		cfg := loadMockConfig(t, makeConfig(globalTimeout, actionTimeout))
 		action := cfg.Projects["test-proj"].Actions[0]
-		if action.TimeoutSeconds != actionTimeout {
-			t.Errorf("want action timeout %d, got %d", actionTimeout, action.TimeoutSeconds)
+		if action.Timeout != actionTimeout {
+			t.Errorf("want action timeout %s, got %s", actionTimeout, action.Timeout)
 		}
 	})
 
 	t.Run("action inherits default global timeout when neither is set", func(t *testing.T) {
 		cfg := loadMockConfig(t, makeConfig(0, 0))
 		action := cfg.Projects["test-proj"].Actions[0]
-		if action.TimeoutSeconds != config.DefaultTimeoutSeconds {
-			t.Errorf("want action timeout %d, got %d", config.DefaultTimeoutSeconds, action.TimeoutSeconds)
+		if action.Timeout != config.DefaultTimeout {
+			t.Errorf("want action timeout %s, got %s", config.DefaultTimeout, action.Timeout)
 		}
 	})
 
@@ -487,47 +489,47 @@ func TestTimeoutPropagationToActions(t *testing.T) {
 }
 
 func TestGracefulShutdownPropagationToActions(t *testing.T) {
-	makeConfig := func(globalMS, actionMS int) string {
+	makeConfig := func(global, local time.Duration) string {
 		action := "      - run: [\"node\", \"--version\"]"
-		if actionMS != 0 {
-			action += fmt.Sprintf("\n        graceful_shutdown_ms: %d", actionMS)
+		if local != 0 {
+			action += fmt.Sprintf("\n        graceful_shutdown: %s", local)
 		}
 		s := "projects:\n  test-proj:\n    repo: \"username/reponame\"\n    actions:\n" + action
-		if globalMS != 0 {
-			s = fmt.Sprintf("graceful_shutdown_ms: %d\n", globalMS) + s
+		if global != 0 {
+			s = fmt.Sprintf("actions_graceful_shutdown: %s\n", global) + s
 		}
 		return s
 	}
 
 	t.Run("global graceful_shutdown_ms propagates to action when action has none", func(t *testing.T) {
-		want := 5000
+		want := 5000 * time.Millisecond
 		cfg := loadMockConfig(t, makeConfig(want, 0))
 		action := cfg.Projects["test-proj"].Actions[0]
-		if action.GracefulShutdownMS != want {
-			t.Errorf("want action graceful_shutdown_ms %d, got %d", want, action.GracefulShutdownMS)
+		if action.GracefulShutdown != want {
+			t.Errorf("want action graceful_shutdown %s, got %s", want, action.GracefulShutdown)
 		}
 	})
 
 	t.Run("action-specific graceful_shutdown_ms overrides global", func(t *testing.T) {
-		globalMS := 5000
-		actionMS := 1000
-		cfg := loadMockConfig(t, makeConfig(globalMS, actionMS))
+		global := 5000 * time.Millisecond
+		local := 1000 * time.Millisecond
+		cfg := loadMockConfig(t, makeConfig(global, local))
 		action := cfg.Projects["test-proj"].Actions[0]
-		if action.GracefulShutdownMS != actionMS {
-			t.Errorf("want action graceful_shutdown_ms %d, got %d", actionMS, action.GracefulShutdownMS)
+		if action.GracefulShutdown != local {
+			t.Errorf("want action graceful_shutdown %s, got %s", local, action.GracefulShutdown)
 		}
 	})
 
 	t.Run("action inherits default global graceful_shutdown_ms when neither is set", func(t *testing.T) {
 		cfg := loadMockConfig(t, makeConfig(0, 0))
 		action := cfg.Projects["test-proj"].Actions[0]
-		if action.GracefulShutdownMS != config.DefaultGracefulShutdownMS {
-			t.Errorf("want action graceful_shutdown_ms %d, got %d", config.DefaultGracefulShutdownMS, action.GracefulShutdownMS)
+		if action.GracefulShutdown != config.DefaultGracefulShutdown {
+			t.Errorf("want action graceful_shutdown_ms %s, got %s", config.DefaultGracefulShutdown, action.GracefulShutdown)
 		}
 	})
 
 	t.Run("negative action graceful_shutdown_ms is rejected", func(t *testing.T) {
-		configFileName := tmpConfigFile(t, makeConfig(0, -1))
+		configFileName := tmpConfigFile(t, makeConfig(0, -1*time.Millisecond))
 		if _, err := config.Load(configFileName); err == nil {
 			t.Errorf("expected error for action graceful_shutdown_ms=-1, got nil")
 		}

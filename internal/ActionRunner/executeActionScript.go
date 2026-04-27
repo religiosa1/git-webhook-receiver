@@ -20,9 +20,8 @@ func executeActionScript(ctx context.Context, action config.Action, sysProcAttr 
 		return fmt.Errorf("error parsing actions's script: %w", err)
 	}
 
-	gracefulKillTimeout := time.Duration(action.GracefulShutdownMS) * time.Millisecond
 	runner, err := interp.New(
-		interp.ExecHandlers(execHandler(sysProcAttr, gracefulKillTimeout)),
+		interp.ExecHandlers(execHandler(sysProcAttr, action.GracefulShutdown)),
 		interp.StdIO(nil, output, output),
 		interp.Dir(action.Cwd),
 	)

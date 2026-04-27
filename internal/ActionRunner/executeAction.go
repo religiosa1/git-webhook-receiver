@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"strings"
-	"time"
 )
 
 func (runner ActionRunner) executeAction(
@@ -51,7 +50,7 @@ func (runner ActionRunner) executeAction(
 		logger.Debug("Running from a user", slog.String("user", action.User))
 	}
 
-	actionCtx, cancelAction := context.WithTimeout(runner.ctx, time.Duration(action.TimeoutSeconds)*time.Second)
+	actionCtx, cancelAction := context.WithTimeout(runner.ctx, action.Timeout)
 	defer cancelAction()
 
 	var actionErr error

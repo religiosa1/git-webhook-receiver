@@ -38,9 +38,9 @@ projects:
         # or to execute a script or program:
         # run: ["node", "--version"]
         # per-action timeout, defaults to 0, meaning the global timeout value will be used
-        timeout_seconds: 0
+        timeout: 0s
         # per-action graceful shutdown timeout, defaults to 0, meaning the global value will be used
-        graceful_shutdown_ms: 0
+        graceful_shutdown: 0s
 # pipeline results db filename, defaults to `actions.sqlite3` use empty string or null to disable
 actions_db_file: "actions.sqlite3"
 # application logs db filename, default to `logs.sqlite3`. Use empty string or null to disable
@@ -51,10 +51,10 @@ max_actions_stored: 1000
 # global actions timeout. After this amount of seconds we're sending SIGINT on unix/SIGKILL on windows
 # to the action process;
 # must be a positive int, 0 will result in the default timeout value
-timeout_seconds: 600
+actions_timeout: 10m
 # global graceful shutdown duration AFTER the timeout value is reached. We're waiting for this amount of
 # ms after timeout for the process to clean up and exit, otherwise we're hard killing it
-graceful_shutdown_ms: 15000
+actions_graceful_shutdown: 15s
 # maximum size of the action output stored in the DB
 # anything above that is truncated and a text suffix denoting that truncation happened is appended
 # 0 means use the default value, negative values disable output restriction

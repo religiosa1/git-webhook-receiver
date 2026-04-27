@@ -6,33 +6,37 @@ import (
 	"os/user"
 	"runtime"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
 const (
-	DefaultMaxActionsStored   = 1_000
-	DefaultMaxOutputBytes     = 1_048_576 // 1 MiB
-	DefaultTimeoutSeconds     = 600
-	DefaultGracefulShutdownMS = 15_000
+	DefaultMaxActionsStored = 1_000
+	DefaultMaxOutputBytes   = 1_048_576 // 1 MiB
+)
+
+const (
+	DefaultTimeout          = 10 * time.Minute
+	DefaultGracefulShutdown = 15 * time.Second
 )
 
 type Config struct {
-	Addr               string             `yaml:"addr" env:"ADDR" env-default:"localhost:9090"`
-	PublicURL          string             `yaml:"public_url" env:"PUBLIC_URL"`
-	DisableAPI         bool               `yaml:"disable_api" env:"DISABLE_API"`
-	APIUser            string             `yaml:"api_user" env:"API_USER" env-default:"admin"`
-	APIPassword        string             `yaml:"api_password" env:"API_PASSWORD"`
-	LogLevel           string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
-	LogsDBFile         string             `yaml:"logs_db_file" env:"LOGS_DB_FILE"`
-	ActionsDBFile      string             `yaml:"actions_db_file" env:"ACTIONS_DB_FILE" env-default:"actions.sqlite3"`
-	MaxActionsStored   int                `yaml:"max_actions_stored" env:"MAX_ACTIONS_STORED" env-default:"1000"` // the same as DefaultMaxActionsStored
-	MaxOutputBytes     int                `yaml:"max_output_bytes" env:"MAX_OUTPUT_BYTES" env-default:"1048576"`  // the same as DefaultMaxOutputBytes
-	TimeoutSeconds     int                `yaml:"timeout_seconds" env:"TIMEOUT_SECONDS" env-default:"600"`
-	GracefulShutdownMS int                `yaml:"graceful_shutdown_ms" env:"GRACEFUL_SHUTDOWN_MS" env-default:"15000"`
-	Ssl                SslConfig          `yaml:"ssl" env-prefix:"SSL__"`
-	Projects           map[string]Project `yaml:"projects" env-required:"true"`
+	Addr                    string             `yaml:"addr" env:"ADDR" env-default:"localhost:9090"`
+	PublicURL               string             `yaml:"public_url" env:"PUBLIC_URL"`
+	DisableAPI              bool               `yaml:"disable_api" env:"DISABLE_API"`
+	APIUser                 string             `yaml:"api_user" env:"API_USER" env-default:"admin"`
+	APIPassword             string             `yaml:"api_password" env:"API_PASSWORD"`
+	LogLevel                string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
+	LogsDBFile              string             `yaml:"logs_db_file" env:"LOGS_DB_FILE"`
+	ActionsDBFile           string             `yaml:"actions_db_file" env:"ACTIONS_DB_FILE" env-default:"actions.sqlite3"`
+	MaxActionsStored        int                `yaml:"max_actions_stored" env:"MAX_ACTIONS_STORED" env-default:"1000"` // the same as DefaultMaxActionsStored
+	MaxOutputBytes          int                `yaml:"max_output_bytes" env:"MAX_OUTPUT_BYTES" env-default:"1048576"`  // the same as DefaultMaxOutputBytes
+	ActionsTimeout          time.Duration      `yaml:"actions_timeout" env:"ACTIONS_TIMEOUT" env-default:"10m"`
+	ActionsGracefulShutdown time.Duration      `yaml:"actions_graceful_shutdown" env:"ACTIONS_GRACEFUL_SHUTDOWN" env-default:"15s"`
+	Ssl                     SslConfig          `yaml:"ssl" env-prefix:"SSL__"`
+	Projects                map[string]Project `yaml:"projects" env-required:"true"`
 }
 
 type SslConfig struct {
@@ -52,14 +56,14 @@ type Project struct {
 }
 
 type Action struct {
-	On                 string   `yaml:"on" env-default:"push" json:"on,omitempty"`
-	Branch             string   `yaml:"branch" env-default:"master" json:"branch,omitempty"`
-	Cwd                string   `yaml:"cwd" json:"cwd,omitempty"`
-	User               string   `yaml:"user" json:"user,omitempty"`
-	Script             string   `yaml:"script" json:"script,omitempty"`
-	Run                []string `yaml:"run" json:"run,omitempty"`
-	TimeoutSeconds     int      `yaml:"timeout_seconds"`
-	GracefulShutdownMS int      `yaml:"graceful_shutdown_ms"`
+	On               string        `yaml:"on" env-default:"push" json:"on,omitempty"`
+	Branch           string        `yaml:"branch" env-default:"master" json:"branch,omitempty"`
+	Cwd              string        `yaml:"cwd" json:"cwd,omitempty"`
+	User             string        `yaml:"user" json:"user,omitempty"`
+	Script           string        `yaml:"script" json:"script,omitempty"`
+	Run              []string      `yaml:"run" json:"run,omitempty"`
+	Timeout          time.Duration `yaml:"timeout"`
+	GracefulShutdown time.Duration `yaml:"graceful_shutdown"`
 }
 
 func Load(configPath string) (Config, error) {
@@ -86,18 +90,18 @@ func Load(configPath string) (Config, error) {
 	}
 
 	// zeros are overwritten here by clean-env `env-default` so we don't particularly care about them
-	if cfg.TimeoutSeconds < 0 {
-		return cfg, fmt.Errorf("'timeout_seconds' must be a non-negative integer")
-	} else if cfg.TimeoutSeconds == 0 {
+	if cfg.ActionsTimeout < 0 {
+		return cfg, fmt.Errorf("'actions_timeout' must be a non-negative duration")
+	} else if cfg.ActionsTimeout == 0 {
 		panic("global timeout value should've been set by the env-default in config parsing")
 	}
-	if cfg.GracefulShutdownMS < 0 {
-		return cfg, fmt.Errorf("'graceful_shutdown_ms' must be a non-negative integer")
-	} else if cfg.GracefulShutdownMS == 0 {
-		panic("global gracefulShutdownMs value should've been set by the env-default in config parsing")
+	if cfg.ActionsGracefulShutdown < 0 {
+		return cfg, fmt.Errorf("'actions_graceful_shutdown' must be a non-negative duration")
+	} else if cfg.ActionsGracefulShutdown == 0 {
+		panic("global graceful shutdown value should've been set by the env-default in config parsing")
 	}
 
-	projectsWithDefaults, err := validateAndSetDefaultsConfigProjects(cfg.Projects, cfg.TimeoutSeconds, cfg.GracefulShutdownMS)
+	projectsWithDefaults, err := validateAndSetDefaultsConfigProjects(cfg.Projects, cfg.ActionsTimeout, cfg.ActionsGracefulShutdown)
 	if err != nil {
 		return cfg, fmt.Errorf("configs projects validation failed: %w", err)
 	}
@@ -109,8 +113,8 @@ func Load(configPath string) (Config, error) {
 
 func validateAndSetDefaultsConfigProjects(
 	projects map[string]Project,
-	globalTimeoutSeconds int,
-	globalGracefulShutdownMS int,
+	globalTimeout time.Duration,
+	globalGracefulShutdown time.Duration,
 ) (map[string]Project, error) {
 	for projectName, project := range projects {
 		if err := setDefaultAndCheckRequired(&project); err != nil {
@@ -129,7 +133,7 @@ func validateAndSetDefaultsConfigProjects(
 			)
 		}
 
-		actionsWithDefaults, err := validateAndSetDefaultConfigActions(projectName, project.Actions, globalTimeoutSeconds, globalGracefulShutdownMS)
+		actionsWithDefaults, err := validateAndSetDefaultConfigActions(projectName, project.Actions, globalTimeout, globalGracefulShutdown)
 		if err != nil {
 			return nil, fmt.Errorf("action validation failed: %w", err)
 		}
@@ -139,11 +143,11 @@ func validateAndSetDefaultsConfigProjects(
 	return projects, nil
 }
 
-func validateAndSetDefaultConfigActions(projectName string, actions []Action, globalTimeoutSeconds int, globalGracefulShutdownMS int) ([]Action, error) {
+func validateAndSetDefaultConfigActions(projectName string, actions []Action, globalTimeout time.Duration, globalGracefulShutdown time.Duration) ([]Action, error) {
 	for i, action := range actions {
 		wrapActionErr := func(err error) error {
 			return fmt.Errorf(
-				"bad action %d (invoked on %s) of project %q: %w",
+				"bad action %d (invoked on %q) of project %q: %w",
 				i+1,
 				action.On,
 				projectName,
@@ -167,15 +171,15 @@ func validateAndSetDefaultConfigActions(projectName string, actions []Action, gl
 			}
 		}
 
-		if action.TimeoutSeconds == 0 {
-			action.TimeoutSeconds = globalTimeoutSeconds
-		} else if action.TimeoutSeconds < 0 {
-			return nil, wrapActionErr(fmt.Errorf("'timeout_seconds' cannot be a negative value"))
+		if action.Timeout == 0 {
+			action.Timeout = globalTimeout
+		} else if action.Timeout < 0 {
+			return nil, wrapActionErr(fmt.Errorf("'timeout' cannot be a negative value"))
 		}
-		if action.GracefulShutdownMS == 0 {
-			action.GracefulShutdownMS = globalGracefulShutdownMS
-		} else if action.GracefulShutdownMS < 0 {
-			return nil, wrapActionErr(fmt.Errorf("'graceful_shutdown_ms' cannot be a negative value"))
+		if action.GracefulShutdown == 0 {
+			action.GracefulShutdown = globalGracefulShutdown
+		} else if action.GracefulShutdown < 0 {
+			return nil, wrapActionErr(fmt.Errorf("'graceful_shutdown' cannot be a negative value"))
 		}
 
 		actions[i] = action
