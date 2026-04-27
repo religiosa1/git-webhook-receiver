@@ -25,7 +25,7 @@ go run .
 And try out sending a payload:
 
 ```sh
-curl  -v -s -X 'POST' \
+curl -s -X 'POST' \
   'http://localhost:9090/projects/test' \
   -H 'X-GitHub-Event:push' \
   -H 'X-GitHub-Delivery:blah' \

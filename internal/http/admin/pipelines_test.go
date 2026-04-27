@@ -18,9 +18,6 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/http/middleware"
 )
 
-// TODO: a lot of stuff here is testing repo-layer functionality. We need to move
-// all of pagination and overlap tests to the ActionDb_test.go
-
 var testAction = config.Action{
 	On:     "push",
 	Branch: "main",
@@ -514,6 +511,7 @@ func TestGetPipelineOutput(t *testing.T) {
 	})
 }
 
+// TODO: move to integration tests
 func TestPipelinesAuthorization(t *testing.T) {
 	db := newTestDB(t)
 

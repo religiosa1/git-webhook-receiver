@@ -14,14 +14,14 @@ func SetupLogger(logLevel string, db *logsDb.LogsDB) (*slog.Logger, error) {
 	programLevel.Set(strLogLevelToEnumValue(logLevel))
 	handlerOpts := &slog.HandlerOptions{Level: programLevel}
 
-	textHandler := slog.NewTextHandler(os.Stdout, handlerOpts)
+	jsonHandler := slog.NewJSONHandler(os.Stdout, handlerOpts)
 
 	if db == nil {
-		return slog.New(textHandler), nil
+		return slog.New(jsonHandler), nil
 	}
 
 	logger := slog.New(slogmulti.Fanout(
-		textHandler,
+		jsonHandler,
 		NewDBLogger(db, handlerOpts),
 	))
 

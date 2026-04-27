@@ -18,17 +18,6 @@ func (err IncorrectRepoError) Error() string {
 	)
 }
 
-type AuthorizationError struct {
-	info string
-}
-
-func (err AuthorizationError) Error() string {
-	return fmt.Sprintf(
-		"Incorrect authorization information passed to action: %q",
-		err.info,
-	)
-}
-
 var (
 	ErrAuthNotSupported = errors.New("authorization header is not supported for this receiver, use secret signature instead")
 	ErrSignNotSupported = errors.New("request signature is not supported for this receiver, use authorization header instead")

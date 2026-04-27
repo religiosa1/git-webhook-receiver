@@ -110,9 +110,6 @@ func getWebhookErrorCode(err error) ErrorInfo {
 	if terr, ok := err.(whreceiver.IncorrectRepoError); ok {
 		return ErrorInfo{http.StatusUnprocessableEntity, terr.Error()}
 	}
-	if terr, ok := err.(whreceiver.AuthorizationError); ok {
-		return ErrorInfo{http.StatusForbidden, terr.Error()}
-	}
 	if errors.Is(err, io.EOF) {
 		return ErrorInfo{http.StatusUnprocessableEntity, "Empty body supplied in the webhook request"}
 	}
