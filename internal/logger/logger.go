@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -9,19 +10,27 @@ import (
 	slogmulti "github.com/samber/slog-multi"
 )
 
-func SetupLogger(logLevel string, db *logsDb.LogsDB) (*slog.Logger, error) {
+func SetupLogger(logLevel, logType string, db *logsDb.LogsDB) (*slog.Logger, error) {
 	programLevel := new(slog.LevelVar)
 	programLevel.Set(strLogLevelToEnumValue(logLevel))
 	handlerOpts := &slog.HandlerOptions{Level: programLevel}
 
-	jsonHandler := slog.NewJSONHandler(os.Stdout, handlerOpts)
+	var handler slog.Handler
+	switch logType {
+	case "json":
+		handler = slog.NewJSONHandler(os.Stdout, handlerOpts)
+	case "text":
+		handler = slog.NewTextHandler(os.Stdout, handlerOpts)
+	default:
+		return nil, fmt.Errorf("unknown logger type: %q", logType)
+	}
 
 	if db == nil {
-		return slog.New(jsonHandler), nil
+		return slog.New(handler), nil
 	}
 
 	logger := slog.New(slogmulti.Fanout(
-		jsonHandler,
+		handler,
 		NewDBLogger(db, handlerOpts),
 	))
 

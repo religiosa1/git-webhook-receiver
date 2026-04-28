@@ -29,6 +29,7 @@ type Config struct {
 	APIUser                 string             `yaml:"api_user" env:"API_USER" env-default:"admin"`
 	APIPassword             Secret             `yaml:"api_password" env:"API_PASSWORD"`
 	LogLevel                string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
+	LogType                 string             `yaml:"log_type" env:"LOG_TYPE" env-default:"json"`
 	LogsDBFile              string             `yaml:"logs_db_file" env:"LOGS_DB_FILE"`
 	ActionsDBFile           string             `yaml:"actions_db_file" env:"ACTIONS_DB_FILE" env-default:"actions.sqlite3"`
 	MaxActionsStored        int                `yaml:"max_actions_stored" env:"MAX_ACTIONS_STORED" env-default:"1000"` // the same as DefaultMaxActionsStored
@@ -74,13 +75,11 @@ func Load(configPath string) (Config, error) {
 	}
 	applyEnvToProjectAndActions(&cfg)
 
-	switch cfg.LogLevel {
-	case "":
-		cfg.LogLevel = "info"
-	case "info", "debug", "warn", "error":
-		// everything is ok, no action needed
-	default:
-		return cfg, fmt.Errorf("incorrect LogLevel value %q. Possible values are 'debug', 'info', 'warn', and 'error", cfg.LogLevel)
+	if err := validateLogType(cfg.LogType); err != nil {
+		return cfg, err
+	}
+	if err := validateLogLevel(cfg.LogLevel); err != nil {
+		return cfg, err
 	}
 
 	if cfg.PublicURL != "" {
@@ -109,6 +108,24 @@ func Load(configPath string) (Config, error) {
 	cfg.Projects = projectsWithDefaults
 
 	return cfg, nil
+}
+
+func validateLogLevel(loglevel string) error {
+	switch loglevel {
+	case "info", "debug", "warn", "error":
+		return nil
+	default:
+		return fmt.Errorf("incorrect LogLevel value %q. Possible values are 'debug', 'info', 'warn', and 'error'", loglevel)
+	}
+}
+
+func validateLogType(logType string) error {
+	switch logType {
+	case "json", "text":
+		return nil
+	default:
+		return fmt.Errorf("unknown log type %q", logType)
+	}
 }
 
 func validateAndSetDefaultsConfigProjects(

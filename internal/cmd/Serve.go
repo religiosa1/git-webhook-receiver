@@ -58,7 +58,7 @@ func Serve(cfg config.Config) {
 		}
 	}()
 
-	logger, err := logger.SetupLogger(cfg.LogLevel, dbLogs)
+	logger, err := logger.SetupLogger(cfg.LogLevel, cfg.LogType, dbLogs)
 	if err != nil {
 		log.Printf("Error setting up the logger: %s", err)
 		os.Exit(ExitCodeLoggerDB)

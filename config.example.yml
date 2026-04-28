@@ -6,6 +6,7 @@ addr: 0.0.0.0:9090
 # If not specified public url will be a combination of protocol + host + port
 public_url: https://example.com:9090/ # default is empty, here only for example
 log_level: "info" # other options are  'debug', 'warn' and 'error'
+log_type: "json" # type of stdout log: "json" (default), "text"
 disable_api: false # Disable Inspection HTTP API
 api_user: "admin" # Basic auth user for the inspection API.
 api_password: "" # Basic auth user for the inspection API. Empty string means disabled
