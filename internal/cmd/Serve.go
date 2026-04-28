@@ -63,7 +63,7 @@ func Serve(cfg config.Config) {
 		log.Printf("Error setting up the logger: %s", err)
 		os.Exit(ExitCodeLoggerDB)
 	}
-	logger.Debug("configuration loaded", slog.Any("config", cfg.MaskSensitiveData()))
+	logger.Debug("configuration loaded", slog.Any("config", cfg))
 	if cfg.PublicURL == "" {
 		logger.Warn("PublicURL is not set in the config, URL generation in responses will be falling back to relative paths")
 	}
@@ -83,8 +83,9 @@ func Serve(cfg config.Config) {
 	if !cfg.DisableAPI {
 		middlewares := middleware.Chain(
 			middleware.WithLogger(logger),
-			middleware.WithBasicAuth(cfg.APIUser, cfg.APIPassword),
+			middleware.WithBasicAuth(cfg.APIUser, cfg.APIPassword.RawContents()),
 		)
+		mux.Handle("GET /projects", middlewares(admin.ListProjects{Projects: cfg.Projects}))
 		if dbActions != nil {
 			logger.Debug("Web admin enabled for pipelines")
 			mux.Handle("GET /pipelines", middlewares(admin.ListPipelines{DB: dbActions, PublicURL: cfg.PublicURL}))
@@ -204,6 +205,7 @@ func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig
 
 func createProjectsMux(actionsCh chan ActionRunner.ActionArgs, cfg config.Config, logger *slog.Logger) (*http.ServeMux, error) {
 	mux := http.NewServeMux()
+	basicAuth := middleware.WithBasicAuth(cfg.APIUser, cfg.APIPassword.RawContents())
 	for projectName, project := range cfg.Projects {
 		receiver := whreceiver.New(project)
 		if receiver == nil {
@@ -211,15 +213,15 @@ func createProjectsMux(actionsCh chan ActionRunner.ActionArgs, cfg config.Config
 		}
 
 		caps := receiver.GetCapabilities()
-		if !caps.CanAuthorize && project.Authorization != "" {
+		if !caps.CanAuthorize && !project.Authorization.IsZero() {
 			return nil, fmt.Errorf("misconfigured project %q, receiver %q does not support authorization, but it was provided", projectName, project.GitProvider)
 		}
-		if !caps.CanVerifySignature && project.Secret != "" {
+		if !caps.CanVerifySignature && !project.Secret.IsZero() {
 			return nil, fmt.Errorf("misconfigured project %q, receiver %q does not support signature validation, but secret was provided", projectName, project.GitProvider)
 		}
 
 		projectLogger := logger.With(slog.String("project", projectName))
-		path := fmt.Sprintf("POST /projects/%s", projectName)
+		path := fmt.Sprintf("/projects/%s", projectName)
 		handler := handlers.Webhook{
 			ActionsCh:   actionsCh,
 			Config:      cfg,
@@ -228,9 +230,15 @@ func createProjectsMux(actionsCh chan ActionRunner.ActionArgs, cfg config.Config
 			Receiver:    receiver,
 		}
 		mux.Handle(
-			path,
+			"POST "+path,
 			middleware.WithLogger(projectLogger)(handler),
 		)
+		if !cfg.DisableAPI {
+			mux.Handle(
+				"GET "+path,
+				middleware.WithLogger(projectLogger)(basicAuth(admin.GetProject{Project: project})),
+			)
+		}
 		logger.Debug("Registered project",
 			slog.String("projectName", projectName),
 			slog.String("type", project.GitProvider),
@@ -238,11 +246,15 @@ func createProjectsMux(actionsCh chan ActionRunner.ActionArgs, cfg config.Config
 		)
 	}
 	// fallback route, just for logging out errors
-	mux.HandleFunc("POST /projects/{projectName}", func(w http.ResponseWriter, req *http.Request) {
+	prjNotFound := func(w http.ResponseWriter, req *http.Request) {
 		projectName := req.PathValue("projectName")
 		logger.Error("unknown git project passed", slog.String("project", projectName))
 		w.WriteHeader(http.StatusNotFound)
-	})
+	}
+	mux.HandleFunc("POST /projects/{projectName}", prjNotFound)
+	if !cfg.DisableAPI {
+		mux.Handle("GET /projects/{projectName}", basicAuth(http.HandlerFunc(prjNotFound)))
+	}
 	return mux, nil
 }
 

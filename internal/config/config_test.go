@@ -1,9 +1,12 @@
 package config_test
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
-	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -136,11 +139,11 @@ projects:
 			t.Errorf("incorrect action db file read from config, want %q, got %q", want, got)
 		}
 
-		if want, got := secret, project.Secret; want != got {
+		if want, got := secret, project.Secret.RawContents(); want != got {
 			t.Errorf("incorrect secret value read from config, want %q, got %q", want, got)
 		}
 
-		if want, got := auth, project.Authorization; want != got {
+		if want, got := auth, project.Authorization.RawContents(); want != got {
 			t.Errorf("incorrect auth value read from config, want %q, got %q", want, got)
 		}
 	})
@@ -566,77 +569,55 @@ func TestSensitiveDataMasking(t *testing.T) {
 		cfg := config.Config{
 			Projects: make(map[string]config.Project),
 		}
-
-		cfg.APIPassword = "testPassword"
-
+		cfg.APIPassword = "t3stPa55w0rd"
 		cfg.Projects["proj1"] = config.Project{
-			Authorization: "auth",
+			Authorization: "B3ar3rT0k3nV4lu3",
 		}
 		cfg.Projects["proj2"] = config.Project{
-			Secret: "secret",
+			Secret: "wh00kS3cr3tV4lu3",
 		}
 		return cfg
 	}
-	t.Run("masks secrets and authorization headers", func(t *testing.T) {
+
+	passwords := []string{"t3stPa55w0rd", "B3ar3rT0k3nV4lu3", "wh00kS3cr3tV4lu3"}
+
+	t.Run("text handler masks sensitive data", func(t *testing.T) {
 		cfg := makeTestCfg()
-		maskedCfg := cfg.MaskSensitiveData()
-
-		if maskedCfg.Projects["proj1"].Authorization == "auth" {
-			t.Errorf("Project Authorization value wasn't masked")
-		}
-
-		if maskedCfg.Projects["proj2"].Secret == "secret" {
-			t.Errorf("Project secret value wasn't masked")
+		var buf bytes.Buffer
+		logger := slog.New(slog.NewTextHandler(&buf, nil))
+		logger.Info("config", "config", cfg)
+		output := buf.String()
+		for _, pwd := range passwords {
+			if strings.Contains(output, pwd) {
+				t.Errorf("password %q leaked in text log output: %s", pwd, output)
+			}
 		}
 	})
 
-	t.Run("masks secrets and authorization headers only if they're present", func(t *testing.T) {
+	t.Run("json handler masks sensitive data", func(t *testing.T) {
 		cfg := makeTestCfg()
-		maskedCfg := cfg.MaskSensitiveData()
-
-		if got := maskedCfg.Projects["proj2"].Authorization; got != "" {
-			t.Errorf("Project Authorization value was masked when it shouldn't. Want empty string, got %s", got)
-		}
-
-		if got := maskedCfg.Projects["proj1"].Secret; got != "" {
-			t.Errorf("Project secret value was masked when it shouldn't. Want empty string, got %s", got)
+		var buf bytes.Buffer
+		logger := slog.New(slog.NewJSONHandler(&buf, nil))
+		logger.Info("config", "config", cfg)
+		output := buf.String()
+		for _, pwd := range passwords {
+			if strings.Contains(output, pwd) {
+				t.Errorf("password %q leaked in JSON log output: %s", pwd, output)
+			}
 		}
 	})
 
-	t.Run("masks ApiPassword if present", func(t *testing.T) {
+	t.Run("json.Marshal masks sensitive data", func(t *testing.T) {
 		cfg := makeTestCfg()
-		maskedCfg := cfg.MaskSensitiveData()
-
-		if got := maskedCfg.APIPassword; got == cfg.APIPassword {
-			t.Errorf("ApiPassword value wasn't masked: %s", got)
+		data, err := json.Marshal(cfg)
+		if err != nil {
+			t.Fatalf("json.Marshal failed: %s", err)
 		}
-	})
-
-	t.Run("masks ApiPassword only if present", func(t *testing.T) {
-		cfg := makeTestCfg()
-		cfg.APIPassword = ""
-		maskedCfg := cfg.MaskSensitiveData()
-
-		if got := maskedCfg.APIPassword; got != "" {
-			t.Errorf("ApiPassword value was masked when it shouldn't. Want empty string, got %s", got)
-		}
-	})
-
-	t.Run("doesn't change the initial project in any way", func(t *testing.T) {
-		cfg := makeTestCfg()
-		cfg2 := makeTestCfg()
-		cfg.MaskSensitiveData()
-
-		if !reflect.DeepEqual(cfg, cfg2) {
-			t.Errorf("Project was modified, when it shouldn't: %v, %v", cfg, cfg2)
-		}
-
-		if cfg.Projects["proj1"].Authorization != "auth" {
-			t.Error("Project Authorization value was modified, when it shouldn't")
-		}
-
-		if cfg.Projects["proj2"].Secret != "secret" {
-			t.Error("Project secret value was modified, when it shouldn't")
+		output := string(data)
+		for _, pwd := range passwords {
+			if strings.Contains(output, pwd) {
+				t.Errorf("password %q leaked in json.Marshal output: %s", pwd, output)
+			}
 		}
 	})
 }

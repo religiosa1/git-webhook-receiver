@@ -156,8 +156,8 @@ func TestProjectMatching(t *testing.T) {
 			actn := config.Action{}
 
 			prj2 := prj
-			prj2.Authorization = tt.auth
-			prj2.Secret = tt.secret
+			prj2.Authorization = config.Secret(tt.auth)
+			prj2.Secret = config.Secret(tt.secret)
 			prj2.Actions = makeActionsList(actn)
 
 			request := requestDump.ToHttpRequest(projectEndPoint)

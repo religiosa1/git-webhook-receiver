@@ -27,7 +27,7 @@ type Config struct {
 	PublicURL               string             `yaml:"public_url" env:"PUBLIC_URL"`
 	DisableAPI              bool               `yaml:"disable_api" env:"DISABLE_API"`
 	APIUser                 string             `yaml:"api_user" env:"API_USER" env-default:"admin"`
-	APIPassword             string             `yaml:"api_password" env:"API_PASSWORD"`
+	APIPassword             Secret             `yaml:"api_password" env:"API_PASSWORD"`
 	LogLevel                string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
 	LogsDBFile              string             `yaml:"logs_db_file" env:"LOGS_DB_FILE"`
 	ActionsDBFile           string             `yaml:"actions_db_file" env:"ACTIONS_DB_FILE" env-default:"actions.sqlite3"`
@@ -50,8 +50,8 @@ type SslConfig struct {
 type Project struct {
 	GitProvider   string   `yaml:"git_provider" env-default:"github"`
 	Repo          string   `yaml:"repo" env-required:"true"`
-	Authorization string   `yaml:"authorization" env:"AUTH"`
-	Secret        string   `yaml:"secret" env:"SECRET"`
+	Authorization Secret   `yaml:"authorization" env:"AUTH" json:"authorization,omitzero"`
+	Secret        Secret   `yaml:"secret" env:"SECRET" json:"secret,omitzero"`
 	Actions       []Action `yaml:"actions" env-required:"true"`
 }
 
@@ -221,35 +221,4 @@ func ParseAddr(addr string) (network, address string) {
 		return "unix", path
 	}
 	return "tcp", addr
-}
-
-const maskValue = "********"
-
-func (cfg Config) MaskSensitiveData() Config {
-	maskedCfg := cfg
-
-	if maskedCfg.APIPassword != "" {
-		maskedCfg.APIPassword = maskValue
-	}
-
-	maskedCfg.Projects = make(map[string]Project, 0)
-
-	for projectName, project := range cfg.Projects {
-		maskedCfg.Projects[projectName] = project.MaskSensitiveData()
-	}
-
-	return maskedCfg
-}
-
-func (project Project) MaskSensitiveData() Project {
-	maskedProject := project
-
-	if maskedProject.Secret != "" {
-		maskedProject.Secret = maskValue
-	}
-	if maskedProject.Authorization != "" {
-		maskedProject.Authorization = maskValue
-	}
-
-	return maskedProject
 }

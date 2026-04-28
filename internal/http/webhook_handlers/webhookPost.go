@@ -59,16 +59,16 @@ func (h Webhook) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		deliveryLogger.Info("no branch name captured out of the payload ref")
 	}
 
-	if h.Project.Authorization != "" {
-		if authed, err := h.Receiver.Authorize(whReq, h.Project.Authorization); err != nil || !authed {
+	if !h.Project.Authorization.IsZero() {
+		if authed, err := h.Receiver.Authorize(whReq, h.Project.Authorization.RawContents()); err != nil || !authed {
 			deliveryLogger.Warn("Request authentications failed", slog.Any("error", err))
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 	}
 
-	if h.Project.Secret != "" {
-		if verified, err := h.Receiver.VerifySignature(whReq, h.Project.Secret); err != nil || !verified {
+	if !h.Project.Secret.IsZero() {
+		if verified, err := h.Receiver.VerifySignature(whReq, h.Project.Secret.RawContents()); err != nil || !verified {
 			deliveryLogger.Warn("Request signature is not valid", slog.Any("error", err))
 			w.WriteHeader(http.StatusForbidden)
 			return
