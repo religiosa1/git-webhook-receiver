@@ -112,7 +112,7 @@ func TestLogDb(t *testing.T) {
 			}
 		}
 
-		page1, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{PageSize: 2})
+		page1, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{Limit: 2})
 		if err != nil {
 			t.Fatalf("Error while retrieving entries: %s", err)
 		}

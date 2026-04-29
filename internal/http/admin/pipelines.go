@@ -6,7 +6,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strconv"
 
 	actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/middleware"
@@ -23,17 +22,21 @@ func (h ListPipelines) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	logger := middleware.GetLogger(req.Context())
 	queryParams := req.URL.Query()
 
-	offset, _ := strconv.Atoi(queryParams.Get("offset"))
-	limit, _ := strconv.Atoi(queryParams.Get("limit"))
+	pagination, err := utils.ParsePagination(queryParams)
+	if err != nil {
+		if writeErr := utils.WriteErrorResponse(w, 400, err.Error()); writeErr != nil {
+			logger.Error("error while writing error message", slog.Any("error", writeErr))
+		}
+		return
+	}
 
 	query := actiondb.ListPipelineRecordsQuery{
-		Offset:     offset,
-		Limit:      limit,
+		Offset:     pagination.Offset,
+		Limit:      pagination.Limit,
 		Project:    queryParams.Get("project"),
 		DeliveryID: queryParams.Get("deliveryId"),
 		Cursor:     queryParams.Get("cursor"),
 	}
-	var err error
 	query.Status, err = actiondb.ParsePipelineStatus(queryParams.Get("status"))
 	if err != nil {
 		logger.Warn("Error parsing pipeline state", slog.Any("error", err))

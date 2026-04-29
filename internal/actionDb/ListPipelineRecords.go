@@ -17,11 +17,11 @@ type ListPipelineRecordsQuery struct {
 	Cursor     string
 }
 
-const maxPageSize int = 200
+const defaultPageSize = 20
 
 func (d ActionDB) ListPipelineRecords(search ListPipelineRecordsQuery) (models.PagedDB[PipeLineRecord], error) {
-	if search.Limit <= 0 || search.Limit > maxPageSize {
-		search.Limit = 20
+	if search.Limit <= 0 {
+		search.Limit = defaultPageSize
 	}
 	var result models.PagedDB[PipeLineRecord]
 

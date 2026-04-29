@@ -35,7 +35,7 @@ func Logs(cfg config.Config, args LogsArgs) {
 	}
 
 	query := logsDb.GetEntryFilteredQuery{
-		PageSize:   args.Limit,
+		Limit:      args.Limit,
 		Project:    args.Project,
 		DeliveryID: args.DeliveryID,
 		PipeID:     args.PipeID,

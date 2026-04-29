@@ -88,7 +88,6 @@ func (d LogsDB) CreateEntry(entry LogEntry) error {
 }
 
 const (
-	maxPageSize     int = 200
 	defaultPageSize int = 20
 )
 
@@ -104,13 +103,13 @@ type GetEntryFilteredQuery struct {
 	PipeID     string `json:"pipeId"`
 	Message    string `json:"message"`
 	Offset     int    `json:"offset"`
-	PageSize   int    `json:"pageSize"`
+	Limit      int    `json:"limit"`
 	Cursor     string `json:"cursor"`
 }
 
 func (d LogsDB) GetEntryFiltered(search GetEntryFilteredQuery) (models.PagedDB[LogEntry], error) {
-	if search.PageSize <= 0 || search.PageSize > maxPageSize {
-		search.PageSize = defaultPageSize
+	if search.Limit <= 0 {
+		search.Limit = defaultPageSize
 	}
 	var result models.PagedDB[LogEntry]
 
@@ -148,7 +147,7 @@ func (d LogsDB) GetEntryFiltered(search GetEntryFilteredQuery) (models.PagedDB[L
 
 	qb.WriteString("ORDER BY ts DESC, id DESC\n")
 	qb.WriteString("LIMIT ?\n")
-	args = append(args, search.PageSize+1)
+	args = append(args, search.Limit+1)
 
 	if search.Offset != 0 {
 		qb.WriteString("OFFSET ?\n")
@@ -163,11 +162,11 @@ func (d LogsDB) GetEntryFiltered(search GetEntryFilteredQuery) (models.PagedDB[L
 	if err != nil {
 		return result, err
 	}
-	if len(result.Items) > search.PageSize {
-		lastRow := result.Items[search.PageSize-1]
+	if len(result.Items) > search.Limit {
+		lastRow := result.Items[search.Limit-1]
 		cursorStr := paginationCursor{TS: lastRow.TS, ID: lastRow.ID}.String()
 		result.Cursor = &cursorStr
-		result.Items = result.Items[0:search.PageSize]
+		result.Items = result.Items[0:search.Limit]
 	}
 	return result, err
 }

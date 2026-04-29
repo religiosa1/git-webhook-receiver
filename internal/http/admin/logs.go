@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strconv"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/http/middleware"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/utils"
@@ -23,18 +22,23 @@ func (h GetLogs) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	queryParams := req.URL.Query()
 
-	offset, _ := strconv.Atoi(queryParams.Get("offset"))
-	limit, _ := strconv.Atoi(queryParams.Get("limit"))
+	pagination, err := utils.ParsePagination(queryParams)
+	if err != nil {
+		if writeErr := utils.WriteErrorResponse(w, 400, err.Error()); writeErr != nil {
+			logger.Error("error while writing error message", slog.Any("error", writeErr))
+		}
+		return
+	}
 
 	query := logsDb.GetEntryFilteredQuery{
-		PageSize:   limit,
+		Limit:      pagination.Limit,
+		Offset:     pagination.Offset,
 		Cursor:     queryParams.Get("cursor"),
 		Levels:     parseLevels(queryParams["level"]),
 		Project:    queryParams.Get("project"),
 		DeliveryID: queryParams.Get("deliveryId"),
 		PipeID:     queryParams.Get("pipeId"),
 		Message:    queryParams.Get("message"),
-		Offset:     offset,
 	}
 
 	page, err := h.DB.GetEntryFiltered(query)
