@@ -88,6 +88,10 @@ func Load(configPath string) (Config, error) {
 		}
 	}
 
+	if (cfg.Ssl.CertFilePath != "") != (cfg.Ssl.KeyFilePath != "") {
+		return cfg, fmt.Errorf("ssl requires both `cert_file_path` and `key_file_path`")
+	}
+
 	// zeros are overwritten here by clean-env `env-default` so we don't particularly care about them
 	if cfg.ActionsTimeout < 0 {
 		return cfg, fmt.Errorf("'actions_timeout' must be a non-negative duration")
@@ -100,7 +104,10 @@ func Load(configPath string) (Config, error) {
 		panic("global graceful shutdown value should've been set by the env-default in config parsing")
 	}
 
-	projectsWithDefaults, err := validateAndSetDefaultsConfigProjects(cfg.Projects, cfg.ActionsTimeout, cfg.ActionsGracefulShutdown)
+	projectsWithDefaults, err := validateAndSetDefaultsConfigProjects(cfg.Projects, globalDefaults{
+		Timeout:          cfg.ActionsTimeout,
+		GracefulShutdown: cfg.ActionsGracefulShutdown,
+	})
 	if err != nil {
 		return cfg, fmt.Errorf("configs projects validation failed: %w", err)
 	}
@@ -128,11 +135,12 @@ func validateLogType(logType string) error {
 	}
 }
 
-func validateAndSetDefaultsConfigProjects(
-	projects map[string]Project,
-	globalTimeout time.Duration,
-	globalGracefulShutdown time.Duration,
-) (map[string]Project, error) {
+type globalDefaults struct {
+	Timeout          time.Duration
+	GracefulShutdown time.Duration
+}
+
+func validateAndSetDefaultsConfigProjects(projects map[string]Project, global globalDefaults) (map[string]Project, error) {
 	for projectName, project := range projects {
 		if err := setDefaultAndCheckRequired(&project); err != nil {
 			return nil, fmt.Errorf("project %q has issue with its fields: %w", projectName, err)
@@ -150,7 +158,7 @@ func validateAndSetDefaultsConfigProjects(
 			)
 		}
 
-		actionsWithDefaults, err := validateAndSetDefaultConfigActions(projectName, project.Actions, globalTimeout, globalGracefulShutdown)
+		actionsWithDefaults, err := validateAndSetDefaultConfigActions(projectName, project.Actions, global)
 		if err != nil {
 			return nil, fmt.Errorf("action validation failed: %w", err)
 		}
@@ -160,7 +168,7 @@ func validateAndSetDefaultsConfigProjects(
 	return projects, nil
 }
 
-func validateAndSetDefaultConfigActions(projectName string, actions []Action, globalTimeout time.Duration, globalGracefulShutdown time.Duration) ([]Action, error) {
+func validateAndSetDefaultConfigActions(projectName string, actions []Action, global globalDefaults) ([]Action, error) {
 	for i, action := range actions {
 		wrapActionErr := func(err error) error {
 			return fmt.Errorf(
@@ -189,12 +197,12 @@ func validateAndSetDefaultConfigActions(projectName string, actions []Action, gl
 		}
 
 		if action.Timeout == 0 {
-			action.Timeout = globalTimeout
+			action.Timeout = global.Timeout
 		} else if action.Timeout < 0 {
 			return nil, wrapActionErr(fmt.Errorf("'timeout' cannot be a negative value"))
 		}
 		if action.GracefulShutdown == 0 {
-			action.GracefulShutdown = globalGracefulShutdown
+			action.GracefulShutdown = global.GracefulShutdown
 		} else if action.GracefulShutdown < 0 {
 			return nil, wrapActionErr(fmt.Errorf("'graceful_shutdown' cannot be a negative value"))
 		}

@@ -191,7 +191,7 @@ func TestLogDbFiltering(t *testing.T) {
 
 		s3, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{PipeID: "pipe-search"})
 		if err != nil {
-			t.Errorf("Error while retrieving entries: %s", err)
+			t.Fatalf("Error while retrieving entries: %s", err)
 		}
 		if l := len(s3.Items); l != 1 {
 			t.Errorf("Unexpected number of entries returned, want 1, got %d", l)
@@ -200,7 +200,7 @@ func TestLogDbFiltering(t *testing.T) {
 
 		s4, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{Message: "message-search"})
 		if err != nil {
-			t.Errorf("Error while retrieving entries: %s", err)
+			t.Fatalf("Error while retrieving entries: %s", err)
 		}
 		if l := len(s4.Items); l != 1 {
 			t.Errorf("Unexpected number of entries returned, want 1, got %d", l)
@@ -211,7 +211,7 @@ func TestLogDbFiltering(t *testing.T) {
 	t.Run("All of filtering conditions must match", func(t *testing.T) {
 		db, err := logsDb.New(":memory:")
 		if err != nil {
-			t.Errorf("Error while opening a db: %s", err)
+			t.Fatalf("Error while opening a db: %s", err)
 		}
 
 		pipeID := "test-pipeid-search"
@@ -236,13 +236,13 @@ func TestLogDbFiltering(t *testing.T) {
 		for _, entry := range allEntries {
 			err := db.CreateEntry(entry)
 			if err != nil {
-				t.Errorf("error while creating an entry %v: %s", entry, err)
+				t.Fatalf("error while creating an entry %v: %s", entry, err)
 			}
 		}
 
 		s1, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{DeliveryID: delivery, PipeID: pipeID})
 		if err != nil {
-			t.Errorf("Error while retrieving entries: %s", err)
+			t.Fatalf("Error while retrieving entries: %s", err)
 		}
 		if l := len(s1.Items); l != 1 {
 			t.Errorf("Unexpected number of entries returned, want 1, got %d", l)
@@ -253,7 +253,7 @@ func TestLogDbFiltering(t *testing.T) {
 	t.Run("Any of the log levels can match", func(t *testing.T) {
 		db, err := logsDb.New(":memory:")
 		if err != nil {
-			t.Errorf("Error while opening a db: %s", err)
+			t.Fatalf("Error while opening a db: %s", err)
 		}
 
 		entryA := testEntry
@@ -270,7 +270,7 @@ func TestLogDbFiltering(t *testing.T) {
 		for _, entry := range allEntries {
 			err := db.CreateEntry(entry)
 			if err != nil {
-				t.Errorf("error while creating an entry %v: %s", entry, err)
+				t.Fatalf("error while creating an entry %v: %s", entry, err)
 			}
 		}
 
@@ -279,7 +279,7 @@ func TestLogDbFiltering(t *testing.T) {
 			int(slog.LevelWarn),
 		}})
 		if err != nil {
-			t.Errorf("Error while retrieving entries: %s", err)
+			t.Fatalf("Error while retrieving entries: %s", err)
 		}
 		if l := len(s1.Items); l != 2 {
 			t.Errorf("Unexpected number of entries returned, want 2, got %d", l)

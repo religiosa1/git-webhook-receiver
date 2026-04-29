@@ -18,11 +18,11 @@ func tmpConfigFile(t *testing.T, contents string) string {
 	tmpdir := t.TempDir()
 	tmpfile, err := os.CreateTemp(tmpdir, "config_*.yml")
 	if err != nil {
-		t.Errorf("Unable to create temporary config for test: %s", err)
+		t.Fatalf("Unable to create temporary config for test: %s", err)
 	}
 	err = os.WriteFile(tmpfile.Name(), []byte(contents), 0o775)
 	if err != nil {
-		t.Errorf("Unable to write config file %q contents: %s", tmpfile.Name(), err)
+		t.Fatalf("Unable to write config file %q contents: %s", tmpfile.Name(), err)
 	}
 	return tmpfile.Name()
 }
@@ -37,18 +37,20 @@ func loadMockConfig(t *testing.T, contents string) config.Config {
 	return cfg
 }
 
-func TestConfigLoad(t *testing.T) {
-	t.Run("loads the test config", func(t *testing.T) {
-		cfg := loadMockConfig(t, `
-addr: "test.example.com:1234"
-actions_db_file: db2.sqlite3
-projects:
+const testBaseProj = `projects:
   test-proj:
     git_provider: gitea
     repo: "username/reponame"
     actions:
-      - run: ["node", "--version"]`,
-		)
+      - run: ["node", "--version"]
+`
+
+func TestConfigLoad(t *testing.T) {
+	t.Run("loads the test config", func(t *testing.T) {
+		cfg := loadMockConfig(t, `
+addr: "test.example.com:1234"
+actions_db_file: db2.sqlite3 
+`+testBaseProj)
 
 		want := "test.example.com:1234"
 		if cfg.Addr != want {
@@ -66,7 +68,7 @@ projects:
 		project := cfg.Projects["test-proj"]
 
 		if l := len(project.Actions); l != 1 {
-			t.Errorf("There must be only one action in test-proj in config, but got %d", l)
+			t.Fatalf("There must be only one action in test-proj in config, but got %d", l)
 		}
 
 		if want, got := "username/reponame", project.Repo; want != got {
@@ -75,14 +77,7 @@ projects:
 	})
 
 	t.Run("sets the default values", func(t *testing.T) {
-		cfg := loadMockConfig(t, `
-projects:
-  test-proj:
-    git_provider: gitea
-    repo: "username/reponame"
-    actions:
-      - run: ["node", "--version"]`,
-		)
+		cfg := loadMockConfig(t, testBaseProj)
 
 		if want, got := "localhost:9090", cfg.Addr; want != got {
 			t.Errorf("incorrect addr value read from config, want %s, got %s", want, got)
@@ -106,13 +101,7 @@ projects:
 }
 
 func TestConfigLoadEnv(t *testing.T) {
-	configContents := `
-projects:
-  test-proj:
-    git_provider: gitea
-    repo: "username/reponame"
-    actions:
-      - run: ["node", "--version"]`
+	configContents := testBaseProj
 
 	t.Run("allows to override config values with env", func(t *testing.T) {
 		overriddenAddr := "test3.example.com:32167"
@@ -559,6 +548,56 @@ func TestParseAddr(t *testing.T) {
 			}
 			if gotAddress != tt.wantAddress {
 				t.Errorf("address: want %q, got %q", tt.wantAddress, gotAddress)
+			}
+		})
+	}
+}
+
+func TestSslValidation(t *testing.T) {
+	makeConfig := func(certFile, keyFile string) string {
+		var sb strings.Builder
+		sb.WriteString(testBaseProj)
+		if certFile == "" && keyFile == "" {
+			return sb.String()
+		}
+		sb.WriteString("ssl:\n")
+		if certFile != "" {
+			sb.WriteString("    cert_file_path: ")
+			sb.WriteString(certFile)
+			sb.WriteString("\n")
+		}
+		if keyFile != "" {
+			sb.WriteString("    key_file_path: ")
+			sb.WriteString(keyFile)
+			sb.WriteString("\n")
+		}
+
+		return sb.String()
+	}
+
+	tests := []struct {
+		name     string
+		valid    bool
+		certFile string
+		keyFile  string
+	}{
+		{"no ssl is ok", true, "", ""},
+		{"both cert and key files are ok", true, "foo", "bar"},
+		{"only cert file is bad", false, "foo", ""},
+		{"only key file is bad", false, "", "bar"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configFileName := tmpConfigFile(t, makeConfig(tt.certFile, tt.keyFile))
+			_, err := config.Load(configFileName)
+			if tt.valid {
+				if err != nil {
+					t.Errorf("expected to pass validation, but got err: %s", err)
+				}
+			} else {
+				if err == nil {
+					t.Error("expected validation to fail, but it passed")
+				}
 			}
 		})
 	}

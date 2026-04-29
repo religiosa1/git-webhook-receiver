@@ -34,23 +34,23 @@ func TestActionDb(t *testing.T) {
 	t.Run("successfully creates a db", func(t *testing.T) {
 		_, err := actiondb.New(":memory:", defaultMaxActionsStored, 0)
 		if err != nil {
-			t.Error((err))
+			t.Fatalf("Failed to create a db: %s", err)
 		}
 	})
 	t.Run("creates a record", func(t *testing.T) {
 		db, err := actiondb.New(":memory:", defaultMaxActionsStored, 0)
 		if err != nil {
-			t.Errorf("Unable to create a db: %s", err)
+			t.Fatalf("Unable to create a db: %s", err)
 		}
 
 		err = db.CreateRecord(pipeID, projectName, deliveryID, action)
 		if err != nil {
-			t.Errorf("Unable to create a pipeline record: %s", err)
+			t.Fatalf("Unable to create a pipeline record: %s", err)
 		}
 
 		record, err := db.GetPipelineRecord(pipeID)
 		if err != nil {
-			t.Errorf("Unable to retrieve the created record: %s", err)
+			t.Fatalf("Unable to retrieve the created record: %s", err)
 		}
 
 		want := actiondb.PipeLineRecord{
@@ -67,22 +67,22 @@ func TestActionDb(t *testing.T) {
 		actionOutput := "test output"
 		db, err := actiondb.New(":memory:", defaultMaxActionsStored, 0)
 		if err != nil {
-			t.Errorf("Unable to create a db: %s", err)
+			t.Fatalf("Unable to create a db: %s", err)
 		}
 
 		err = db.CreateRecord(pipeID, projectName, deliveryID, action)
 		if err != nil {
-			t.Errorf("Unable to create a pipeline record: %s", err)
+			t.Fatalf("Unable to create a pipeline record: %s", err)
 		}
 
 		err = db.CloseRecord(pipeID, nil, strings.NewReader(actionOutput))
 		if err != nil {
-			t.Errorf("Unable to close a pipeline record: %s", err)
+			t.Fatalf("Unable to close a pipeline record: %s", err)
 		}
 
 		record, err := db.GetPipelineRecord(pipeID)
 		if err != nil {
-			t.Errorf("Unable to retrieve the created record: %s", err)
+			t.Fatalf("Unable to retrieve the created record: %s", err)
 		}
 
 		want := actiondb.PipeLineRecord{
@@ -102,22 +102,22 @@ func TestActionDb(t *testing.T) {
 		actionOutput := "test output"
 		db, err := actiondb.New(":memory:", defaultMaxActionsStored, 0)
 		if err != nil {
-			t.Errorf("Unable to create a db: %s", err)
+			t.Fatalf("Unable to create a db: %s", err)
 		}
 
 		err = db.CreateRecord(pipeID, projectName, deliveryID, action)
 		if err != nil {
-			t.Errorf("Unable to create a pipeline record: %s", err)
+			t.Fatalf("Unable to create a pipeline record: %s", err)
 		}
 
 		err = db.CloseRecord(pipeID, actionErr, strings.NewReader(actionOutput))
 		if err != nil {
-			t.Errorf("Unable to close a pipeline record: %s", err)
+			t.Fatalf("Unable to close a pipeline record: %s", err)
 		}
 
 		record, err := db.GetPipelineRecord(pipeID)
 		if err != nil {
-			t.Errorf("Unable to retrieve the created record: %s", err)
+			t.Fatalf("Unable to retrieve the created record: %s", err)
 		}
 
 		want := actiondb.PipeLineRecord{
@@ -135,17 +135,17 @@ func TestActionDb(t *testing.T) {
 	t.Run("An action can only be closed once", func(t *testing.T) {
 		db, err := actiondb.New(":memory:", defaultMaxActionsStored, 0)
 		if err != nil {
-			t.Errorf("Unable to create a db: %s", err)
+			t.Fatalf("Unable to create a db: %s", err)
 		}
 
 		err = db.CreateRecord(pipeID, projectName, deliveryID, action)
 		if err != nil {
-			t.Errorf("Unable to create a pipeline record: %s", err)
+			t.Fatalf("Unable to create a pipeline record: %s", err)
 		}
 
 		err = db.CloseRecord(pipeID, nil, strings.NewReader(""))
 		if err != nil {
-			t.Errorf("Unable to close a pipeline record: %s", err)
+			t.Fatalf("Unable to close a pipeline record: %s", err)
 		}
 
 		err = db.CloseRecord(pipeID, nil, strings.NewReader(""))
@@ -158,19 +158,19 @@ func TestActionDb(t *testing.T) {
 		tmpdir := t.TempDir()
 		tmpfile, err := os.CreateTemp(tmpdir, "*.sqlite3")
 		if err != nil {
-			t.Errorf("Unable to create a tempfile for db: %s", err)
+			t.Fatalf("Unable to create a tempfile for db: %s", err)
 		}
 		defer func() {
 			_ = tmpfile.Close()
 		}()
 		db, err := actiondb.New(tmpfile.Name(), defaultMaxActionsStored, 0)
 		if err != nil {
-			t.Errorf("Unable to create a db: %s", err)
+			t.Fatalf("Unable to create a db: %s", err)
 		}
 
 		err = db.CreateRecord(pipeID, projectName, deliveryID, action)
 		if err != nil {
-			t.Errorf("Unable to create a record: %s", err)
+			t.Fatalf("Unable to create a record: %s", err)
 		}
 
 		err = db.Close()
@@ -180,12 +180,12 @@ func TestActionDb(t *testing.T) {
 
 		db2, err := actiondb.New(tmpfile.Name(), defaultMaxActionsStored, 0)
 		if err != nil {
-			t.Errorf("Unable to open the db for the second time: %s", err)
+			t.Fatalf("Unable to open the db for the second time: %s", err)
 		}
 
 		record, err := db2.GetPipelineRecord(pipeID)
 		if err != nil {
-			t.Errorf("Unable to retrieve the created record: %s", err)
+			t.Fatalf("Unable to retrieve the created record: %s", err)
 		}
 
 		want := actiondb.PipeLineRecord{
@@ -205,7 +205,7 @@ func TestAutoRemoval(t *testing.T) {
 		pipeID := ulid.Make().String()
 		err := db.CreateRecord(pipeID, projectName, deliveryID, action)
 		if err != nil {
-			t.Errorf("Unable to create a pipeline record: %s", err)
+			t.Fatalf("Unable to create a pipeline record: %s", err)
 		}
 
 		err = db.CloseRecord(pipeID, nil, strings.NewReader("test"))
@@ -227,7 +227,7 @@ func TestAutoRemoval(t *testing.T) {
 		const maxRecords = 3
 		db, err := actiondb.New(":memory:", maxRecords, 0)
 		if err != nil {
-			t.Errorf("Unable to create a db: %s", err)
+			t.Fatalf("Unable to create a db: %s", err)
 		}
 		for range maxRecords {
 			_ = createRecord(t, db)
@@ -264,7 +264,7 @@ func TestAutoRemoval(t *testing.T) {
 			const nRecords = config.DefaultMaxActionsStored + 5
 			db, err := actiondb.New(":memory:", tt.amount, 0)
 			if err != nil {
-				t.Errorf("Unable to create a db: %s", err)
+				t.Fatalf("Unable to create a db: %s", err)
 			}
 			for range nRecords {
 				_ = createRecord(t, db)
@@ -344,7 +344,7 @@ func compareAction(t *testing.T, action config.Action, record actiondb.PipeLineR
 	var recordConfig config.Action
 	err := json.Unmarshal(record.Config, &recordConfig)
 	if err != nil {
-		t.Errorf("failed to unmarshal record config: %v, JSON: %s", err, string(record.Config))
+		t.Fatalf("failed to unmarshal record config: %v, JSON: %s", err, string(record.Config))
 		return
 	}
 
