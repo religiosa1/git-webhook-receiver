@@ -2,6 +2,12 @@ name=git-webhook-receiver
 
 all: release-unix release-windows
 
+test:
+	go test ./...
+
+test-integration:
+	go test -v -tags=integration -count=1 ./test/integration/...
+
 release-unix:
 	mkdir -p build; \
 	for arch in 386 arm amd64 arm64 ; do \
