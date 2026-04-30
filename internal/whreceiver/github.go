@@ -7,6 +7,8 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
 )
 
+var _ Receiver = (*GithubReceiver)(nil)
+
 type GithubReceiver struct {
 	project config.Project
 }

@@ -5,6 +5,8 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/cryptoutils"
 )
 
+var _ Receiver = (*GiteaReceiver)(nil)
+
 type GiteaReceiver struct {
 	project config.Project
 }

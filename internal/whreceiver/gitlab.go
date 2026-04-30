@@ -9,6 +9,8 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/cryptoutils"
 )
 
+var _ Receiver = (*GitlabReceiver)(nil)
+
 type GitlabReceiver struct {
 	project config.Project
 }
