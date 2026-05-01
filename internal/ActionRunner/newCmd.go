@@ -20,6 +20,12 @@ func newCmd(ctx context.Context, path string, args []string, sysProcAttr *syscal
 		if runtime.GOOS == "windows" {
 			return cmd.Process.Kill()
 		}
+		// When the process was started in its own process group (Setpgid), kill
+		// the whole group so that child processes also receive SIGINT and exit
+		// immediately instead of outliving their parent.
+		if sysProcAttr != nil && sysProcAttr.Setpgid {
+			return syscall.Kill(-cmd.Process.Pid, syscall.SIGINT)
+		}
 		return cmd.Process.Signal(os.Interrupt)
 	}
 	cmd.WaitDelay = gracefulKillTimeout
