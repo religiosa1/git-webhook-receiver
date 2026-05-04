@@ -12,26 +12,23 @@ import (
 // adminPaths are the read-side admin endpoints that should follow the
 // disable_api / basic-auth gating. Listed once and reused by every admin test.
 var adminPaths = []string{
-	"/projects",
-	"/projects/" + defaultProject,
-	"/pipelines",
-	"/logs",
+	"/api/projects",
+	"/api/projects/" + defaultProject,
+	"/api/pipelines",
+	"/api/logs",
 }
 
 func TestServe_Admin_DisabledReturnsUnreachable(t *testing.T) {
 	s := startServer(t, WithDisableAPI(true))
 
-	// /projects/{projectName} also has a POST webhook route, so when the GET
-	// route isn't registered ServeMux replies 405 instead of 404. Either way
-	// the endpoint must be unreachable as a GET.
 	cases := []struct {
 		path string
 		want int
 	}{
-		{"/projects", http.StatusNotFound},
-		{"/projects/" + defaultProject, http.StatusMethodNotAllowed},
-		{"/pipelines", http.StatusNotFound},
-		{"/logs", http.StatusNotFound},
+		{"/api/projects", http.StatusNotFound},
+		{"/api/projects/" + defaultProject, http.StatusNotFound},
+		{"/api/pipelines", http.StatusNotFound},
+		{"/api/logs", http.StatusNotFound},
 	}
 
 	for _, tc := range cases {
@@ -97,14 +94,14 @@ func TestServe_Admin_RequiresBasicAuthWhenConfigured(t *testing.T) {
 	})
 
 	t.Run("ListProjectsContainsTestProject", func(t *testing.T) {
-		resp := adminGet(t, s.BaseURL, "/projects", &basicCreds{User: user, Pass: pass})
+		resp := adminGet(t, s.BaseURL, "/api/projects", &basicCreds{User: user, Pass: pass})
 		defer resp.Body.Close()
 		var projects map[string]interface{}
 		if err := json.NewDecoder(resp.Body).Decode(&projects); err != nil {
 			t.Fatalf("decode: %v", err)
 		}
 		if _, ok := projects[defaultProject]; !ok {
-			t.Errorf("project %q missing from /projects response: %v", defaultProject, projects)
+			t.Errorf("project %q missing from /api/projects response: %v", defaultProject, projects)
 		}
 	})
 }
@@ -115,7 +112,7 @@ func TestServe_Admin_RequiresBasicAuthWhenConfigured(t *testing.T) {
 func TestServe_Admin_NoCredsConfiguredAllowsAccess(t *testing.T) {
 	s := startServer(t, WithDisableAPI(false))
 
-	resp := adminGet(t, s.BaseURL, "/projects", nil)
+	resp := adminGet(t, s.BaseURL, "/api/projects", nil)
 	defer resp.Body.Close()
 	_, _ = io.Copy(io.Discard, resp.Body)
 	if resp.StatusCode != http.StatusOK {

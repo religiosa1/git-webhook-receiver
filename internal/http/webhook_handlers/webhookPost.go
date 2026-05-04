@@ -164,11 +164,11 @@ func generateLinks(disableApi bool, publicURL string, pipeID string) *ActionLink
 		return nil
 	}
 	pipeID = url.PathEscape(pipeID)
-	details, err := url.JoinPath(publicURL, "pipelines", pipeID)
+	details, err := url.JoinPath(publicURL, "api", "pipelines", pipeID)
 	if err != nil {
 		return nil
 	}
-	output, err := url.JoinPath(publicURL, "pipelines", pipeID, "output")
+	output, err := url.JoinPath(publicURL, "api", "pipelines", pipeID, "output")
 	if err != nil {
 		return nil
 	}

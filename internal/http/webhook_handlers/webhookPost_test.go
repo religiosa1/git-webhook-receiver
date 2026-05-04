@@ -301,7 +301,7 @@ func TestPublicUrl(t *testing.T) {
 		publicURL := "ftp://example.com/"
 		cfg := config.Config{PublicURL: publicURL}
 		action := newTestHandler(cfg, prj).doRequestAndGetAction(t, requestDump.ToHttpRequest(projectEndPoint))
-		want := publicURL + "pipelines/" + url.PathEscape(action.PipeID)
+		want := publicURL + "api/pipelines/" + url.PathEscape(action.PipeID)
 		if action.Links == nil {
 			t.Fatal("unexpected empty links object")
 		}
@@ -318,7 +318,7 @@ func TestPublicUrl(t *testing.T) {
 		publicURL := "ftp://example.com"
 		cfg := config.Config{PublicURL: publicURL}
 		action := newTestHandler(cfg, prj).doRequestAndGetAction(t, requestDump.ToHttpRequest(projectEndPoint))
-		want := publicURL + "/pipelines/" + url.PathEscape(action.PipeID)
+		want := publicURL + "/api/pipelines/" + url.PathEscape(action.PipeID)
 		if action.Links == nil {
 			t.Fatal("unexpected empty links object")
 		}

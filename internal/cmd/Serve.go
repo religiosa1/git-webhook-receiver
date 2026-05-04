@@ -85,18 +85,18 @@ func Serve(cfg config.Config) {
 			middleware.WithLogger(logger),
 			middleware.WithBasicAuth(cfg.APIUser, cfg.APIPassword.RawContents()),
 		)
-		mux.Handle("GET /projects", middlewares(admin.ListProjects{Projects: cfg.Projects}))
+		mux.Handle("GET /api/projects", middlewares(admin.ListProjects{Projects: cfg.Projects}))
 		if dbActions != nil {
 			logger.Debug("Web admin enabled for pipelines")
-			mux.Handle("GET /pipelines", middlewares(admin.ListPipelines{DB: dbActions, PublicURL: cfg.PublicURL}))
-			mux.Handle("GET /pipelines/{pipeId}", middlewares(admin.GetPipeline{DB: dbActions}))
-			mux.Handle("GET /pipelines/{pipeId}/output", middlewares(admin.GetPipelineOutput{DB: dbActions}))
+			mux.Handle("GET /api/pipelines", middlewares(admin.ListPipelines{DB: dbActions, PublicURL: cfg.PublicURL}))
+			mux.Handle("GET /api/pipelines/{pipeId}", middlewares(admin.GetPipeline{DB: dbActions}))
+			mux.Handle("GET /api/pipelines/{pipeId}/output", middlewares(admin.GetPipelineOutput{DB: dbActions}))
 		} else {
-			logger.Warn("actions_db_file config value is an empty string. All of /pipeline API endpoints won't be available")
+			logger.Warn("actions_db_file config value is an empty string. All of /api/pipelines API endpoints won't be available")
 		}
 		if dbLogs != nil {
 			logger.Debug("Web admin enabled for logs")
-			mux.Handle("GET /logs", middlewares(admin.GetLogs{DB: dbLogs, PublicURL: cfg.PublicURL}))
+			mux.Handle("GET /api/logs", middlewares(admin.GetLogs{DB: dbLogs, PublicURL: cfg.PublicURL}))
 		} else {
 			logger.Warn("logs_db_file config value is an empty string. Logs inspection won't be available")
 		}
@@ -235,7 +235,7 @@ func createProjectsMux(actionsCh chan ActionRunner.ActionArgs, cfg config.Config
 		)
 		if !cfg.DisableAPI {
 			mux.Handle(
-				"GET "+path,
+				"GET /api"+path,
 				middleware.WithLogger(projectLogger)(basicAuth(admin.GetProject{Project: project})),
 			)
 		}
@@ -253,7 +253,7 @@ func createProjectsMux(actionsCh chan ActionRunner.ActionArgs, cfg config.Config
 	}
 	mux.HandleFunc("POST /projects/{projectName}", prjNotFound)
 	if !cfg.DisableAPI {
-		mux.Handle("GET /projects/{projectName}", basicAuth(http.HandlerFunc(prjNotFound)))
+		mux.Handle("GET /api/projects/{projectName}", basicAuth(http.HandlerFunc(prjNotFound)))
 	}
 	return mux, nil
 }
