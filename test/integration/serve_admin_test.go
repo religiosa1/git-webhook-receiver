@@ -45,7 +45,8 @@ func TestServe_Admin_DisabledReturnsUnreachable(t *testing.T) {
 
 func TestServe_Admin_RequiresBasicAuthWhenConfigured(t *testing.T) {
 	const user, pass = "admin", "s3cret"
-	s := startServer(t,
+	s := startServer(
+		t,
 		WithDisableAPI(false),
 		WithBasicAuth(user, pass),
 	)
@@ -106,7 +107,7 @@ func TestServe_Admin_RequiresBasicAuthWhenConfigured(t *testing.T) {
 	})
 }
 
-// When disable_api is false but no api_user / api_password are configured the
+// When disable_api is false but no auth_user / auth_password are configured the
 // basic-auth middleware turns into a no-op, so admin endpoints become
 // accessible without credentials. Pinning that current behavior here.
 func TestServe_Admin_NoCredsConfiguredAllowsAccess(t *testing.T) {

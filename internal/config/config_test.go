@@ -197,7 +197,8 @@ projects:
 	})
 
 	t.Run("config without any project isn't valid", func(t *testing.T) {
-		configFileName := tmpConfigFile(t, `
+		configFileName := tmpConfigFile(
+			t, `
 host: test.example.com
 port: 1234`,
 		)
@@ -207,7 +208,8 @@ port: 1234`,
 	})
 
 	t.Run("project without any actions isn't valid", func(t *testing.T) {
-		configFileName := tmpConfigFile(t, `
+		configFileName := tmpConfigFile(
+			t, `
 host: test.example.com
 port: 1234
   test-proj:
@@ -608,7 +610,7 @@ func TestSensitiveDataMasking(t *testing.T) {
 		cfg := config.Config{
 			Projects: make(map[string]config.Project),
 		}
-		cfg.APIPassword = "t3stPa55w0rd"
+		cfg.AuthPassword = "t3stPa55w0rd"
 		cfg.Projects["proj1"] = config.Project{
 			Authorization: "B3ar3rT0k3nV4lu3",
 		}

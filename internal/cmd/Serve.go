@@ -83,7 +83,7 @@ func Serve(cfg config.Config) {
 	if !cfg.DisableAPI {
 		middlewares := middleware.Chain(
 			middleware.WithLogger(logger),
-			middleware.WithBasicAuth(cfg.APIUser, cfg.APIPassword.RawContents()),
+			middleware.WithBasicAuth(cfg.AuthUser, cfg.AuthPassword.RawContents()),
 		)
 		mux.Handle("GET /api/projects", middlewares(admin.ListProjects{Projects: cfg.Projects}))
 		if dbActions != nil {
@@ -206,7 +206,7 @@ func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig
 
 func createProjectsMux(actionsCh chan actionrunner.ActionArgs, cfg config.Config, logger *slog.Logger) (*http.ServeMux, error) {
 	mux := http.NewServeMux()
-	basicAuth := middleware.WithBasicAuth(cfg.APIUser, cfg.APIPassword.RawContents())
+	basicAuth := middleware.WithBasicAuth(cfg.AuthUser, cfg.AuthPassword.RawContents())
 	for projectName, project := range cfg.Projects {
 		receiver := whreceiver.New(project)
 		if receiver == nil {

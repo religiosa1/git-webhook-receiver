@@ -25,9 +25,10 @@ const (
 type Config struct {
 	Addr                    string             `yaml:"addr" env:"ADDR" env-default:"localhost:9090"`
 	PublicURL               string             `yaml:"public_url" env:"PUBLIC_URL"`
+	DisableUI               bool               `yaml:"disable_ui" env:"DISABLE_UI"`
 	DisableAPI              bool               `yaml:"disable_api" env:"DISABLE_API"`
-	APIUser                 string             `yaml:"api_user" env:"API_USER" env-default:"admin"`
-	APIPassword             Secret             `yaml:"api_password" env:"API_PASSWORD"`
+	AuthUser                string             `yaml:"auth_user" env:"AUTH_USER" env-default:"admin"`
+	AuthPassword            Secret             `yaml:"auth_password" env:"AUTH_PASSWORD"`
 	LogLevel                string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
 	LogType                 string             `yaml:"log_type" env:"LOG_TYPE" env-default:"json"`
 	LogsDBFile              string             `yaml:"logs_db_file" env:"LOGS_DB_FILE"`

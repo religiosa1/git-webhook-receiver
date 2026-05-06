@@ -9,9 +9,9 @@ configuration fields:
 
 ```
 # Basic auth user for inspection API. Defaults to "admin"
-api_user: 'admin'
+auth_user: 'admin'
 # Basic auth user for inspection API. Empty string (disabled) by default
-api_password: ''
+auth_password: ''
 ```
 
 **Security Warning**: Do not use BasicAuth unless SSL is enabled (either in the

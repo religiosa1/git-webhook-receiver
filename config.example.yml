@@ -7,9 +7,10 @@ addr: 0.0.0.0:9090
 public_url: https://example.com:9090/ # default is empty, here only for example
 log_level: "info" # other options are  'debug', 'warn' and 'error'
 log_type: "json" # type of stdout log: "json" (default), "text"
+disable_ui: false # Disable Web UI
 disable_api: false # Disable Inspection HTTP API
-api_user: "admin" # Basic auth user for the inspection API.
-api_password: "" # Basic auth user for the inspection API. Empty string means disabled
+auth_user: "admin" # Basic auth user for the inspection API and Web UI.
+auth_password: "" # Basic auth password for the inspection API and Web UI. Empty string disables basicauth
 # SSL config: (optional, but recommended, unless you're using a reverse proxy)
 ssl:
   cert_file_path: "./your/certfile/path/fullchain.pem"

@@ -39,8 +39,8 @@ precedence).
 A typical config file may look like this:
 
 ```yaml
-# provide it through env API_PASSWORD, if you don't want it readable in config
-api_password: "password for inspection api basic auth"
+# provide it through env AUTH_PASSWORD, if you don't want it readable in config
+auth_password: "password for inspection api and web ui basic auth"
 projects:
   my_awesome_project:
     repo: "username/reponame"
@@ -193,10 +193,10 @@ GET /logs # To see the logs result, must have logsdb on in config
 You can find the full documentation for endpoints and params they accept
 [here](./docs/inspection-api.md)
 
-You can also enable BasicAuth for the APi either in the config:
+You can also enable BasicAuth for the API either in the config:
 
 ```
-api_password: "mysecret"
+auth_password: "mysecret"
 ```
 
 or with a env variable API_PASSWORD=mysecret

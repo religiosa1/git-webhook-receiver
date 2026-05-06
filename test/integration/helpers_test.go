@@ -199,10 +199,10 @@ func renderConfigYAML(addr, actionsDB, logsDB string, prov providerInfo, o serve
 	fmt.Fprintf(&b, "logs_db_file: %q\n", logsDB)
 	fmt.Fprintf(&b, "disable_api: %t\n", o.DisableAPI)
 	if o.APIUser != "" {
-		fmt.Fprintf(&b, "api_user: %q\n", o.APIUser)
+		fmt.Fprintf(&b, "auth_user: %q\n", o.APIUser)
 	}
 	if o.APIPassword != "" {
-		fmt.Fprintf(&b, "api_password: %q\n", o.APIPassword)
+		fmt.Fprintf(&b, "auth_password: %q\n", o.APIPassword)
 	}
 	b.WriteString("projects:\n")
 	fmt.Fprintf(&b, "  %s:\n", defaultProject)
