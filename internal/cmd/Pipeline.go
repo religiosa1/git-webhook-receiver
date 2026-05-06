@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
 )
 
@@ -24,7 +24,7 @@ func Pipeline(cfg config.Config, args PipelineArgs) {
 	if args.File == "" {
 		args.File = cfg.ActionsDBFile
 	}
-	dbActions, err := actiondb.New(args.File, cfg.MaxActionsStored, cfg.MaxOutputBytes)
+	dbActions, err := actionsdb.New(args.File, cfg.MaxActionsStored, cfg.MaxOutputBytes)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error opening actions db: %s\n", err)
 		os.Exit(ExitCodeActionsDB)
@@ -54,7 +54,7 @@ func Pipeline(cfg config.Config, args PipelineArgs) {
 	}
 }
 
-func displayPipeDetails(pipe actiondb.PipeLineRecord) {
+func displayPipeDetails(pipe actionsdb.PipeLineRecord) {
 	var endedAt string
 	if pipe.EndedAt.Valid {
 		endedAt = time.Unix(pipe.EndedAt.Int64, 0).Format(time.DateTime)

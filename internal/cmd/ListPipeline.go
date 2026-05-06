@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
 	"github.com/religiosa1/git-webhook-receiver/internal/serialization"
 )
@@ -26,7 +26,7 @@ func ListPipelines(cfg config.Config, args ListPipelinesArgs) {
 		args.File = cfg.ActionsDBFile
 	}
 
-	dbActions, err := actiondb.New(args.File, cfg.MaxActionsStored, cfg.MaxOutputBytes)
+	dbActions, err := actionsdb.New(args.File, cfg.MaxActionsStored, cfg.MaxOutputBytes)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error opening actions db: %s\n", err)
 		os.Exit(ExitCodeActionsDB)
@@ -39,14 +39,14 @@ func ListPipelines(cfg config.Config, args ListPipelinesArgs) {
 		}
 	}()
 
-	query := actiondb.ListPipelineRecordsQuery{
+	query := actionsdb.ListPipelineRecordsQuery{
 		Limit:  args.Limit,
 		Offset: args.Skip,
 
 		Project:    args.Project,
 		DeliveryID: args.DeliveryID,
 	}
-	query.Status, err = actiondb.ParsePipelineStatus(args.Status)
+	query.Status, err = actionsdb.ParsePipelineStatus(args.Status)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing pipeline state: %s\n", err)
 		// not aborting the execution here, just logging out
@@ -66,7 +66,7 @@ func ListPipelines(cfg config.Config, args ListPipelinesArgs) {
 	}
 }
 
-func getActionRecordOutputFormatter(format string) func([]actiondb.PipeLineRecord) error {
+func getActionRecordOutputFormatter(format string) func([]actionsdb.PipeLineRecord) error {
 	switch format {
 	case "simple":
 		return formatActionRecordsSimple
@@ -79,7 +79,7 @@ func getActionRecordOutputFormatter(format string) func([]actiondb.PipeLineRecor
 	}
 }
 
-func formatActionRecordsSimple(pipelines []actiondb.PipeLineRecord) error {
+func formatActionRecordsSimple(pipelines []actionsdb.PipeLineRecord) error {
 	for _, pl := range pipelines {
 		createAt := time.Unix(pl.CreatedAt, 0).Format(time.DateTime)
 
@@ -101,7 +101,7 @@ func formatActionRecordsSimple(pipelines []actiondb.PipeLineRecord) error {
 	return nil
 }
 
-func formatActionRecordsJq(pipelines []actiondb.PipeLineRecord) error {
+func formatActionRecordsJq(pipelines []actionsdb.PipeLineRecord) error {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	for _, pl := range pipelines {
@@ -113,7 +113,7 @@ func formatActionRecordsJq(pipelines []actiondb.PipeLineRecord) error {
 	return nil
 }
 
-func formatActionRecordsJSON(pipelines []actiondb.PipeLineRecord) error {
+func formatActionRecordsJSON(pipelines []actionsdb.PipeLineRecord) error {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	err := enc.Encode(serialization.PipelineRecords(pipelines))

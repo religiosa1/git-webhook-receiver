@@ -7,17 +7,17 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/religiosa1/git-webhook-receiver/internal/logsDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/logsdb"
 )
 
 type SlogSqlite struct {
-	db      *logsDb.LogsDB
+	db      *logsdb.LogsDB
 	attrs   []slog.Attr
 	leveler slog.Leveler
 	group   string
 }
 
-func NewDBLogger(db *logsDb.LogsDB, opts *slog.HandlerOptions) *SlogSqlite {
+func NewDBLogger(db *logsdb.LogsDB, opts *slog.HandlerOptions) *SlogSqlite {
 	return &SlogSqlite{
 		db:      db,
 		leveler: opts.Level,
@@ -33,7 +33,7 @@ func (logger *SlogSqlite) Handle(ctx context.Context, record slog.Record) error 
 		return nil
 	}
 
-	dbRecord := logsDb.LogEntry{
+	dbRecord := logsdb.LogEntry{
 		Level:   int(record.Level),
 		Message: record.Message,
 		TS:      record.Time.UTC().Unix(),

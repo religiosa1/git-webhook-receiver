@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/oklog/ulid/v2"
-	actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/admin"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/middleware"
@@ -24,9 +24,9 @@ var testAction = config.Action{
 	Script: "echo test",
 }
 
-func newTestDB(t *testing.T) *actiondb.ActionDB {
+func newTestDB(t *testing.T) *actionsdb.ActionDB {
 	t.Helper()
-	db, err := actiondb.New(":memory:", 1000, 0)
+	db, err := actionsdb.New(":memory:", 1000, 0)
 	if err != nil {
 		t.Fatalf("failed to create test DB: %v", err)
 	}
@@ -34,14 +34,14 @@ func newTestDB(t *testing.T) *actiondb.ActionDB {
 	return db
 }
 
-func seedRecord(t *testing.T, db *actiondb.ActionDB, pipeID, project, deliveryID string) {
+func seedRecord(t *testing.T, db *actionsdb.ActionDB, pipeID, project, deliveryID string) {
 	t.Helper()
 	if err := db.CreateRecord(pipeID, project, deliveryID, testAction); err != nil {
 		t.Fatalf("seed record %s: %v", pipeID, err)
 	}
 }
 
-func seedCompletedRecord(t *testing.T, db *actiondb.ActionDB, pipeID, project, deliveryID, output string, cmdErr error) {
+func seedCompletedRecord(t *testing.T, db *actionsdb.ActionDB, pipeID, project, deliveryID, output string, cmdErr error) {
 	t.Helper()
 	seedRecord(t, db, pipeID, project, deliveryID)
 	if err := db.CloseRecord(pipeID, cmdErr, strings.NewReader(output)); err != nil {

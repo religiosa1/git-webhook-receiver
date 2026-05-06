@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/religiosa1/git-webhook-receiver/internal/ActionRunner"
+	"github.com/religiosa1/git-webhook-receiver/internal/actionrunner"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
 	handlers "github.com/religiosa1/git-webhook-receiver/internal/http/webhook_handlers"
 	"github.com/religiosa1/git-webhook-receiver/internal/requestmock"
@@ -64,7 +64,7 @@ type testHandler struct {
 func newTestHandler(cfg config.Config, prj config.Project) testHandler {
 	rcvr := whreceiver.New(prj)
 	h := handlers.Webhook{
-		ActionsCh:   make(chan ActionRunner.ActionArgs, 10),
+		ActionsCh:   make(chan actionrunner.ActionArgs, 10),
 		Config:      cfg,
 		ProjectName: projectName,
 		Project:     prj,

@@ -8,12 +8,12 @@ import (
 
 	"github.com/religiosa1/git-webhook-receiver/internal/http/middleware"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/utils"
-	"github.com/religiosa1/git-webhook-receiver/internal/logsDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/logsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/serialization"
 )
 
 type GetLogs struct {
-	DB        *logsDb.LogsDB
+	DB        *logsdb.LogsDB
 	PublicURL string
 }
 
@@ -30,7 +30,7 @@ func (h GetLogs) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	query := logsDb.GetEntryFilteredQuery{
+	query := logsdb.GetEntryFilteredQuery{
 		Limit:      pagination.Limit,
 		Offset:     pagination.Offset,
 		Cursor:     queryParams.Get("cursor"),
@@ -44,7 +44,7 @@ func (h GetLogs) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	page, err := h.DB.GetEntryFiltered(query)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, logsDb.ErrBadCursor) || errors.Is(err, logsDb.ErrCursorAndOffset) {
+		if errors.Is(err, logsdb.ErrBadCursor) || errors.Is(err, logsdb.ErrCursorAndOffset) {
 			statusCode = 400
 		}
 		logger.Error("Error processing GetLogs request", slog.Any("error", err))
@@ -65,7 +65,7 @@ func (h GetLogs) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func parseLevels(levels []string) []int {
 	result := make([]int, 0)
 	for _, lvl := range levels {
-		l, err := logsDb.ParseLogLevel(lvl)
+		l, err := logsdb.ParseLogLevel(lvl)
 		if err == nil {
 			result = append(result, l)
 		}

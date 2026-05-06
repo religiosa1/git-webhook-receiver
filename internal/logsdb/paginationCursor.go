@@ -1,4 +1,4 @@
-package logsDb
+package logsdb
 
 import (
 	"fmt"

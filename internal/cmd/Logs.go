@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
-	"github.com/religiosa1/git-webhook-receiver/internal/logsDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/logsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/serialization"
 )
 
@@ -34,7 +34,7 @@ func Logs(cfg config.Config, args LogsArgs) {
 		os.Exit(1)
 	}
 
-	query := logsDb.GetEntryFilteredQuery{
+	query := logsdb.GetEntryFilteredQuery{
 		Limit:      args.Limit,
 		Project:    args.Project,
 		DeliveryID: args.DeliveryID,
@@ -45,13 +45,13 @@ func Logs(cfg config.Config, args LogsArgs) {
 
 	query.Levels = make([]int, 0)
 	for _, lvl := range args.Levels {
-		l, err := logsDb.ParseLogLevel(lvl)
+		l, err := logsdb.ParseLogLevel(lvl)
 		if err == nil {
 			query.Levels = append(query.Levels, l)
 		}
 	}
 
-	dbLogs, err := logsDb.New(args.File)
+	dbLogs, err := logsdb.New(args.File)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error opening logs db: %s\n", err)
 		os.Exit(ExitCodeLoggerDB)
@@ -76,7 +76,7 @@ func Logs(cfg config.Config, args LogsArgs) {
 	}
 }
 
-func getLogOutputFormatter(format string) func([]logsDb.LogEntry) error {
+func getLogOutputFormatter(format string) func([]logsdb.LogEntry) error {
 	switch format {
 	case "simple":
 		return formatLogRecordsSimple
@@ -89,7 +89,7 @@ func getLogOutputFormatter(format string) func([]logsDb.LogEntry) error {
 	}
 }
 
-func formatLogRecordsSimple(entries []logsDb.LogEntry) error {
+func formatLogRecordsSimple(entries []logsdb.LogEntry) error {
 	for _, e := range entries {
 		ts := time.Unix(e.TS, 0).Format(time.DateTime)
 		fmt.Printf("%s %s %s %s %s %s\n", ts, e.Message, e.Project.String, e.DeliveryID.String, e.PipeID.String, e.Data)
@@ -97,7 +97,7 @@ func formatLogRecordsSimple(entries []logsDb.LogEntry) error {
 	return nil
 }
 
-func formatLogRecordsJq(entries []logsDb.LogEntry) error {
+func formatLogRecordsJq(entries []logsdb.LogEntry) error {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	for _, entry := range entries {
@@ -109,9 +109,9 @@ func formatLogRecordsJq(entries []logsDb.LogEntry) error {
 	return nil
 }
 
-func formatLogRecordsJSON(entries []logsDb.LogEntry) error {
+func formatLogRecordsJSON(entries []logsdb.LogEntry) error {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
-	err := enc.Encode(serialization.LogEntries((entries)))
+	err := enc.Encode(serialization.LogEntries(entries))
 	return err
 }

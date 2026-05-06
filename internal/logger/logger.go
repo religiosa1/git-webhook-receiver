@@ -6,11 +6,11 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/religiosa1/git-webhook-receiver/internal/logsDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/logsdb"
 	slogmulti "github.com/samber/slog-multi"
 )
 
-func SetupLogger(logLevel, logType string, db *logsDb.LogsDB) (*slog.Logger, error) {
+func SetupLogger(logLevel, logType string, db *logsdb.LogsDB) (*slog.Logger, error) {
 	programLevel := new(slog.LevelVar)
 	programLevel.Set(strLogLevelToEnumValue(logLevel))
 	handlerOpts := &slog.HandlerOptions{Level: programLevel}

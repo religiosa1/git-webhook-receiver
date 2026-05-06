@@ -1,4 +1,4 @@
-package ActionRunner
+package actionrunner
 
 import "github.com/religiosa1/git-webhook-receiver/internal/config"
 

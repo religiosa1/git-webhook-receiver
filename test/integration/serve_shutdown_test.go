@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
 )
 
 // TestServe_GracefulShutdown_LetsInFlightActionFinish ensures that when SIGINT
@@ -75,7 +75,7 @@ func TestServe_GracefulShutdown_LetsInFlightActionFinish(t *testing.T) {
 
 			// Serve has closed its DB handle; reopen and confirm the action ran to
 			// completion and its output was flushed.
-			db, err := actiondb.New(s.ActionsDB, 0, 0)
+			db, err := actionsdb.New(s.ActionsDB, 0, 0)
 			if err != nil {
 				t.Fatalf("reopen actions db: %v", err)
 			}
@@ -148,7 +148,7 @@ func TestServe_GracefulShutdown_SecondSIGINTKillsActions(t *testing.T) {
 			}
 
 			// Reopen DB and confirm the action was killed before it could print "done".
-			db, err := actiondb.New(s.ActionsDB, 0, 0)
+			db, err := actionsdb.New(s.ActionsDB, 0, 0)
 			if err != nil {
 				t.Fatalf("reopen actions db: %v", err)
 			}

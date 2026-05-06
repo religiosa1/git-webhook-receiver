@@ -1,4 +1,4 @@
-package ActionRunner
+package actionrunner
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func (runner ActionRunner) executeAction(
+func (r ActionRunner) executeAction(
 	logger *slog.Logger,
 	actionDescriptor ActionDescriptor,
 ) {
@@ -16,8 +16,8 @@ func (runner ActionRunner) executeAction(
 	pipeLogger := logger.With(slog.String("pipeId", actionDescriptor.PipeID))
 	pipeLogger.Info("Running action", slog.Int("action_index", actionDescriptor.Index))
 
-	if runner.actionsDB != nil {
-		err := runner.actionsDB.CreateRecord(actionDescriptor.PipeID, actionDescriptor.Project, actionDescriptor.DeliveryID, action)
+	if r.actionsDB != nil {
+		err := r.actionsDB.CreateRecord(actionDescriptor.PipeID, actionDescriptor.Project, actionDescriptor.DeliveryID, action)
 		if err != nil {
 			pipeLogger.Error("Error creating pipeline record in the db", slog.Any("error", err))
 			return
@@ -50,7 +50,7 @@ func (runner ActionRunner) executeAction(
 		logger.Debug("Running from a user", slog.String("user", action.User))
 	}
 
-	actionCtx, cancelAction := context.WithTimeout(runner.ctx, action.Timeout)
+	actionCtx, cancelAction := context.WithTimeout(r.ctx, action.Timeout)
 	defer cancelAction()
 
 	var actionErr error
@@ -68,15 +68,15 @@ func (runner ActionRunner) executeAction(
 		logger.Info("Action successfully finished")
 	}
 
-	if runner.actionsDB != nil {
-		var outputForDb io.Reader
+	if r.actionsDB != nil {
+		var outputForDB io.Reader
 		if _, err := output.Seek(0, io.SeekStart); err != nil {
 			logger.Error("Error seeking output file", slog.Any("error", err))
-			outputForDb = strings.NewReader("CORRUPTED")
+			outputForDB = strings.NewReader("CORRUPTED")
 		} else {
-			outputForDb = output
+			outputForDB = output
 		}
-		err := runner.actionsDB.CloseRecord(actionDescriptor.PipeID, actionErr, outputForDb)
+		err := r.actionsDB.CloseRecord(actionDescriptor.PipeID, actionErr, outputForDB)
 		if err != nil {
 			pipeLogger.Error("Error closing action's db record", slog.Any("error", err))
 			return

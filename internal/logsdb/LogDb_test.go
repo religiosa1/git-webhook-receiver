@@ -1,4 +1,4 @@
-package logsDb_test
+package logsdb_test
 
 import (
 	"database/sql"
@@ -6,10 +6,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/religiosa1/git-webhook-receiver/internal/logsDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/logsdb"
 )
 
-var testEntry = logsDb.LogEntry{
+var testEntry = logsdb.LogEntry{
 	Level:      int(slog.LevelInfo),
 	Project:    sql.NullString{Valid: true, String: "testProject"},
 	DeliveryID: sql.NullString{Valid: true, String: "testDeliveryId"},
@@ -20,7 +20,7 @@ var testEntry = logsDb.LogEntry{
 
 func TestLogDb(t *testing.T) {
 	t.Run("Creates a db", func(t *testing.T) {
-		db, err := logsDb.New(":memory:")
+		db, err := logsdb.New(":memory:")
 		if err != nil {
 			t.Fatalf("Error while opening a db: %s", err)
 		}
@@ -31,7 +31,7 @@ func TestLogDb(t *testing.T) {
 	})
 
 	t.Run("Returns nil on empty dbfilename", func(t *testing.T) {
-		db, err := logsDb.New("")
+		db, err := logsdb.New("")
 		if err != nil {
 			t.Fatalf("Error while opening a db: %s", err)
 		}
@@ -41,7 +41,7 @@ func TestLogDb(t *testing.T) {
 	})
 
 	t.Run("Creates a record in the db", func(t *testing.T) {
-		db, err := logsDb.New(":memory:")
+		db, err := logsdb.New(":memory:")
 		if err != nil {
 			t.Fatalf("Error while opening a db: %s", err)
 		}
@@ -50,7 +50,7 @@ func TestLogDb(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error while creating an entry: %s", err)
 		}
-		entries, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{})
+		entries, err := db.GetEntryFiltered(logsdb.GetEntryFilteredQuery{})
 		if err != nil {
 			t.Fatalf("Error while retrieving entries: %s", err)
 		}
@@ -69,7 +69,7 @@ func TestLogDb(t *testing.T) {
 		defer func() {
 			_ = tmpFile.Close()
 		}()
-		db, err := logsDb.New(tmpFile.Name())
+		db, err := logsdb.New(tmpFile.Name())
 		if err != nil {
 			t.Fatalf("Error while opening a db: %s", err)
 		}
@@ -78,11 +78,11 @@ func TestLogDb(t *testing.T) {
 			t.Fatalf("Error while creating an entry: %s", err)
 		}
 		_ = db.Close()
-		db2, err := logsDb.New(tmpFile.Name())
+		db2, err := logsdb.New(tmpFile.Name())
 		if err != nil {
 			t.Fatalf("Error while opening the db for the second time: %s", err)
 		}
-		entries, err := db2.GetEntryFiltered(logsDb.GetEntryFilteredQuery{})
+		entries, err := db2.GetEntryFiltered(logsdb.GetEntryFilteredQuery{})
 		if err != nil {
 			t.Fatalf("Error while retrieving entries: %s", err)
 		}
@@ -94,7 +94,7 @@ func TestLogDb(t *testing.T) {
 	})
 
 	t.Run("Allows to retrieve entries with pagination", func(t *testing.T) {
-		db, err := logsDb.New(":memory:")
+		db, err := logsdb.New(":memory:")
 		if err != nil {
 			t.Fatalf("Error while opening a db: %s", err)
 		}
@@ -105,14 +105,14 @@ func TestLogDb(t *testing.T) {
 		testEntry3 := testEntry
 		testEntry3.Message = "message3"
 
-		for _, entry := range [...]logsDb.LogEntry{testEntry, testEntry2, testEntry3} {
+		for _, entry := range [...]logsdb.LogEntry{testEntry, testEntry2, testEntry3} {
 			err = db.CreateEntry(entry)
 			if err != nil {
 				t.Fatalf("Error while creating an entry: %s", err)
 			}
 		}
 
-		page1, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{Limit: 2})
+		page1, err := db.GetEntryFiltered(logsdb.GetEntryFilteredQuery{Limit: 2})
 		if err != nil {
 			t.Fatalf("Error while retrieving entries: %s", err)
 		}
@@ -127,7 +127,7 @@ func TestLogDb(t *testing.T) {
 			t.Fatalf("Expected to received next page cursor, received nil")
 		}
 
-		page2, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{Cursor: *page1.Cursor})
+		page2, err := db.GetEntryFiltered(logsdb.GetEntryFilteredQuery{Cursor: *page1.Cursor})
 		if err != nil {
 			t.Fatalf("Error while retrieving entries: %s", err)
 		}
@@ -140,7 +140,7 @@ func TestLogDb(t *testing.T) {
 
 func TestLogDbFiltering(t *testing.T) {
 	t.Run("Single item-filtering", func(t *testing.T) {
-		db, err := logsDb.New(":memory:")
+		db, err := logsdb.New(":memory:")
 		if err != nil {
 			t.Fatalf("Error while opening a db: %s", err)
 		}
@@ -157,7 +157,7 @@ func TestLogDbFiltering(t *testing.T) {
 		messageEntry := testEntry
 		messageEntry.Message = "message-search"
 
-		allEntries := []logsDb.LogEntry{
+		allEntries := []logsdb.LogEntry{
 			testEntry,
 			projectEntry,
 			deliveryEntry,
@@ -171,7 +171,7 @@ func TestLogDbFiltering(t *testing.T) {
 			}
 		}
 
-		s1, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{Project: "project-search"})
+		s1, err := db.GetEntryFiltered(logsdb.GetEntryFilteredQuery{Project: "project-search"})
 		if err != nil {
 			t.Fatalf("Error while retrieving entries: %s", err)
 		}
@@ -180,7 +180,7 @@ func TestLogDbFiltering(t *testing.T) {
 		}
 		CompareEntries(t, projectEntry, s1.Items[0])
 
-		s2, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{DeliveryID: "delivery-search"})
+		s2, err := db.GetEntryFiltered(logsdb.GetEntryFilteredQuery{DeliveryID: "delivery-search"})
 		if err != nil {
 			t.Fatalf("Error while retrieving entries: %s", err)
 		}
@@ -189,7 +189,7 @@ func TestLogDbFiltering(t *testing.T) {
 		}
 		CompareEntries(t, deliveryEntry, s2.Items[0])
 
-		s3, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{PipeID: "pipe-search"})
+		s3, err := db.GetEntryFiltered(logsdb.GetEntryFilteredQuery{PipeID: "pipe-search"})
 		if err != nil {
 			t.Fatalf("Error while retrieving entries: %s", err)
 		}
@@ -198,7 +198,7 @@ func TestLogDbFiltering(t *testing.T) {
 		}
 		CompareEntries(t, pipeEntry, s3.Items[0])
 
-		s4, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{Message: "message-search"})
+		s4, err := db.GetEntryFiltered(logsdb.GetEntryFilteredQuery{Message: "message-search"})
 		if err != nil {
 			t.Fatalf("Error while retrieving entries: %s", err)
 		}
@@ -209,7 +209,7 @@ func TestLogDbFiltering(t *testing.T) {
 	})
 
 	t.Run("All of filtering conditions must match", func(t *testing.T) {
-		db, err := logsDb.New(":memory:")
+		db, err := logsdb.New(":memory:")
 		if err != nil {
 			t.Fatalf("Error while opening a db: %s", err)
 		}
@@ -227,7 +227,7 @@ func TestLogDbFiltering(t *testing.T) {
 		entryAB.PipeID = sql.NullString{Valid: true, String: pipeID}
 		entryAB.DeliveryID = sql.NullString{Valid: true, String: delivery}
 
-		allEntries := []logsDb.LogEntry{
+		allEntries := []logsdb.LogEntry{
 			testEntry,
 			entryA,
 			entryB,
@@ -240,7 +240,7 @@ func TestLogDbFiltering(t *testing.T) {
 			}
 		}
 
-		s1, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{DeliveryID: delivery, PipeID: pipeID})
+		s1, err := db.GetEntryFiltered(logsdb.GetEntryFilteredQuery{DeliveryID: delivery, PipeID: pipeID})
 		if err != nil {
 			t.Fatalf("Error while retrieving entries: %s", err)
 		}
@@ -251,7 +251,7 @@ func TestLogDbFiltering(t *testing.T) {
 	})
 
 	t.Run("Any of the log levels can match", func(t *testing.T) {
-		db, err := logsDb.New(":memory:")
+		db, err := logsdb.New(":memory:")
 		if err != nil {
 			t.Fatalf("Error while opening a db: %s", err)
 		}
@@ -262,7 +262,7 @@ func TestLogDbFiltering(t *testing.T) {
 		entryB := testEntry
 		entryB.Level = int(slog.LevelWarn)
 
-		allEntries := []logsDb.LogEntry{
+		allEntries := []logsdb.LogEntry{
 			testEntry,
 			entryA,
 			entryB,
@@ -274,7 +274,7 @@ func TestLogDbFiltering(t *testing.T) {
 			}
 		}
 
-		s1, err := db.GetEntryFiltered(logsDb.GetEntryFilteredQuery{Levels: []int{
+		s1, err := db.GetEntryFiltered(logsdb.GetEntryFilteredQuery{Levels: []int{
 			int(slog.LevelError),
 			int(slog.LevelWarn),
 		}})
@@ -290,7 +290,7 @@ func TestLogDbFiltering(t *testing.T) {
 	})
 }
 
-func CompareEntries(t *testing.T, want logsDb.LogEntry, got logsDb.LogEntry) bool {
+func CompareEntries(t *testing.T, want logsdb.LogEntry, got logsdb.LogEntry) bool {
 	t.Helper()
 	if want.Level != got.Level {
 		t.Errorf("Wrong level value, want %d got %d", want.Level, got.Level)

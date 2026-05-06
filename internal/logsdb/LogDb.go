@@ -1,4 +1,4 @@
-package logsDb
+package logsdb
 
 import (
 	"database/sql"
@@ -11,7 +11,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/religiosa1/git-webhook-receiver/internal/models"
-	sqlfilterbuilder "github.com/religiosa1/git-webhook-receiver/internal/sqlFilterBuilder"
+	"github.com/religiosa1/git-webhook-receiver/internal/sqlfilterbuilder"
 )
 
 type LogsDB struct {

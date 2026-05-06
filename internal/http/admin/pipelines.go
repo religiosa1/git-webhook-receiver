@@ -7,14 +7,14 @@ import (
 	"log/slog"
 	"net/http"
 
-	actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/middleware"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/utils"
 	"github.com/religiosa1/git-webhook-receiver/internal/serialization"
 )
 
 type ListPipelines struct {
-	DB        *actiondb.ActionDB
+	DB        *actionsdb.ActionDB
 	PublicURL string
 }
 
@@ -30,14 +30,14 @@ func (h ListPipelines) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	query := actiondb.ListPipelineRecordsQuery{
+	query := actionsdb.ListPipelineRecordsQuery{
 		Offset:     pagination.Offset,
 		Limit:      pagination.Limit,
 		Project:    queryParams.Get("project"),
 		DeliveryID: queryParams.Get("deliveryId"),
 		Cursor:     queryParams.Get("cursor"),
 	}
-	query.Status, err = actiondb.ParsePipelineStatus(queryParams.Get("status"))
+	query.Status, err = actionsdb.ParsePipelineStatus(queryParams.Get("status"))
 	if err != nil {
 		logger.Warn("Error parsing pipeline state", slog.Any("error", err))
 		// just logging out, no execution abort here
@@ -46,7 +46,7 @@ func (h ListPipelines) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	page, err := h.DB.ListPipelineRecords(query)
 	if err != nil {
 		statusCode := 500
-		if errors.Is(err, actiondb.ErrBadCursor) || errors.Is(err, actiondb.ErrCursorAndOffset) {
+		if errors.Is(err, actionsdb.ErrBadCursor) || errors.Is(err, actionsdb.ErrCursorAndOffset) {
 			statusCode = 400
 		}
 		if writeErr := utils.WriteErrorResponse(w, statusCode, err.Error()); writeErr != nil {
@@ -65,7 +65,7 @@ func (h ListPipelines) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 type GetPipeline struct {
-	DB *actiondb.ActionDB
+	DB *actionsdb.ActionDB
 }
 
 func (h GetPipeline) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -92,7 +92,7 @@ func (h GetPipeline) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 type GetPipelineOutput struct {
-	DB *actiondb.ActionDB
+	DB *actionsdb.ActionDB
 }
 
 func (h GetPipelineOutput) ServeHTTP(w http.ResponseWriter, req *http.Request) {

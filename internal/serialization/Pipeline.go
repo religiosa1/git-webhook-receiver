@@ -1,7 +1,7 @@
 package serialization
 
 import (
-	actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/models"
 )
 
@@ -15,7 +15,7 @@ type PrettyPipelineRecord struct {
 	EndedAt    NullTS     `json:"endedAt"`
 }
 
-func PipelineRecord(r actiondb.PipeLineRecord) PrettyPipelineRecord {
+func PipelineRecord(r actionsdb.PipeLineRecord) PrettyPipelineRecord {
 	config, _ := NewJSONData(r.Config)
 
 	return PrettyPipelineRecord{
@@ -29,7 +29,7 @@ func PipelineRecord(r actiondb.PipeLineRecord) PrettyPipelineRecord {
 	}
 }
 
-func PipelineRecords(rs []actiondb.PipeLineRecord) []PrettyPipelineRecord {
+func PipelineRecords(rs []actionsdb.PipeLineRecord) []PrettyPipelineRecord {
 	records := make([]PrettyPipelineRecord, len(rs))
 	for i, r := range rs {
 		records[i] = PipelineRecord(r)
@@ -37,7 +37,7 @@ func PipelineRecords(rs []actiondb.PipeLineRecord) []PrettyPipelineRecord {
 	return records
 }
 
-func PipelinePage(pagedPipeLineRecords models.PagedDB[actiondb.PipeLineRecord]) models.Paged[PrettyPipelineRecord] {
+func PipelinePage(pagedPipeLineRecords models.PagedDB[actionsdb.PipeLineRecord]) models.Paged[PrettyPipelineRecord] {
 	var result models.Paged[PrettyPipelineRecord]
 	result.TotalCount = pagedPipeLineRecords.TotalCount
 	result.Items = PipelineRecords(pagedPipeLineRecords.Items)

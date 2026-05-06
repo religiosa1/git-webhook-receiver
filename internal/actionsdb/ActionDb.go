@@ -1,4 +1,4 @@
-package actiondb
+package actionsdb
 
 import (
 	"database/sql"

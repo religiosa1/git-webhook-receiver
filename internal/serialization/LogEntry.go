@@ -3,7 +3,7 @@ package serialization
 import (
 	"log/slog"
 
-	"github.com/religiosa1/git-webhook-receiver/internal/logsDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/logsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/models"
 )
 
@@ -17,7 +17,7 @@ type PrettyLogEntry struct {
 	TS         Timestamp  `json:"ts"`
 }
 
-func LogEntry(e logsDb.LogEntry) PrettyLogEntry {
+func LogEntry(e logsdb.LogEntry) PrettyLogEntry {
 	var level string
 	switch slog.Level(e.Level) {
 	case slog.LevelDebug:
@@ -43,7 +43,7 @@ func LogEntry(e logsDb.LogEntry) PrettyLogEntry {
 	}
 }
 
-func LogEntries(les []logsDb.LogEntry) []PrettyLogEntry {
+func LogEntries(les []logsdb.LogEntry) []PrettyLogEntry {
 	entries := make([]PrettyLogEntry, len(les))
 	for i, e := range les {
 		entries[i] = LogEntry(e)
@@ -51,7 +51,7 @@ func LogEntries(les []logsDb.LogEntry) []PrettyLogEntry {
 	return entries
 }
 
-func LogEntriesPage(page models.PagedDB[logsDb.LogEntry]) models.Paged[PrettyLogEntry] {
+func LogEntriesPage(page models.PagedDB[logsdb.LogEntry]) models.Paged[PrettyLogEntry] {
 	var result models.Paged[PrettyLogEntry]
 	result.Items = LogEntries(page.Items)
 	result.TotalCount = page.TotalCount

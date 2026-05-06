@@ -9,7 +9,7 @@ import (
 	"net/url"
 
 	"github.com/oklog/ulid/v2"
-	"github.com/religiosa1/git-webhook-receiver/internal/ActionRunner"
+	"github.com/religiosa1/git-webhook-receiver/internal/actionrunner"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/middleware"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/utils"
@@ -20,7 +20,7 @@ import (
 const maxBodySize int64 = 1024 * 300
 
 type Webhook struct {
-	ActionsCh   chan ActionRunner.ActionArgs
+	ActionsCh   chan actionrunner.ActionArgs
 	Config      config.Config
 	ProjectName string
 	Project     config.Project
@@ -88,7 +88,7 @@ func (h Webhook) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	for _, actionDescriptor := range actions {
-		h.ActionsCh <- ActionRunner.ActionArgs{Logger: deliveryLogger, Action: actionDescriptor}
+		h.ActionsCh <- actionrunner.ActionArgs{Logger: deliveryLogger, Action: actionDescriptor}
 	}
 
 	deliveryLogger.Info("Launched actions", slog.Any("actions", actions))
@@ -116,8 +116,8 @@ func getWebhookErrorCode(err error) ErrorInfo {
 	return ErrorInfo{http.StatusBadRequest, err.Error()}
 }
 
-func getProjectsActionsForWebhookPost(projectName string, project config.Project, webhookInfo *whreceiver.WebhookPostInfo) []ActionRunner.ActionDescriptor {
-	actions := make([]ActionRunner.ActionDescriptor, 0)
+func getProjectsActionsForWebhookPost(projectName string, project config.Project, webhookInfo *whreceiver.WebhookPostInfo) []actionrunner.ActionDescriptor {
+	actions := make([]actionrunner.ActionDescriptor, 0)
 	for index, action := range project.Actions {
 		if action.Branch != "*" && action.Branch != webhookInfo.Branch {
 			continue
@@ -125,8 +125,8 @@ func getProjectsActionsForWebhookPost(projectName string, project config.Project
 		if action.On != "*" && action.On != webhookInfo.Event {
 			continue
 		}
-		actions = append(actions, ActionRunner.ActionDescriptor{
-			ActionIdentifier: ActionRunner.ActionIdentifier{
+		actions = append(actions, actionrunner.ActionDescriptor{
+			ActionIdentifier: actionrunner.ActionIdentifier{
 				Index:      index,
 				PipeID:     ulid.Make().String(),
 				Project:    projectName,
@@ -139,11 +139,11 @@ func getProjectsActionsForWebhookPost(projectName string, project config.Project
 }
 
 type ActionOutput struct {
-	ActionRunner.ActionIdentifier
+	actionrunner.ActionIdentifier
 	Links *ActionLinks `json:"links,omitempty"`
 }
 
-func actionsToOutput(cfg config.Config, actions []ActionRunner.ActionDescriptor) []ActionOutput {
+func actionsToOutput(cfg config.Config, actions []actionrunner.ActionDescriptor) []ActionOutput {
 	output := make([]ActionOutput, len(actions))
 	for idx, action := range actions {
 		output[idx] = ActionOutput{

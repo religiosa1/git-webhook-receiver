@@ -1,4 +1,4 @@
-package ActionRunner
+package actionrunner
 
 import (
 	"bytes"

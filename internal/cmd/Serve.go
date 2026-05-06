@@ -12,14 +12,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/religiosa1/git-webhook-receiver/internal/ActionRunner"
-	actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/actionrunner"
+	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/admin"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/middleware"
 	handlers "github.com/religiosa1/git-webhook-receiver/internal/http/webhook_handlers"
 	"github.com/religiosa1/git-webhook-receiver/internal/logger"
-	"github.com/religiosa1/git-webhook-receiver/internal/logsDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/logsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/whreceiver"
 )
 
@@ -30,7 +30,7 @@ func Serve(cfg config.Config) {
 	//==========================================================================
 	// Logger and Action DBs
 
-	dbActions, err := actiondb.New(cfg.ActionsDBFile, cfg.MaxActionsStored, cfg.MaxOutputBytes)
+	dbActions, err := actionsdb.New(cfg.ActionsDBFile, cfg.MaxActionsStored, cfg.MaxOutputBytes)
 	if err != nil {
 		log.Printf("Error opening actions db: %s", err)
 		os.Exit(ExitCodeActionsDB)
@@ -44,7 +44,7 @@ func Serve(cfg config.Config) {
 		}
 	}()
 
-	dbLogs, err := logsDb.New(cfg.LogsDBFile)
+	dbLogs, err := logsdb.New(cfg.LogsDBFile)
 	if err != nil {
 		log.Printf("Error opening logs db: %s", err)
 		os.Exit(ExitCodeLoggerDB)
@@ -68,7 +68,7 @@ func Serve(cfg config.Config) {
 		logger.Warn("PublicURL is not set in the config, URL generation in responses will be falling back to relative paths")
 	}
 
-	actionRunner := ActionRunner.New(
+	actionRunner := actionrunner.New(
 		context.Background(),
 		dbActions,
 	)
@@ -171,7 +171,8 @@ func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig
 	go func() {
 		var err error
 		if sslConfig.CertFilePath != "" && sslConfig.KeyFilePath != "" {
-			logger.Info("Running the server with SSL",
+			logger.Info(
+				"Running the server with SSL",
 				slog.String("addr", srv.Addr),
 				slog.String("cert file", sslConfig.CertFilePath),
 				slog.String("key file", sslConfig.KeyFilePath),
@@ -203,7 +204,7 @@ func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig
 	return <-errCh
 }
 
-func createProjectsMux(actionsCh chan ActionRunner.ActionArgs, cfg config.Config, logger *slog.Logger) (*http.ServeMux, error) {
+func createProjectsMux(actionsCh chan actionrunner.ActionArgs, cfg config.Config, logger *slog.Logger) (*http.ServeMux, error) {
 	mux := http.NewServeMux()
 	basicAuth := middleware.WithBasicAuth(cfg.APIUser, cfg.APIPassword.RawContents())
 	for projectName, project := range cfg.Projects {
@@ -239,7 +240,8 @@ func createProjectsMux(actionsCh chan ActionRunner.ActionArgs, cfg config.Config
 				middleware.WithLogger(projectLogger)(basicAuth(admin.GetProject{Project: project})),
 			)
 		}
-		logger.Debug("Registered project",
+		logger.Debug(
+			"Registered project",
 			slog.String("projectName", projectName),
 			slog.String("type", project.GitProvider),
 			slog.String("repo", project.Repo),

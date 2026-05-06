@@ -1,11 +1,11 @@
-package actiondb
+package actionsdb
 
 import (
 	"fmt"
 	"strings"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/models"
-	sqlfilterbuilder "github.com/religiosa1/git-webhook-receiver/internal/sqlFilterBuilder"
+	"github.com/religiosa1/git-webhook-receiver/internal/sqlfilterbuilder"
 )
 
 type ListPipelineRecordsQuery struct {

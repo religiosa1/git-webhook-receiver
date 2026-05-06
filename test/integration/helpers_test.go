@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/cmd"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
 	handlers "github.com/religiosa1/git-webhook-receiver/internal/http/webhook_handlers"
@@ -67,12 +67,12 @@ type serverOpts struct {
 
 type Option func(*serverOpts)
 
-func WithProvider(p string) Option        { return func(o *serverOpts) { o.Provider = p } }
-func WithSecret(s string) Option          { return func(o *serverOpts) { o.Secret = s } }
-func WithAuthorization(s string) Option   { return func(o *serverOpts) { o.Authorization = s } }
-func WithRun(args []string) Option        { return func(o *serverOpts) { o.Run = args; o.Script = "" } }
-func WithScript(s string) Option          { return func(o *serverOpts) { o.Script = s; o.Run = nil } }
-func WithDisableAPI(b bool) Option        { return func(o *serverOpts) { o.DisableAPI = b } }
+func WithProvider(p string) Option      { return func(o *serverOpts) { o.Provider = p } }
+func WithSecret(s string) Option        { return func(o *serverOpts) { o.Secret = s } }
+func WithAuthorization(s string) Option { return func(o *serverOpts) { o.Authorization = s } }
+func WithRun(args []string) Option      { return func(o *serverOpts) { o.Run = args; o.Script = "" } }
+func WithScript(s string) Option        { return func(o *serverOpts) { o.Script = s; o.Run = nil } }
+func WithDisableAPI(b bool) Option      { return func(o *serverOpts) { o.DisableAPI = b } }
 func WithBasicAuth(user, pass string) Option {
 	return func(o *serverOpts) { o.APIUser = user; o.APIPassword = pass }
 }
@@ -291,9 +291,9 @@ func parsePipeIDs(t *testing.T, resp *http.Response) []string {
 	return ids
 }
 
-func waitForPipeline(t *testing.T, dbPath, pipeID string, timeout time.Duration) actiondb.PipeLineRecord {
+func waitForPipeline(t *testing.T, dbPath, pipeID string, timeout time.Duration) actionsdb.PipeLineRecord {
 	t.Helper()
-	db, err := actiondb.New(dbPath, 0, 0)
+	db, err := actionsdb.New(dbPath, 0, 0)
 	if err != nil {
 		t.Fatalf("open actions db: %v", err)
 	}
@@ -307,7 +307,7 @@ func waitForPipeline(t *testing.T, dbPath, pipeID string, timeout time.Duration)
 		time.Sleep(50 * time.Millisecond)
 	}
 	t.Fatalf("pipeline %q did not finish within %s", pipeID, timeout)
-	return actiondb.PipeLineRecord{}
+	return actionsdb.PipeLineRecord{}
 }
 
 // adminGet builds a GET request to an admin endpoint. We always set
@@ -339,7 +339,7 @@ func adminGet(t *testing.T, baseURL, path string, creds *basicCreds) *http.Respo
 // webhook never enqueued an action.
 func pipelineExists(t *testing.T, dbPath, pipeID string) bool {
 	t.Helper()
-	db, err := actiondb.New(dbPath, 0, 0)
+	db, err := actionsdb.New(dbPath, 0, 0)
 	if err != nil {
 		t.Fatalf("open actions db: %v", err)
 	}

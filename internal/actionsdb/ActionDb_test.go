@@ -1,4 +1,4 @@
-package actiondb_test
+package actionsdb_test
 
 import (
 	"database/sql"
@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/oklog/ulid/v2"
-	actiondb "github.com/religiosa1/git-webhook-receiver/internal/actionDb"
+	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
 )
 
@@ -32,13 +32,13 @@ var action = config.Action{
 
 func TestActionDb(t *testing.T) {
 	t.Run("successfully creates a db", func(t *testing.T) {
-		_, err := actiondb.New(":memory:", defaultMaxActionsStored, 0)
+		_, err := actionsdb.New(":memory:", defaultMaxActionsStored, 0)
 		if err != nil {
 			t.Fatalf("Failed to create a db: %s", err)
 		}
 	})
 	t.Run("creates a record", func(t *testing.T) {
-		db, err := actiondb.New(":memory:", defaultMaxActionsStored, 0)
+		db, err := actionsdb.New(":memory:", defaultMaxActionsStored, 0)
 		if err != nil {
 			t.Fatalf("Unable to create a db: %s", err)
 		}
@@ -53,7 +53,7 @@ func TestActionDb(t *testing.T) {
 			t.Fatalf("Unable to retrieve the created record: %s", err)
 		}
 
-		want := actiondb.PipeLineRecord{
+		want := actionsdb.PipeLineRecord{
 			PipeID:     pipeID,
 			Project:    projectName,
 			DeliveryID: deliveryID,
@@ -65,7 +65,7 @@ func TestActionDb(t *testing.T) {
 
 	t.Run("Close successful action", func(t *testing.T) {
 		actionOutput := "test output"
-		db, err := actiondb.New(":memory:", defaultMaxActionsStored, 0)
+		db, err := actionsdb.New(":memory:", defaultMaxActionsStored, 0)
 		if err != nil {
 			t.Fatalf("Unable to create a db: %s", err)
 		}
@@ -85,7 +85,7 @@ func TestActionDb(t *testing.T) {
 			t.Fatalf("Unable to retrieve the created record: %s", err)
 		}
 
-		want := actiondb.PipeLineRecord{
+		want := actionsdb.PipeLineRecord{
 			PipeID:     pipeID,
 			Project:    projectName,
 			DeliveryID: deliveryID,
@@ -100,7 +100,7 @@ func TestActionDb(t *testing.T) {
 	t.Run("Close errored action", func(t *testing.T) {
 		actionErr := errors.New("some error blah blah")
 		actionOutput := "test output"
-		db, err := actiondb.New(":memory:", defaultMaxActionsStored, 0)
+		db, err := actionsdb.New(":memory:", defaultMaxActionsStored, 0)
 		if err != nil {
 			t.Fatalf("Unable to create a db: %s", err)
 		}
@@ -120,7 +120,7 @@ func TestActionDb(t *testing.T) {
 			t.Fatalf("Unable to retrieve the created record: %s", err)
 		}
 
-		want := actiondb.PipeLineRecord{
+		want := actionsdb.PipeLineRecord{
 			PipeID:     pipeID,
 			Project:    projectName,
 			DeliveryID: deliveryID,
@@ -133,7 +133,7 @@ func TestActionDb(t *testing.T) {
 	})
 
 	t.Run("An action can only be closed once", func(t *testing.T) {
-		db, err := actiondb.New(":memory:", defaultMaxActionsStored, 0)
+		db, err := actionsdb.New(":memory:", defaultMaxActionsStored, 0)
 		if err != nil {
 			t.Fatalf("Unable to create a db: %s", err)
 		}
@@ -163,7 +163,7 @@ func TestActionDb(t *testing.T) {
 		defer func() {
 			_ = tmpfile.Close()
 		}()
-		db, err := actiondb.New(tmpfile.Name(), defaultMaxActionsStored, 0)
+		db, err := actionsdb.New(tmpfile.Name(), defaultMaxActionsStored, 0)
 		if err != nil {
 			t.Fatalf("Unable to create a db: %s", err)
 		}
@@ -178,7 +178,7 @@ func TestActionDb(t *testing.T) {
 			t.Errorf("Unable to close the db: %s", err)
 		}
 
-		db2, err := actiondb.New(tmpfile.Name(), defaultMaxActionsStored, 0)
+		db2, err := actionsdb.New(tmpfile.Name(), defaultMaxActionsStored, 0)
 		if err != nil {
 			t.Fatalf("Unable to open the db for the second time: %s", err)
 		}
@@ -188,7 +188,7 @@ func TestActionDb(t *testing.T) {
 			t.Fatalf("Unable to retrieve the created record: %s", err)
 		}
 
-		want := actiondb.PipeLineRecord{
+		want := actionsdb.PipeLineRecord{
 			PipeID:     pipeID,
 			Project:    projectName,
 			DeliveryID: deliveryID,
@@ -200,7 +200,7 @@ func TestActionDb(t *testing.T) {
 }
 
 func TestAutoRemoval(t *testing.T) {
-	createRecord := func(t *testing.T, db *actiondb.ActionDB) string {
+	createRecord := func(t *testing.T, db *actionsdb.ActionDB) string {
 		t.Helper()
 		pipeID := ulid.Make().String()
 		err := db.CreateRecord(pipeID, projectName, deliveryID, action)
@@ -215,8 +215,8 @@ func TestAutoRemoval(t *testing.T) {
 		return pipeID
 	}
 
-	countRecords := func(t *testing.T, db *actiondb.ActionDB) int {
-		count, err := db.CountPipelineRecords(actiondb.ListPipelineRecordsQuery{})
+	countRecords := func(t *testing.T, db *actionsdb.ActionDB) int {
+		count, err := db.CountPipelineRecords(actionsdb.ListPipelineRecordsQuery{})
 		if err != nil {
 			t.Errorf("Failed to count pipelines: %s", err)
 		}
@@ -225,7 +225,7 @@ func TestAutoRemoval(t *testing.T) {
 
 	t.Run("removes old record", func(t *testing.T) {
 		const maxRecords = 3
-		db, err := actiondb.New(":memory:", maxRecords, 0)
+		db, err := actionsdb.New(":memory:", maxRecords, 0)
 		if err != nil {
 			t.Fatalf("Unable to create a db: %s", err)
 		}
@@ -262,7 +262,7 @@ func TestAutoRemoval(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// hitting over the default limit
 			const nRecords = config.DefaultMaxActionsStored + 5
-			db, err := actiondb.New(":memory:", tt.amount, 0)
+			db, err := actionsdb.New(":memory:", tt.amount, 0)
 			if err != nil {
 				t.Fatalf("Unable to create a db: %s", err)
 			}
@@ -311,7 +311,7 @@ func TestOutputTruncation(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			db, err := actiondb.New(":memory:", defaultMaxActionsStored, tt.maxOutputBytes)
+			db, err := actionsdb.New(":memory:", defaultMaxActionsStored, tt.maxOutputBytes)
 			if err != nil {
 				t.Fatalf("Unable to create a db: %s", err)
 			}
@@ -338,7 +338,7 @@ func TestOutputTruncation(t *testing.T) {
 	}
 }
 
-func compareAction(t *testing.T, action config.Action, record actiondb.PipeLineRecord) {
+func compareAction(t *testing.T, action config.Action, record actionsdb.PipeLineRecord) {
 	t.Helper()
 
 	var recordConfig config.Action
@@ -353,7 +353,7 @@ func compareAction(t *testing.T, action config.Action, record actiondb.PipeLineR
 	}
 }
 
-func compareRecord(t *testing.T, want actiondb.PipeLineRecord, got actiondb.PipeLineRecord) {
+func compareRecord(t *testing.T, want actionsdb.PipeLineRecord, got actionsdb.PipeLineRecord) {
 	t.Helper()
 
 	if want.PipeID != got.PipeID {
