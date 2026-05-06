@@ -24,7 +24,7 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/cmd"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
-	handlers "github.com/religiosa1/git-webhook-receiver/internal/http/webhook_handlers"
+	"github.com/religiosa1/git-webhook-receiver/internal/http/webhook"
 	"github.com/religiosa1/git-webhook-receiver/internal/requestmock"
 )
 
@@ -280,7 +280,7 @@ func postWebhook(t *testing.T, baseURL, project string, headers http.Header, bod
 
 func parsePipeIDs(t *testing.T, resp *http.Response) []string {
 	t.Helper()
-	var out []handlers.ActionOutput
+	var out []webhook.ActionOutput
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		t.Fatalf("decode webhook response: %v", err)
 	}

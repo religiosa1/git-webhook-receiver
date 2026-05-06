@@ -1,4 +1,4 @@
-package webhookhandlers_test
+package webhook_test
 
 import (
 	"encoding/json"
@@ -11,7 +11,7 @@ import (
 
 	"github.com/religiosa1/git-webhook-receiver/internal/actionrunner"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
-	handlers "github.com/religiosa1/git-webhook-receiver/internal/http/webhook_handlers"
+	"github.com/religiosa1/git-webhook-receiver/internal/http/webhook"
 	"github.com/religiosa1/git-webhook-receiver/internal/requestmock"
 	"github.com/religiosa1/git-webhook-receiver/internal/whreceiver"
 )
@@ -58,12 +58,12 @@ func loadMockRequest(t *testing.T) requestmock.RequestMock {
 }
 
 type testHandler struct {
-	handlers.Webhook
+	webhook.Webhook
 }
 
 func newTestHandler(cfg config.Config, prj config.Project) testHandler {
 	rcvr := whreceiver.New(prj)
-	h := handlers.Webhook{
+	h := webhook.Webhook{
 		ActionsCh:   make(chan actionrunner.ActionArgs, 10),
 		Config:      cfg,
 		ProjectName: projectName,
@@ -73,7 +73,7 @@ func newTestHandler(cfg config.Config, prj config.Project) testHandler {
 	return testHandler{h}
 }
 
-func (h testHandler) doRequestAndGetAction(t *testing.T, req *http.Request) handlers.ActionOutput {
+func (h testHandler) doRequestAndGetAction(t *testing.T, req *http.Request) webhook.ActionOutput {
 	t.Helper()
 	response := httptest.NewRecorder()
 	h.ServeHTTP(response, req)
@@ -84,7 +84,7 @@ func (h testHandler) doRequestAndGetAction(t *testing.T, req *http.Request) hand
 		t.Fatalf("Expected status 201 OK, got %v, %s", result.StatusCode, string(body))
 	}
 
-	actions := make([]handlers.ActionOutput, 0)
+	actions := make([]webhook.ActionOutput, 0)
 	if err := json.NewDecoder(result.Body).Decode(&actions); err != nil {
 		t.Fatal(err)
 	}

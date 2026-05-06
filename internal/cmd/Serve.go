@@ -17,7 +17,7 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/admin"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/middleware"
-	handlers "github.com/religiosa1/git-webhook-receiver/internal/http/webhook_handlers"
+	"github.com/religiosa1/git-webhook-receiver/internal/http/webhook"
 	"github.com/religiosa1/git-webhook-receiver/internal/logger"
 	"github.com/religiosa1/git-webhook-receiver/internal/logsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/whreceiver"
@@ -223,7 +223,7 @@ func createProjectsMux(actionsCh chan actionrunner.ActionArgs, cfg config.Config
 
 		projectLogger := logger.With(slog.String("project", projectName))
 		path := fmt.Sprintf("/projects/%s", projectName)
-		handler := handlers.Webhook{
+		handler := webhook.Webhook{
 			ActionsCh:   actionsCh,
 			Config:      cfg,
 			ProjectName: projectName,
