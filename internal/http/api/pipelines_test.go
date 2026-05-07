@@ -1,4 +1,4 @@
-package admin_test
+package api_test
 
 import (
 	"encoding/json"
@@ -14,7 +14,7 @@ import (
 	"github.com/oklog/ulid/v2"
 	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
-	"github.com/religiosa1/git-webhook-receiver/internal/http/admin"
+	"github.com/religiosa1/git-webhook-receiver/internal/http/api"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/middleware"
 )
 
@@ -81,7 +81,7 @@ func collectPipeIDs(items []itemResponse) map[string]bool {
 func TestListPipelines(t *testing.T) {
 	t.Run("empty db returns empty items and zero total", func(t *testing.T) {
 		db := newTestDB(t)
-		handler := admin.ListPipelines{DB: db}
+		handler := api.ListPipelines{DB: db}
 
 		req := httptest.NewRequest(http.MethodGet, "/pipelines", nil)
 		rec := httptest.NewRecorder()
@@ -104,7 +104,7 @@ func TestListPipelines(t *testing.T) {
 
 	t.Run("returns correct content-type", func(t *testing.T) {
 		db := newTestDB(t)
-		handler := admin.ListPipelines{DB: db}
+		handler := api.ListPipelines{DB: db}
 
 		req := httptest.NewRequest(http.MethodGet, "/pipelines", nil)
 		rec := httptest.NewRecorder()
@@ -122,7 +122,7 @@ func TestListPipelines(t *testing.T) {
 			seedRecord(t, db, ulid.Make().String(), "proj", "del")
 		}
 
-		handler := admin.ListPipelines{DB: db}
+		handler := api.ListPipelines{DB: db}
 		req := httptest.NewRequest(http.MethodGet, "/pipelines", nil)
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -162,7 +162,7 @@ func TestListPipelinesFiltering(t *testing.T) {
 
 	request := func(t *testing.T, query string) listResponse {
 		t.Helper()
-		handler := admin.ListPipelines{DB: db}
+		handler := api.ListPipelines{DB: db}
 		req := httptest.NewRequest(http.MethodGet, "/pipelines?"+query, nil)
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -237,7 +237,7 @@ func TestListPipelinesPagination(t *testing.T) {
 		seedRecord(t, db, ulid.Make().String(), "proj", "del")
 	}
 
-	handler := admin.ListPipelines{DB: db}
+	handler := api.ListPipelines{DB: db}
 
 	doRequest := func(t *testing.T, query string) (listResponse, int) {
 		t.Helper()
@@ -351,7 +351,7 @@ func TestListPipelinesPagination(t *testing.T) {
 
 	t.Run("nextPage URL uses publicURL as base", func(t *testing.T) {
 		const publicURL = "https://example.com"
-		h := admin.ListPipelines{DB: db, PublicURL: publicURL}
+		h := api.ListPipelines{DB: db, PublicURL: publicURL}
 		req := httptest.NewRequest(http.MethodGet, "/pipelines?limit=10", nil)
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, req)
@@ -366,7 +366,7 @@ func TestListPipelinesPagination(t *testing.T) {
 	})
 
 	t.Run("nextPage URL is relative when no publicURL", func(t *testing.T) {
-		h := admin.ListPipelines{DB: db}
+		h := api.ListPipelines{DB: db}
 		req := httptest.NewRequest(http.MethodGet, "/pipelines?limit=10", nil)
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, req)
@@ -416,7 +416,7 @@ func TestGetPipeline(t *testing.T) {
 	pipeID := ulid.Make().String()
 	seedCompletedRecord(t, db, pipeID, "myproject", "del-123", "hello output", nil)
 
-	handler := admin.GetPipeline{DB: db}
+	handler := api.GetPipeline{DB: db}
 
 	t.Run("returns 200 with record data for existing pipeId", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/pipelines/"+pipeID, nil)
@@ -463,7 +463,7 @@ func TestGetPipelineOutput(t *testing.T) {
 	const outputText = "line one\nline two\n"
 	seedCompletedRecord(t, db, pipeID, "proj", "del", outputText, nil)
 
-	handler := admin.GetPipelineOutput{DB: db}
+	handler := api.GetPipelineOutput{DB: db}
 
 	t.Run("returns 200 with plain text output", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/pipelines/"+pipeID+"/output", nil)
@@ -521,7 +521,7 @@ func TestPipelinesAuthorization(t *testing.T) {
 	)
 
 	auth := middleware.WithBasicAuth(user, password)
-	handler := auth(admin.ListPipelines{DB: db})
+	handler := auth(api.ListPipelines{DB: db})
 
 	doRequest := func(username, pass string) int {
 		req := httptest.NewRequest(http.MethodGet, "/pipelines", nil)
@@ -558,7 +558,7 @@ func TestPipelinesAuthorization(t *testing.T) {
 	})
 
 	t.Run("no auth configured allows unauthenticated access", func(t *testing.T) {
-		openHandler := middleware.WithBasicAuth("", "")(admin.ListPipelines{DB: db})
+		openHandler := middleware.WithBasicAuth("", "")(api.ListPipelines{DB: db})
 		req := httptest.NewRequest(http.MethodGet, "/pipelines", nil)
 		rec := httptest.NewRecorder()
 		openHandler.ServeHTTP(rec, req)

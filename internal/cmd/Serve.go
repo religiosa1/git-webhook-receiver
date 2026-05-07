@@ -15,7 +15,7 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/actionrunner"
 	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
-	"github.com/religiosa1/git-webhook-receiver/internal/http/admin"
+	"github.com/religiosa1/git-webhook-receiver/internal/http/api"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/middleware"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/webhook"
 	"github.com/religiosa1/git-webhook-receiver/internal/logger"
@@ -80,25 +80,45 @@ func Serve(cfg config.Config) {
 		logger.Error("Error creating the server", slog.Any("error", err))
 		os.Exit(ExitReadConfig)
 	}
-	if !cfg.DisableAPI {
-		middlewares := middleware.Chain(
-			middleware.WithLogger(logger),
-			middleware.WithBasicAuth(cfg.AuthUser, cfg.AuthPassword.RawContents()),
-		)
-		mux.Handle("GET /api/projects", middlewares(admin.ListProjects{Projects: cfg.Projects}))
+	middlewares := middleware.Chain(
+		middleware.WithLogger(logger),
+		middleware.WithBasicAuth(cfg.AuthUser, cfg.AuthPassword.RawContents()),
+	)
+	if !cfg.DisableUI {
+		projectsPage := middlewares(api.ListProjects{Projects: cfg.Projects})
+		mux.Handle("GET /", projectsPage)
+		mux.Handle("GET /projects", projectsPage)
 		if dbActions != nil {
 			logger.Debug("Web admin enabled for pipelines")
-			mux.Handle("GET /api/pipelines", middlewares(admin.ListPipelines{DB: dbActions, PublicURL: cfg.PublicURL}))
-			mux.Handle("GET /api/pipelines/{pipeId}", middlewares(admin.GetPipeline{DB: dbActions}))
-			mux.Handle("GET /api/pipelines/{pipeId}/output", middlewares(admin.GetPipelineOutput{DB: dbActions}))
+			// TODO: actual admin handlers
+			mux.Handle("GET /pipelines", middlewares(api.ListPipelines{DB: dbActions, PublicURL: cfg.PublicURL}))
+			mux.Handle("GET /pipelines/{pipeId}", middlewares(api.GetPipeline{DB: dbActions}))
+			mux.Handle("GET /pipelines/{pipeId}/output", middlewares(api.GetPipelineOutput{DB: dbActions}))
 		} else {
-			logger.Warn("actions_db_file config value is an empty string. All of /api/pipelines API endpoints won't be available")
+			logger.Info("actions_db_file config value is an empty string. All of /pipelines pages won't be available")
 		}
 		if dbLogs != nil {
 			logger.Debug("Web admin enabled for logs")
-			mux.Handle("GET /api/logs", middlewares(admin.GetLogs{DB: dbLogs, PublicURL: cfg.PublicURL}))
+			mux.Handle("GET /logs", middlewares(api.GetLogs{DB: dbLogs, PublicURL: cfg.PublicURL}))
 		} else {
-			logger.Warn("logs_db_file config value is an empty string. Logs inspection won't be available")
+			logger.Info("logs_db_file config value is an empty string. Logs page won't be available")
+		}
+	}
+	if !cfg.DisableAPI {
+		mux.Handle("GET /api/projects", middlewares(api.ListProjects{Projects: cfg.Projects}))
+		if dbActions != nil {
+			logger.Debug("HTTP API enabled for pipelines")
+			mux.Handle("GET /api/pipelines", middlewares(api.ListPipelines{DB: dbActions, PublicURL: cfg.PublicURL}))
+			mux.Handle("GET /api/pipelines/{pipeId}", middlewares(api.GetPipeline{DB: dbActions}))
+			mux.Handle("GET /api/pipelines/{pipeId}/output", middlewares(api.GetPipelineOutput{DB: dbActions}))
+		} else {
+			logger.Info("actions_db_file config value is an empty string. All of /api/pipelines API endpoints won't be available")
+		}
+		if dbLogs != nil {
+			logger.Debug("HTTP API enabled for logs")
+			mux.Handle("GET /api/logs", middlewares(api.GetLogs{DB: dbLogs, PublicURL: cfg.PublicURL}))
+		} else {
+			logger.Info("logs_db_file config value is an empty string. Logs inspection won't be available")
 		}
 	}
 
@@ -237,7 +257,7 @@ func createProjectsMux(actionsCh chan actionrunner.ActionArgs, cfg config.Config
 		if !cfg.DisableAPI {
 			mux.Handle(
 				"GET /api"+path,
-				middleware.WithLogger(projectLogger)(basicAuth(admin.GetProject{Project: project})),
+				middleware.WithLogger(projectLogger)(basicAuth(api.GetProject{Project: project})),
 			)
 		}
 		logger.Debug(

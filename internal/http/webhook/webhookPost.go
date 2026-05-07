@@ -148,10 +148,29 @@ func actionsToOutput(cfg config.Config, actions []actionrunner.ActionDescriptor)
 	for idx, action := range actions {
 		output[idx] = ActionOutput{
 			ActionIdentifier: action.ActionIdentifier,
-			Links:            generateLinks(cfg.DisableAPI, cfg.PublicURL, action.PipeID),
+			Links:            generateLinks(determineLinksType(cfg), cfg.PublicURL, action.PipeID),
 		}
 	}
 	return output
+}
+
+type linksTypeEnum int
+
+const (
+	linksTypeNone linksTypeEnum = 0
+	linksTypeUI   linksTypeEnum = 1
+	linksTypeAPI  linksTypeEnum = 2
+)
+
+func determineLinksType(cfg config.Config) linksTypeEnum {
+	switch {
+	case !cfg.DisableUI && cfg.ActionsDBFile != "":
+		return linksTypeUI
+	case !cfg.DisableAPI && cfg.ActionsDBFile != "":
+		return linksTypeAPI
+	default:
+		return linksTypeNone
+	}
 }
 
 type ActionLinks struct {
@@ -159,16 +178,26 @@ type ActionLinks struct {
 	Output  string `json:"output"`
 }
 
-func generateLinks(disableApi bool, publicURL string, pipeID string) *ActionLinks {
-	if disableApi || publicURL == "" {
+func generateLinks(linksType linksTypeEnum, publicURL string, pipeID string) *ActionLinks {
+	if linksType == linksTypeNone || publicURL == "" {
 		return nil
 	}
 	pipeID = url.PathEscape(pipeID)
-	details, err := url.JoinPath(publicURL, "api", "pipelines", pipeID)
+	var detailsElem []string
+	var outputElem []string
+	switch linksType {
+	case linksTypeUI:
+		detailsElem = []string{"pipelines", pipeID}
+		outputElem = []string{"pipelines", pipeID, "output"}
+	case linksTypeAPI:
+		detailsElem = []string{"api", "pipelines", pipeID}
+		outputElem = []string{"api", "pipelines", pipeID, "output"}
+	}
+	details, err := url.JoinPath(publicURL, detailsElem...)
 	if err != nil {
 		return nil
 	}
-	output, err := url.JoinPath(publicURL, "api", "pipelines", pipeID, "output")
+	output, err := url.JoinPath(publicURL, outputElem...)
 	if err != nil {
 		return nil
 	}

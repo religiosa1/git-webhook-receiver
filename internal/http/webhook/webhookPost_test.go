@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/actionrunner"
@@ -297,39 +298,49 @@ func TestPublicUrl(t *testing.T) {
 		},
 	}
 
-	t.Run("returns a list of links, if publicURL is present in config", func(t *testing.T) {
-		publicURL := "ftp://example.com/"
-		cfg := config.Config{PublicURL: publicURL}
-		action := newTestHandler(cfg, prj).doRequestAndGetAction(t, requestDump.ToHttpRequest(projectEndPoint))
-		want := publicURL + "api/pipelines/" + url.PathEscape(action.PipeID)
-		if action.Links == nil {
-			t.Fatal("unexpected empty links object")
-		}
-		if got := action.Links.Details; want != got {
-			t.Errorf("details link is wrong, want %q. got %q", want, got)
-		}
-		want = want + "/output"
-		if got := action.Links.Output; want != got {
-			t.Errorf("output link is wrong, want %q. got %q", want, got)
-		}
-	})
+	publicURL := "ftp://example.com/"
+	happyTests := []struct {
+		name string
+		cfg  config.Config
+		want string
+	}{
+		{
+			"returns a list of links, if publicURL is present in config",
+			config.Config{PublicURL: publicURL, ActionsDBFile: "something"},
+			publicURL + "pipelines/{pipeID}",
+		},
+		{
+			"falls back to API links, if UI is disabled",
+			config.Config{PublicURL: publicURL, ActionsDBFile: "something", DisableUI: true},
+			publicURL + "api/pipelines/{pipeID}",
+		},
+		{
+			"trailing slash is optional for the public url",
+			config.Config{PublicURL: "ftp://example.com", ActionsDBFile: "something"},
+			"ftp://example.com/pipelines/{pipeID}",
+		},
+	}
 
-	t.Run("trailing slash is optional for the public url", func(t *testing.T) {
-		publicURL := "ftp://example.com"
-		cfg := config.Config{PublicURL: publicURL}
-		action := newTestHandler(cfg, prj).doRequestAndGetAction(t, requestDump.ToHttpRequest(projectEndPoint))
-		want := publicURL + "/api/pipelines/" + url.PathEscape(action.PipeID)
-		if action.Links == nil {
-			t.Fatal("unexpected empty links object")
-		}
-		if got := action.Links.Details; want != got {
-			t.Errorf("details link is wrong, want %q. got %q", want, got)
-		}
-	})
+	for _, tt := range happyTests {
+		t.Run(tt.name, func(t *testing.T) {
+			action := newTestHandler(tt.cfg, prj).doRequestAndGetAction(t, requestDump.ToHttpRequest(projectEndPoint))
+			pipeID := url.PathEscape(action.PipeID)
+			want := strings.ReplaceAll(tt.want, "{pipeID}", pipeID)
+			if action.Links == nil {
+				t.Fatal("unexpected empty links object")
+			}
+			if got := action.Links.Details; want != got {
+				t.Errorf("details link is wrong, want %q. got %q", want, got)
+			}
+			want = want + "/output"
+			if got := action.Links.Output; want != got {
+				t.Errorf("output link is wrong, want %q. got %q", want, got)
+			}
+		})
+	}
 
-	t.Run("no links field is present if inspection API is disabled", func(t *testing.T) {
-		publicURL := "ftp://example.com"
-		cfg := config.Config{PublicURL: publicURL, DisableAPI: true}
+	t.Run("no links field is present if inspection API and UI are disabled", func(t *testing.T) {
+		cfg := config.Config{PublicURL: publicURL, ActionsDBFile: "something", DisableAPI: true, DisableUI: true}
 		action := newTestHandler(cfg, prj).doRequestAndGetAction(t, requestDump.ToHttpRequest(projectEndPoint))
 		if action.Links != nil {
 			t.Fatalf("Expected to get empty links, got %v", action.Links)
@@ -337,7 +348,15 @@ func TestPublicUrl(t *testing.T) {
 	})
 
 	t.Run("no links field is present if publicURL is not configured", func(t *testing.T) {
-		cfg := config.Config{}
+		cfg := config.Config{ActionsDBFile: "something"}
+		action := newTestHandler(cfg, prj).doRequestAndGetAction(t, requestDump.ToHttpRequest(projectEndPoint))
+		if action.Links != nil {
+			t.Fatalf("Expected to get empty links, got %v", action.Links)
+		}
+	})
+
+	t.Run("no links field is present if actionsDb is disabled", func(t *testing.T) {
+		cfg := config.Config{PublicURL: publicURL}
 		action := newTestHandler(cfg, prj).doRequestAndGetAction(t, requestDump.ToHttpRequest(projectEndPoint))
 		if action.Links != nil {
 			t.Fatalf("Expected to get empty links, got %v", action.Links)
