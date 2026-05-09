@@ -1,0 +1,11 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "templ generate && go build -o ./tmp/main ."
+bin = "./tmp/main"
+include_ext = ["go", "templ", "html"]
+exclude_dir = ["tmp", "node_modules", "static"]
+exclude_regex = ["_templ.go$"]
+delay = 100
+stop_on_error = true

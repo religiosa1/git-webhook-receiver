@@ -265,6 +265,9 @@ write in the issues section or create a PR.
 If you want to quickly play around with the project, without actually doing
 any kind of git integration, please refer to [this doc](./docs/local-run.md).
 
+For local development with watch mode, this project uses [air](https://github.com/air-verse/air)
+Install it and run `air`.
+
 ## License
 
 git-webhook-receiver is MIT licensed.

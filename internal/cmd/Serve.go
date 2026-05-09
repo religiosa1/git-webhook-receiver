@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"log"
 	"log/slog"
 	"net"
@@ -15,6 +16,7 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/actionrunner"
 	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
+	"github.com/religiosa1/git-webhook-receiver/internal/http/admin"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/api"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/middleware"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/webhook"
@@ -85,7 +87,14 @@ func Serve(cfg config.Config) {
 		middleware.WithBasicAuth(cfg.AuthUser, cfg.AuthPassword.RawContents()),
 	)
 	if !cfg.DisableUI {
-		projectsPage := middlewares(api.ListProjects{Projects: cfg.Projects})
+		staticFS, err := fs.Sub(admin.StaticFiles, "static")
+		if err != nil {
+			logger.Error("Error setting up static files", slog.Any("error", err))
+			os.Exit(ExitReadConfig)
+		}
+		mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(staticFS)))
+
+		projectsPage := middlewares(admin.ListProjects{Projects: cfg.Projects, DB: dbActions})
 		mux.Handle("GET /", projectsPage)
 		mux.Handle("GET /projects", projectsPage)
 		if dbActions != nil {
