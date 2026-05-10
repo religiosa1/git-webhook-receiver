@@ -90,7 +90,7 @@ type GetPipelineOutput struct {
 func (s GetPipelineOutput) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	pipeID := req.PathValue("pipeId")
 	logger := middleware.GetLogger(req.Context()).With(slog.String("pipe_id", pipeID))
-	_, err := s.DB.GetPipelineRecord(pipeID)
+	record, err := s.DB.GetPipelineRecord(pipeID)
 	if errors.Is(err, sql.ErrNoRows) {
 		w.WriteHeader(404)
 		if writeErr := views.NotFound().Render(req.Context(), w); writeErr != nil {
@@ -106,7 +106,11 @@ func (s GetPipelineOutput) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 		return
 	}
-	if err := views.ToDo("Pipeline output").Render(req.Context(), w); err != nil {
+	viewModel := views.PipelineOutputViewModel{
+		PipeID: pipeID,
+		Output: record.Output.String,
+	}
+	if err := views.PipelineOutput(viewModel).Render(req.Context(), w); err != nil {
 		logger.Error("Error while writing response", slog.Any("error", err))
 	}
 }

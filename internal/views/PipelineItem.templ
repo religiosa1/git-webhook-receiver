@@ -14,5 +14,13 @@ templ PipelineItem(model PipelineItemViewModel) {
 	@base(fmt.Sprintf("Pipeline %s", model.Record.PipeID)) {
 		<p><a href="/pipelines">Back to pipelines</a></p>
 		@pipelineItemPreview(model.Record, false)
+		if model.Record.Output.Valid {
+			<details class="pipeline-page-output">
+				<summary>
+					Output
+				</summary>
+				@pipelineOutput(model.Record.Output.String)
+			</details>
+		}
 	}
 }

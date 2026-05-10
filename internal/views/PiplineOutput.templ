@@ -1,0 +1,23 @@
+package views
+
+import "fmt"
+import "net/url"
+
+type PipelineOutputViewModel struct {
+	PipeID string
+	Output string
+}
+
+// TODO: do we even need this page?.. Isn't it already fully served by the general pipeline page?
+//
+//
+templ PipelineOutput(model PipelineOutputViewModel) {
+	@base("Pipeline output") {
+		<a href={ fmt.Sprintf("/pipelines/%s", url.PathEscape(model.PipeID)) }>Back to pipeline</a>
+		@pipelineOutput(model.Output)
+	}
+}
+
+templ pipelineOutput(contents string) {
+	<code class="pipeline-output"><pre>{ contents }</pre></code>
+}
