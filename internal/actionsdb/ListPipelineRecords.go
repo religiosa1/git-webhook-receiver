@@ -41,7 +41,7 @@ func (d ActionDB) ListPipelineRecords(search ListPipelineRecordsQuery) (models.P
 SELECT
 	id, pipe_id, project, delivery_id, config, error, created_at, ended_at
 FROM
-	pipeline
+	pipelines
 `)
 
 	fj := createListPipelineWhereQuery(search)
@@ -91,7 +91,7 @@ FROM
 func (d ActionDB) CountPipelineRecords(search ListPipelineRecordsQuery) (int, error) {
 	args := make([]any, 0)
 	var qb strings.Builder
-	qb.WriteString(`SELECT count(*) FROM pipeline`)
+	qb.WriteString(`SELECT count(*) FROM pipelines`)
 	fb := createListPipelineWhereQuery(search)
 	if fb.HasFilters() {
 		qb.WriteString("\nWHERE\n")

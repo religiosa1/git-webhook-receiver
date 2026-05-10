@@ -31,6 +31,17 @@ type PipeLineRecord struct {
 	EndedAt    sql.NullInt64   `db:"ended_at"`
 }
 
+type PipeLineConfigSummary struct {
+	Branch string `json:"branch"`
+	On     string `json:"on"`
+}
+
+func (r PipeLineRecord) ParseConfigSummary() (PipeLineConfigSummary, error) {
+	var summary PipeLineConfigSummary
+	err := json.Unmarshal(r.Config, &summary)
+	return summary, err
+}
+
 type ActionDB struct {
 	db             *sqlx.DB
 	maxActions     int
@@ -83,7 +94,7 @@ func (d ActionDB) CreateRecord(pipeID string, project string, deliveryID string,
 		return err
 	}
 
-	query := `INSERT INTO pipeline (pipe_id, project, delivery_id, config) VALUES (?, ?, ?, ?)`
+	query := `INSERT INTO pipelines (pipe_id, project, delivery_id, config) VALUES (?, ?, ?, ?)`
 	_, err = tx.Exec(query, pipeID, project, deliveryID, configJSON)
 	if err != nil {
 		_ = tx.Rollback()
@@ -93,8 +104,8 @@ func (d ActionDB) CreateRecord(pipeID string, project string, deliveryID string,
 	// auto-removal of records above max actions config value
 	if d.maxActions > 0 {
 		autoRemoveQuery := `
-DELETE FROM pipeline WHERE pipe_id IN (
-		SELECT pipe_id FROM pipeline ORDER BY created_at DESC LIMIT -1 OFFSET ?
+DELETE FROM pipelines WHERE pipe_id IN (
+		SELECT pipe_id FROM pipelines ORDER BY created_at DESC LIMIT -1 OFFSET ?
 )`
 		_, err = tx.Exec(autoRemoveQuery, d.maxActions)
 		if err != nil {
@@ -121,8 +132,8 @@ func (d ActionDB) CloseRecord(pipeID string, actionErr error, output io.Reader) 
 		return fmt.Errorf("error reading action output: %w", err)
 	}
 
-	query := `UPDATE pipeline SET error = ?, output = ?, ended_at = ? WHERE pipe_id = ? AND ended_at IS NULL;`
-	result, err := d.db.Exec(query, actionErrValue, outputStr, time.Now().UTC().Unix(), pipeID)
+	query := `UPDATE pipelines SET error = ?, output = ?, ended_at = ? WHERE pipe_id = ? AND ended_at IS NULL;`
+	result, err := d.db.Exec(query, actionErrValue, outputStr, time.Now().UTC().UnixMilli(), pipeID)
 	if err != nil {
 		return fmt.Errorf("error while updating pipeline record: %w", err)
 	}
@@ -154,9 +165,9 @@ func readOutput(r io.Reader, maxBytes int) (string, error) {
 func (d ActionDB) GetPipelineRecord(pipeID string) (PipeLineRecord, error) {
 	var record PipeLineRecord
 	if pipeID == "" {
-		err := d.db.Get(&record, "SELECT * FROM pipeline ORDER BY created_at DESC LIMIT 1;")
+		err := d.db.Get(&record, "SELECT * FROM pipelines ORDER BY created_at DESC LIMIT 1;")
 		return record, err
 	}
-	err := d.db.Get(&record, "SELECT * FROM pipeline WHERE pipe_id=?;", pipeID)
+	err := d.db.Get(&record, "SELECT * FROM pipelines WHERE pipe_id=?;", pipeID)
 	return record, err
 }

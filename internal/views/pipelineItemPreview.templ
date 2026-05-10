@@ -1,0 +1,74 @@
+package views
+
+import (
+	"fmt"
+	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
+	"net/url"
+	"time"
+)
+
+templ maybeLink(href string) {
+	if href != "" {
+		<a href={ href }>
+			{ children... }
+		</a>
+	} else {
+		{ children... }
+	}
+}
+
+templ pipelineRunStatus(item actionsdb.PipeLineRecord) {
+	<span class="pipeline-status">
+		if item.EndedAt.Valid {
+			if item.Error.Valid {
+				<span class="pipeline-status__errored">
+					Errored
+				</span>
+			} else {
+				<span class="pipeline-status__finished">
+					Finished
+				</span>
+			}
+			<span class="pipeline-status__duration">
+				{{ duration := time.UnixMilli(item.EndedAt.Int64).Sub(time.UnixMilli(item.CreatedAt)) }}
+				Took { duration }
+			</span>
+		} else {
+			<span class="pipeline-status__pending">
+				Pending...
+			</span>
+		}
+	</span>
+}
+
+templ pipelineItemPreview(item actionsdb.PipeLineRecord, showLink bool) {
+	<article class="pipeline-preview">
+		{{
+			var link string
+			if showLink {
+				link = fmt.Sprintf("/pipelines/%s", url.PathEscape(item.PipeID))
+			}
+		}}
+		@maybeLink(link) {
+			<span class="pipeline-preview__project">{ item.Project }</span>
+			<span class="pipeline-preview__id">{ item.PipeID }</span>
+		}
+		{{ cfg, _ := item.ParseConfigSummary() }}
+		if cfg.Branch != "" || cfg.On != "" {
+			<span class="pipeline-preview__config">
+				if cfg.Branch != "" {
+					<span class="pipeline-preview__branch">branch: { cfg.Branch }</span>
+				}
+				if cfg.On != "" {
+					<span class="pipeline-preview__on">on { cfg.On }</span>
+				}
+			</span>
+		}
+		<span class="pipeline-preview__started-at">
+			{{ startedAT := time.UnixMilli(item.CreatedAt).UTC() }}
+			Started at:
+			<time datetime={ startedAT.Format(time.RFC3339) }>{ startedAT.Format(time.RFC3339) }</time>
+		</span>
+		@pipelineRunStatus(item)
+	</article>
+}
