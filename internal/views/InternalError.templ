@@ -1,0 +1,11 @@
+package views
+
+templ InternalError(requestID string) {
+	@base("Internal Error") {
+		<p>Sorry, an unexpected error occurred while trying to serve your request</p>
+		if requestID != "" {
+			<p>Communicate this request ID to the server administrators: { requestID }</p>
+		}
+		<p><a href="/">go back to homepage</a></p>
+	}
+}

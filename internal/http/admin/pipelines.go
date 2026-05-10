@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"database/sql"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -25,7 +27,24 @@ type GetPipeline struct {
 }
 
 func (s GetPipeline) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	logger := middleware.GetLogger(req.Context())
+	pipeID := req.PathValue("pipeId")
+	logger := middleware.GetLogger(req.Context()).With(slog.String("pipe_id", pipeID))
+	_, err := s.DB.GetPipelineRecord(pipeID)
+	if errors.Is(err, sql.ErrNoRows) {
+		w.WriteHeader(404)
+		if writeErr := views.NotFound().Render(req.Context(), w); writeErr != nil {
+			logger.Error("error while writing error response", slog.Any("error", writeErr))
+		}
+		return
+	} else if err != nil {
+		logger.Error("Error processing pipeline ui request", slog.Any("error", err))
+		w.WriteHeader(500)
+		requestID := middleware.GetRequestID(req.Context())
+		if writeErr := views.InternalError(requestID).Render(req.Context(), w); writeErr != nil {
+			logger.Error("error while writing error response", slog.Any("error", writeErr))
+		}
+		return
+	}
 	if err := views.ToDo("Pipeline").Render(req.Context(), w); err != nil {
 		logger.Error("Error while writing response", slog.Any("error", err))
 	}
@@ -36,7 +55,24 @@ type GetPipelineOutput struct {
 }
 
 func (s GetPipelineOutput) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	logger := middleware.GetLogger(req.Context())
+	pipeID := req.PathValue("pipeId")
+	logger := middleware.GetLogger(req.Context()).With(slog.String("pipe_id", pipeID))
+	_, err := s.DB.GetPipelineRecord(pipeID)
+	if errors.Is(err, sql.ErrNoRows) {
+		w.WriteHeader(404)
+		if writeErr := views.NotFound().Render(req.Context(), w); writeErr != nil {
+			logger.Error("error while writing error response", slog.Any("error", writeErr))
+		}
+		return
+	} else if err != nil {
+		logger.Error("Error processing pipeline output ui request", slog.Any("error", err))
+		w.WriteHeader(500)
+		requestID := middleware.GetRequestID(req.Context())
+		if writeErr := views.InternalError(requestID).Render(req.Context(), w); writeErr != nil {
+			logger.Error("error while writing error response", slog.Any("error", writeErr))
+		}
+		return
+	}
 	if err := views.ToDo("Pipeline output").Render(req.Context(), w); err != nil {
 		logger.Error("Error while writing response", slog.Any("error", err))
 	}

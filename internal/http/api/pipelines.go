@@ -72,7 +72,7 @@ func (h GetPipeline) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	logger := middleware.GetLogger(req.Context())
 	pipeID := req.PathValue("pipeId")
 	record, err := h.DB.GetPipelineRecord(pipeID)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "Not Found", http.StatusNotFound)
 		return
 	} else if err != nil {
@@ -99,7 +99,7 @@ func (h GetPipelineOutput) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	logger := middleware.GetLogger(req.Context())
 	pipeID := req.PathValue("pipeId")
 	record, err := h.DB.GetPipelineRecord(pipeID)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "Not Found", http.StatusNotFound)
 		return
 	} else if err != nil {
