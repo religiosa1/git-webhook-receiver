@@ -93,22 +93,28 @@ func Serve(cfg config.Config) {
 			os.Exit(ExitReadConfig)
 		}
 		mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(staticFS)))
-
 		projectsPage := middlewares(admin.ListProjects{Projects: cfg.Projects, DB: dbActions})
-		mux.Handle("GET /", projectsPage)
 		mux.Handle("GET /projects", projectsPage)
+		if dbActions == nil && dbLogs == nil {
+			mux.Handle("GET /", projectsPage)
+		}
 		if dbActions != nil {
 			logger.Debug("Web admin enabled for pipelines")
-			// TODO: actual admin handlers
-			mux.Handle("GET /pipelines", middlewares(api.ListPipelines{DB: dbActions, PublicURL: cfg.PublicURL}))
-			mux.Handle("GET /pipelines/{pipeId}", middlewares(api.GetPipeline{DB: dbActions}))
-			mux.Handle("GET /pipelines/{pipeId}/output", middlewares(api.GetPipelineOutput{DB: dbActions}))
+			listPipelinesPage := middlewares(admin.ListPipelines{DB: dbActions})
+			mux.Handle("GET /", listPipelinesPage)
+			mux.Handle("GET /pipelines", listPipelinesPage)
+			mux.Handle("GET /pipelines/{pipeId}", middlewares(admin.GetPipeline{DB: dbActions}))
+			mux.Handle("GET /pipelines/{pipeId}/output", middlewares(admin.GetPipelineOutput{DB: dbActions}))
 		} else {
 			logger.Info("actions_db_file config value is an empty string. All of /pipelines pages won't be available")
 		}
 		if dbLogs != nil {
 			logger.Debug("Web admin enabled for logs")
-			mux.Handle("GET /logs", middlewares(api.GetLogs{DB: dbLogs, PublicURL: cfg.PublicURL}))
+			listLogsPage := middlewares(admin.GetLogs{DB: dbLogs})
+			if dbActions == nil {
+				mux.Handle("GET /", listLogsPage)
+			}
+			mux.Handle("GET /logs", listLogsPage)
 		} else {
 			logger.Info("logs_db_file config value is an empty string. Logs page won't be available")
 		}

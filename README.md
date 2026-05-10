@@ -266,7 +266,8 @@ If you want to quickly play around with the project, without actually doing
 any kind of git integration, please refer to [this doc](./docs/local-run.md).
 
 For local development with watch mode, this project uses [air](https://github.com/air-verse/air)
-Install it and run `air`.
+Install it, along with [templ](https://templ.guide/quick-start/installation)
+and run `air`.
 
 ## License
 

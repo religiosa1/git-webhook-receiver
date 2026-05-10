@@ -1,0 +1,6 @@
+[tools]
+go = "1.26.3"
+"go:github.com/a-h/templ/cmd/templ" = "latest"
+"go:github.com/air-verse/air" = "latest"
+golangci-lint = "2"
+staticcheck = "latest"
