@@ -1,0 +1,18 @@
+package views
+
+import (
+	"fmt"
+
+	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
+)
+
+type PipelineItemViewModel struct {
+	Record actionsdb.PipeLineRecord
+}
+
+templ PipelineItem(model PipelineItemViewModel) {
+	@base(fmt.Sprintf("Pipeline %s", model.Record.PipeID)) {
+		<p><a href="/pipelines">Back to pipelines</a></p>
+		@pipelineItemPreview(model.Record, false)
+	}
+}
