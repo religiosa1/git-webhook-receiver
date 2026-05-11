@@ -93,24 +93,31 @@ func (s GetPipelineOutput) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	record, err := s.DB.GetPipelineRecord(pipeID)
 	if errors.Is(err, sql.ErrNoRows) {
 		w.WriteHeader(404)
-		if writeErr := views.NotFound().Render(req.Context(), w); writeErr != nil {
-			logger.Error("error while writing error response", slog.Any("error", writeErr))
+		if req.Header.Get("HX-Request") != "true" {
+			if writeErr := views.NotFound().Render(req.Context(), w); writeErr != nil {
+				logger.Error("error while writing error response", slog.Any("error", writeErr))
+			}
 		}
 		return
 	} else if err != nil {
 		logger.Error("Error processing pipeline output ui request", slog.Any("error", err))
 		w.WriteHeader(500)
-		requestID := middleware.GetRequestID(req.Context())
-		if writeErr := views.InternalError(requestID).Render(req.Context(), w); writeErr != nil {
-			logger.Error("error while writing error response", slog.Any("error", writeErr))
+		if req.Header.Get("HX-Request") != "true" {
+			requestID := middleware.GetRequestID(req.Context())
+			if writeErr := views.InternalError(requestID).Render(req.Context(), w); writeErr != nil {
+				logger.Error("error while writing error response", slog.Any("error", writeErr))
+			}
 		}
 		return
 	}
-	viewModel := views.PipelineOutputViewModel{
-		PipeID: pipeID,
-		Output: record.Output.String,
+	if req.Header.Get("HX-Request") == "true" {
+		if err := views.PipelineOutputPartial(record.Output.String).Render(req.Context(), w); err != nil {
+			logger.Error("Error while writing response", slog.Any("error", err))
+		}
+		return
 	}
-	if err := views.PipelineOutput(viewModel).Render(req.Context(), w); err != nil {
-		logger.Error("Error while writing response", slog.Any("error", err))
+	w.Header().Set("Content-Type", "text/plain")
+	if _, err := w.Write([]byte(record.Output.String)); err != nil {
+		logger.Error("Error writing output", slog.Any("error", err))
 	}
 }

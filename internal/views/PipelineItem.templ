@@ -2,6 +2,7 @@ package views
 
 import (
 	"fmt"
+	"net/url"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
 )
@@ -16,10 +17,14 @@ templ PipelineItem(model PipelineItemViewModel) {
 		@pipelineItemPreview(model.Record, false)
 		if model.Record.Output.Valid {
 			<details class="pipeline-page-output">
-				<summary>
-					Output
-				</summary>
-				@pipelineOutput(model.Record.Output.String)
+				<summary>Output</summary>
+				<div
+					hx-get={ fmt.Sprintf("/pipelines/%s/output", url.PathEscape(model.Record.PipeID)) }
+					hx-trigger="toggle from:closest details once"
+					hx-swap="outerHTML"
+				>
+					<p class="pipeline-output-loading">Loading...</p>
+				</div>
 			</details>
 		}
 	}
