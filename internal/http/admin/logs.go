@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/a-h/templ"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/middleware"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/utils"
 	"github.com/religiosa1/git-webhook-receiver/internal/logsdb"
@@ -29,8 +30,7 @@ func (s GetLogs) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	pagination, err := utils.ParsePagination(queryParams)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		requestID := middleware.GetRequestID(req.Context())
-		if writeErr := views.InternalError(requestID).Render(req.Context(), w); writeErr != nil {
+		if writeErr := views.BadRequest(err).Render(req.Context(), w); writeErr != nil {
 			logger.Error("error while writing error response", slog.Any("error", writeErr))
 		}
 		return
@@ -44,14 +44,17 @@ func (s GetLogs) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	page, err := s.DB.GetEntryFiltered(query)
 	if err != nil {
-		statusCode := http.StatusInternalServerError
+		var errView templ.Component
 		if errors.Is(err, logsdb.ErrBadCursor) || errors.Is(err, logsdb.ErrCursorAndOffset) {
-			statusCode = http.StatusBadRequest
+			w.WriteHeader(http.StatusBadRequest)
+			errView = views.BadRequest(err)
+		} else {
+			logger.Error("Error processing logs ui request", slog.Any("error", err))
+			w.WriteHeader(http.StatusInternalServerError)
+			requestID := middleware.GetRequestID(req.Context())
+			errView = views.InternalError(requestID)
 		}
-		logger.Error("Error processing logs ui request", slog.Any("error", err))
-		w.WriteHeader(statusCode)
-		requestID := middleware.GetRequestID(req.Context())
-		if writeErr := views.InternalError(requestID).Render(req.Context(), w); writeErr != nil {
+		if writeErr := errView.Render(req.Context(), w); writeErr != nil {
 			logger.Error("error while writing error response", slog.Any("error", writeErr))
 		}
 		return
@@ -61,13 +64,13 @@ func (s GetLogs) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		Page:     page,
 		NextPage: utils.BuildNextPageURL(req, "", page.Cursor),
 	}
+	var view templ.Component
 	if req.Header.Get("HX-Request") == "true" {
-		if err := views.LogsListPartial(viewModel).Render(req.Context(), w); err != nil {
-			logger.Error("Error while writing response", slog.Any("error", err))
-		}
-		return
+		view = views.LogsListPartial(viewModel)
+	} else {
+		view = views.LogsList(viewModel)
 	}
-	if err := views.LogsList(viewModel).Render(req.Context(), w); err != nil {
+	if err := view.Render(req.Context(), w); err != nil {
 		logger.Error("Error while writing response", slog.Any("error", err))
 	}
 }
