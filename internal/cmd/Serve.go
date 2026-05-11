@@ -100,7 +100,11 @@ func Serve(cfg config.Config) {
 		}
 		if dbActions != nil {
 			logger.Debug("Web admin enabled for pipelines")
-			listPipelinesPage := middlewares(admin.ListPipelines{DB: dbActions})
+			projectNames := make([]string, 0, len(cfg.Projects))
+			for name := range cfg.Projects {
+				projectNames = append(projectNames, name)
+			}
+			listPipelinesPage := middlewares(admin.ListPipelines{DB: dbActions, Projects: projectNames})
 			mux.Handle("GET /", listPipelinesPage)
 			mux.Handle("GET /pipelines", listPipelinesPage)
 			mux.Handle("GET /pipelines/{pipeId}", middlewares(admin.GetPipeline{DB: dbActions}))

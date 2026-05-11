@@ -5,13 +5,52 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/models"
 )
 
+type PipelinesListFilter struct {
+	Project    string
+	DeliveryID string
+	Status     string
+}
+
 type PipelinesListViewModel struct {
 	Page     models.PagedDB[actionsdb.PipeLineRecord]
 	NextPage *string
+	Projects []string
+	Filter   PipelinesListFilter
 }
 
 templ PipelinesList(model PipelinesListViewModel) {
 	@base("Pipelines") {
+		<form class="pipelines-filter" method="get" action="/pipelines">
+			<label>
+				Project
+				<input
+					type="text"
+					name="project"
+					list="pipelines-filter__projects"
+					value={ model.Filter.Project }
+				/>
+			</label>
+			<datalist id="pipelines-filter__projects">
+				for _, p := range model.Projects {
+					<option value={ p }></option>
+				}
+			</datalist>
+			<label>
+				Delivery ID
+				<input type="text" name="deliveryId" value={ model.Filter.DeliveryID }/>
+			</label>
+			<label>
+				Status
+				<select name="status">
+					<option value="" selected?={ model.Filter.Status == "" }>Any</option>
+					<option value="ok" selected?={ model.Filter.Status == "ok" }>Ok</option>
+					<option value="error" selected?={ model.Filter.Status == "error" }>Error</option>
+					<option value="pending" selected?={ model.Filter.Status == "pending" }>Pending</option>
+				</select>
+			</label>
+			<button class="btn btn-search" type="submit">Search</button>
+			<a class="btn btn-reset" href="/pipelines">Clear</a>
+		</form>
 		if len(model.Page.Items) > 0 {
 			<ul>
 				@PipelinesListPartial(model)

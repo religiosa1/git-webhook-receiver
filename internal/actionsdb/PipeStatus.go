@@ -5,10 +5,10 @@ import "fmt"
 type PipeStatus int
 
 const (
-	PipeStatusAny     PipeStatus = 0
-	PipeStatusOk      PipeStatus = 1
-	PipeStatusError   PipeStatus = 2
-	PipeStatusPending PipeStatus = 3
+	PipeStatusAny PipeStatus = iota
+	PipeStatusOk
+	PipeStatusError
+	PipeStatusPending
 )
 
 func ParsePipelineStatus(status string) (PipeStatus, error) {
@@ -19,9 +19,22 @@ func ParsePipelineStatus(status string) (PipeStatus, error) {
 		return PipeStatusError, nil
 	case "pending":
 		return PipeStatusPending, nil
-	case "any":
+	case "", "any":
 		return PipeStatusAny, nil
 	default:
 		return PipeStatusAny, fmt.Errorf("unknown pipe status: %q", status)
+	}
+}
+
+func (s PipeStatus) String() string {
+	switch s {
+	case PipeStatusOk:
+		return "ok"
+	case PipeStatusError:
+		return "error"
+	case PipeStatusPending:
+		return "pending"
+	default:
+		return ""
 	}
 }

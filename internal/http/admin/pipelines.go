@@ -28,7 +28,8 @@ func parsePipelineFilterQuery(queryParams url.Values) (actionsdb.ListPipelineRec
 }
 
 type ListPipelines struct {
-	DB *actionsdb.ActionDB
+	DB       *actionsdb.ActionDB
+	Projects []string
 }
 
 func (s ListPipelines) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -47,6 +48,7 @@ func (s ListPipelines) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if writeErr := views.BadRequest(err).Render(req.Context(), w); writeErr != nil {
 			logger.Error("error while writing error response", slog.Any("error", writeErr))
 		}
+		return
 	}
 
 	page, err := s.DB.ListPipelineRecords(query)
@@ -70,6 +72,12 @@ func (s ListPipelines) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	viewModel := views.PipelinesListViewModel{
 		Page:     page,
 		NextPage: utils.BuildNextPageURL(req, "", page.Cursor),
+		Projects: s.Projects,
+		Filter: views.PipelinesListFilter{
+			Project:    query.Project,
+			DeliveryID: query.DeliveryID,
+			Status:     query.Status.String(),
+		},
 	}
 	var view templ.Component
 	if req.Header.Get("HX-Request") == "true" {
