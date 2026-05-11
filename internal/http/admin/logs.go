@@ -28,7 +28,7 @@ func (s GetLogs) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	pagination, err := utils.ParsePagination(queryParams)
 	if err != nil {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 		requestID := middleware.GetRequestID(req.Context())
 		if writeErr := views.InternalError(requestID).Render(req.Context(), w); writeErr != nil {
 			logger.Error("error while writing error response", slog.Any("error", writeErr))
@@ -44,9 +44,9 @@ func (s GetLogs) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	page, err := s.DB.GetEntryFiltered(query)
 	if err != nil {
-		statusCode := 500
+		statusCode := http.StatusInternalServerError
 		if errors.Is(err, logsdb.ErrBadCursor) || errors.Is(err, logsdb.ErrCursorAndOffset) {
-			statusCode = 400
+			statusCode = http.StatusBadRequest
 		}
 		logger.Error("Error processing logs ui request", slog.Any("error", err))
 		w.WriteHeader(statusCode)
@@ -60,6 +60,12 @@ func (s GetLogs) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	viewModel := views.LogsListViewModel{
 		Page:     page,
 		NextPage: utils.BuildNextPageURL(req, "", page.Cursor),
+	}
+	if req.Header.Get("HX-Request") == "true" {
+		if err := views.LogsListPartial(viewModel).Render(req.Context(), w); err != nil {
+			logger.Error("Error while writing response", slog.Any("error", err))
+		}
+		return
 	}
 	if err := views.LogsList(viewModel).Render(req.Context(), w); err != nil {
 		logger.Error("Error while writing response", slog.Any("error", err))

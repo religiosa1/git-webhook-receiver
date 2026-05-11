@@ -6,21 +6,36 @@ import (
 )
 
 type PipelinesListViewModel struct {
-	Page models.PagedDB[actionsdb.PipeLineRecord]
+	Page     models.PagedDB[actionsdb.PipeLineRecord]
+	NextPage *string
 }
 
 templ PipelinesList(model PipelinesListViewModel) {
 	@base("Pipelines") {
 		if len(model.Page.Items) > 0 {
 			<ul>
-				for _, item := range model.Page.Items {
-					<li>
-						@pipelineItemPreview(item, true)
-					</li>
-				}
+				@PipelinesListPartial(model)
 			</ul>
 		} else {
 			<p>No pipeline items</p>
 		}
+	}
+}
+
+templ PipelinesListPartial(model PipelinesListViewModel) {
+	for _, item := range model.Page.Items {
+		<li>
+			@pipelineItemPreview(item, true)
+		</li>
+	}
+	if model.NextPage != nil {
+		<li>
+			<a
+				href={ templ.SafeURL(*model.NextPage) }
+				hx-get={ *model.NextPage }
+				hx-target="closest li"
+				hx-swap="outerHTML"
+			>Load more</a>
+		</li>
 	}
 }

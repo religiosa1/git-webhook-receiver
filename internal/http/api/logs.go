@@ -43,9 +43,9 @@ func (h GetLogs) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	page, err := h.DB.GetEntryFiltered(query)
 	if err != nil {
-		statusCode := 500
+		statusCode := http.StatusInternalServerError
 		if errors.Is(err, logsdb.ErrBadCursor) || errors.Is(err, logsdb.ErrCursorAndOffset) {
-			statusCode = 400
+			statusCode = http.StatusBadRequest
 		}
 		logger.Error("Error processing GetLogs request", slog.Any("error", err))
 		if writeErr := utils.WriteErrorResponse(w, statusCode, err.Error()); writeErr != nil {

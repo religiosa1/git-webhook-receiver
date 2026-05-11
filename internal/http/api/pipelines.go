@@ -24,7 +24,7 @@ func (h ListPipelines) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	pagination, err := utils.ParsePagination(queryParams)
 	if err != nil {
-		if writeErr := utils.WriteErrorResponse(w, 400, err.Error()); writeErr != nil {
+		if writeErr := utils.WriteErrorResponse(w, http.StatusBadRequest, err.Error()); writeErr != nil {
 			logger.Error("error while writing error message", slog.Any("error", writeErr))
 		}
 		return
@@ -45,9 +45,9 @@ func (h ListPipelines) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	page, err := h.DB.ListPipelineRecords(query)
 	if err != nil {
-		statusCode := 500
+		statusCode := http.StatusInternalServerError
 		if errors.Is(err, actionsdb.ErrBadCursor) || errors.Is(err, actionsdb.ErrCursorAndOffset) {
-			statusCode = 400
+			statusCode = http.StatusBadRequest
 		}
 		if writeErr := utils.WriteErrorResponse(w, statusCode, err.Error()); writeErr != nil {
 			logger.Error("error while writing error message", slog.Any("error", writeErr))
@@ -77,7 +77,7 @@ func (h GetPipeline) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	} else if err != nil {
 		logger.Error("Error processing GetPipeline request", slog.Any("error", err))
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 		_, err = w.Write([]byte(err.Error()))
 		if err != nil {
 			logger.Error("Error writing error output", slog.Any("error", err))
@@ -104,7 +104,7 @@ func (h GetPipelineOutput) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	} else if err != nil {
 		logger.Error("Error processing GetPipelineOutput request", slog.Any("error", err))
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 		_, err := w.Write([]byte(err.Error()))
 		if err != nil {
 			logger.Error("Error writing error output", slog.Any("error", err))

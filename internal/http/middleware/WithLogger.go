@@ -14,7 +14,7 @@ type loggingContextKey string
 
 const (
 	loggingContextLogger    = loggingContextKey("logging_context.logger")
-	loggingContextRequestId = loggingContextKey("logging_context.request_id")
+	loggingContextRequestID = loggingContextKey("logging_context.request_id")
 )
 
 func WithLogger(logger *slog.Logger) Middleware {
@@ -30,7 +30,7 @@ func WithLogger(logger *slog.Logger) Middleware {
 			)
 
 			ctx := context.WithValue(r.Context(), loggingContextLogger, newLogger)
-			ctx = context.WithValue(ctx, loggingContextRequestId, id)
+			ctx = context.WithValue(ctx, loggingContextRequestID, id)
 
 			newLogger.Debug("Incoming request")
 			t1 := time.Now()
@@ -73,7 +73,7 @@ func GetLogger(ctx context.Context) *slog.Logger {
 }
 
 func GetRequestID(ctx context.Context) string {
-	requestID, ok := ctx.Value(loggingContextRequestId).(string)
+	requestID, ok := ctx.Value(loggingContextRequestID).(string)
 	if !ok {
 		return ""
 	}

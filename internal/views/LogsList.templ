@@ -28,20 +28,30 @@ templ LogsList(model LogsListViewModel) {
 					</tr>
 				</thead>
 				<tbody>
-					for _, entry := range model.Page.Items {
-						@logEntryRow(entry)
-					}
+					@LogsListPartial(model)
 				</tbody>
 			</table>
-			<nav class="pagination">
-				<a href="/logs">First page</a>
-				if model.NextPage != nil {
-					<a href={ templ.SafeURL(*model.NextPage) }>Next page</a>
-				}
-			</nav>
 		} else {
 			<p>No log entries</p>
 		}
+	}
+}
+
+templ LogsListPartial(model LogsListViewModel) {
+	for _, entry := range model.Page.Items {
+		@logEntryRow(entry)
+	}
+	if model.NextPage != nil {
+		<tr>
+			<td colspan="4">
+				<a
+					href={ templ.SafeURL(*model.NextPage) }
+					hx-get={ *model.NextPage }
+					hx-target="closest tr"
+					hx-swap="outerHTML"
+				>Load more</a>
+			</td>
+		</tr>
 	}
 }
 
