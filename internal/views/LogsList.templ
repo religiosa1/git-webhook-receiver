@@ -1,0 +1,89 @@
+package views
+
+import (
+	"fmt"
+	"log/slog"
+	"time"
+
+	"github.com/religiosa1/git-webhook-receiver/internal/logsdb"
+	"github.com/religiosa1/git-webhook-receiver/internal/models"
+)
+
+type LogsListViewModel struct {
+	Page     models.PagedDB[logsdb.LogEntry]
+	NextPage *string
+}
+
+templ LogsList(model LogsListViewModel) {
+	@base("Logs") {
+		if len(model.Page.Items) > 0 {
+			<p>{ fmt.Sprintf("%d total entries", model.Page.TotalCount) }</p>
+			<table class="logs-table">
+				<thead>
+					<tr>
+						<th>Time</th>
+						<th>Level</th>
+						<th>Message</th>
+						<th>Context</th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, entry := range model.Page.Items {
+						@logEntryRow(entry)
+					}
+				</tbody>
+			</table>
+			<nav class="pagination">
+				<a href="/logs">First page</a>
+				if model.NextPage != nil {
+					<a href={ templ.SafeURL(*model.NextPage) }>Next page</a>
+				}
+			</nav>
+		} else {
+			<p>No log entries</p>
+		}
+	}
+}
+
+templ logEntryRow(entry logsdb.LogEntry) {
+	<tr class={ "log-entry", "log-entry--" + logLevelName(entry.Level) }>
+		<td class="log-entry__ts">
+			{{ ts := time.Unix(entry.TS, 0).UTC() }}
+			<time datetime={ ts.Format(time.RFC3339) }>{ ts.Format("2006-01-02 15:04:05") }</time>
+		</td>
+		<td class="log-entry__level">{ logLevelName(entry.Level) }</td>
+		<td class="log-entry__message">{ entry.Message }</td>
+		<td class="log-entry__context">
+			if entry.Project.Valid {
+				<span class="log-ctx__project">{ entry.Project.String }</span>
+			}
+			if entry.DeliveryID.Valid {
+				<span class="log-ctx__delivery">{ entry.DeliveryID.String }</span>
+			}
+			if entry.PipeID.Valid {
+				<span class="log-ctx__pipe">{ entry.PipeID.String }</span>
+			}
+			if entry.Data != "" && entry.Data != "null" {
+				<details>
+					<summary>data</summary>
+					<pre class="log-entry__data">{ entry.Data }</pre>
+				</details>
+			}
+		</td>
+	</tr>
+}
+
+func logLevelName(level int) string {
+	switch slog.Level(level) {
+	case slog.LevelDebug:
+		return "debug"
+	case slog.LevelInfo:
+		return "info"
+	case slog.LevelWarn:
+		return "warn"
+	case slog.LevelError:
+		return "error"
+	default:
+		return fmt.Sprintf("level(%d)", level)
+	}
+}

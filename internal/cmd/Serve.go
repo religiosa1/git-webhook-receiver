@@ -108,16 +108,16 @@ func Serve(cfg config.Config) {
 		} else {
 			logger.Info("actions_db_file config value is an empty string. All of /pipelines pages won't be available")
 		}
+		logsPage := middlewares(admin.GetLogs{DB: dbLogs})
 		if dbLogs != nil {
 			logger.Debug("Web admin enabled for logs")
-			listLogsPage := middlewares(admin.GetLogs{DB: dbLogs})
 			if dbActions == nil {
-				mux.Handle("GET /", listLogsPage)
+				mux.Handle("GET /", logsPage)
 			}
-			mux.Handle("GET /logs", listLogsPage)
 		} else {
 			logger.Info("logs_db_file config value is an empty string. Logs page won't be available")
 		}
+		mux.Handle("GET /logs", logsPage)
 	}
 	if !cfg.DisableAPI {
 		mux.Handle("GET /api/projects", middlewares(api.ListProjects{Projects: cfg.Projects}))

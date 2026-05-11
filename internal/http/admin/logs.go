@@ -1,10 +1,12 @@
 package admin
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/http/middleware"
+	"github.com/religiosa1/git-webhook-receiver/internal/http/utils"
 	"github.com/religiosa1/git-webhook-receiver/internal/logsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/views"
 )
@@ -15,7 +17,51 @@ type GetLogs struct {
 
 func (s GetLogs) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	logger := middleware.GetLogger(req.Context())
-	if err := views.ToDo("Logs").Render(req.Context(), w); err != nil {
-		logger.Error("error while writing the output", slog.Any("error", err))
+	if s.DB == nil {
+		w.WriteHeader(http.StatusNotFound)
+		if writeErr := views.NotFound().Render(req.Context(), w); writeErr != nil {
+			logger.Error("error while writing error response", slog.Any("error", writeErr))
+		}
+		return
+	}
+	queryParams := req.URL.Query()
+
+	pagination, err := utils.ParsePagination(queryParams)
+	if err != nil {
+		w.WriteHeader(400)
+		requestID := middleware.GetRequestID(req.Context())
+		if writeErr := views.InternalError(requestID).Render(req.Context(), w); writeErr != nil {
+			logger.Error("error while writing error response", slog.Any("error", writeErr))
+		}
+		return
+	}
+
+	query := logsdb.GetEntryFilteredQuery{
+		Limit:  pagination.Limit,
+		Offset: pagination.Offset,
+		Cursor: queryParams.Get("cursor"),
+	}
+
+	page, err := s.DB.GetEntryFiltered(query)
+	if err != nil {
+		statusCode := 500
+		if errors.Is(err, logsdb.ErrBadCursor) || errors.Is(err, logsdb.ErrCursorAndOffset) {
+			statusCode = 400
+		}
+		logger.Error("Error processing logs ui request", slog.Any("error", err))
+		w.WriteHeader(statusCode)
+		requestID := middleware.GetRequestID(req.Context())
+		if writeErr := views.InternalError(requestID).Render(req.Context(), w); writeErr != nil {
+			logger.Error("error while writing error response", slog.Any("error", writeErr))
+		}
+		return
+	}
+
+	viewModel := views.LogsListViewModel{
+		Page:     page,
+		NextPage: utils.BuildNextPageURL(req, "", page.Cursor),
+	}
+	if err := views.LogsList(viewModel).Render(req.Context(), w); err != nil {
+		logger.Error("Error while writing response", slog.Any("error", err))
 	}
 }
