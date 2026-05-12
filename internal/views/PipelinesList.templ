@@ -20,7 +20,7 @@ type PipelinesListViewModel struct {
 
 templ PipelinesList(model PipelinesListViewModel) {
 	@base("Pipelines") {
-		<form class="pipelines-filter" method="get" action="/pipelines">
+		<form class="pipelines-filter" method="get">
 			<label>
 				Project
 				<input
@@ -49,7 +49,7 @@ templ PipelinesList(model PipelinesListViewModel) {
 				</select>
 			</label>
 			<button class="btn btn-search" type="submit">Search</button>
-			<a class="btn btn-reset" href="/pipelines">Clear</a>
+			<a class="btn btn-reset" href={ MakePublicURL(ctx, "/pipelines") }>Clear</a>
 		</form>
 		if len(model.Page.Items) > 0 {
 			<ul>
@@ -70,8 +70,8 @@ templ PipelinesListPartial(model PipelinesListViewModel) {
 	if model.NextPage != nil {
 		<li>
 			<a
-				href={ templ.SafeURL(*model.NextPage) }
-				hx-get={ *model.NextPage }
+				href={ MakePublicURL(ctx, *model.NextPage) }
+				hx-get={ MakePublicURL(ctx, *model.NextPage) }
 				hx-target="closest li"
 				hx-swap="outerHTML"
 			>Load more</a>

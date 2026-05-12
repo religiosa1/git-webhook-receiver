@@ -6,6 +6,6 @@ templ InternalError(requestID string) {
 		if requestID != "" {
 			<p>Communicate this request ID to the server administrators: { requestID }</p>
 		}
-		<p><a href="/">go back to homepage</a></p>
+		<p><a href={ MakePublicURL(ctx, "/") }>go back to homepage</a></p>
 	}
 }

@@ -45,8 +45,8 @@ projects:
         graceful_shutdown: 0s
 # pipeline results db filename, defaults to `actions.sqlite3` use empty string or null to disable
 actions_db_file: "actions.sqlite3"
-# application logs db filename, default to `logs.sqlite3`. Use empty string or null to disable
-logs_db_file: "logs.sqlite3"
+# application logs db filename, e.g. 'logs.sqlite3', defaults to empty -- meaning disabled
+logs_db_file: ""
 # max amount of actions to be stored in the actions DB. After exceeding this value,
 # older entries will be deleted. Negative values disable this functionality
 max_actions_stored: 1000

@@ -1,23 +1,33 @@
 package views
 
 templ base(title string) {
+	{{ model := GetBaseViewModel(ctx) }}
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>{ title }</title>
-			<link rel="stylesheet" href="/static/css/main.css"/>
-			<script src="/static/js/htmx.min.js"></script>
+			<link rel="stylesheet" href={ MakePublicURL(ctx, "/static/css/main.css") }/>
+			<script src={ MakePublicURL(ctx, "/static/js/htmx.min.js") }></script>
 		</head>
 		<body>
-			<header>
-				<h1>{ title }</h1>
+			<header class="main-header">
+				<nav class="main-nav">
+					<a href={ MakePublicURL(ctx, "/projects") }>Projects</a>
+					if model.hasPipelinePages {
+						<a href={ MakePublicURL(ctx, "/pipelines") }>Pipelines</a>
+					}
+					if model.hasLogsPages {
+						<a href={ MakePublicURL(ctx, "/logs") }>Logs</a>
+					}
+				</nav>
 			</header>
-			<main>
+			<main class="main">
+				<h1>{ title }</h1>
 				{ children... }
 			</main>
-			<footer></footer>
+			<footer class="main-footer"></footer>
 		</body>
 	</html>
 }

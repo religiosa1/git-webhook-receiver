@@ -31,7 +31,7 @@ type LogsListViewModel struct {
 
 templ LogsList(model LogsListViewModel) {
 	@base("Logs") {
-		<form class="logs-filter" method="get" action="/logs">
+		<form class="logs-filter" method="get">
 			<label>
 				Project
 				<input
@@ -73,7 +73,7 @@ templ LogsList(model LogsListViewModel) {
 				}
 			</fieldset>
 			<button class="btn btn-search" type="submit">Search</button>
-			<a class="btn btn-reset" href="/logs">Clear</a>
+			<a class="btn btn-reset" href={ MakePublicURL(ctx, "/logs") }>Clear</a>
 		</form>
 		if len(model.Page.Items) > 0 {
 			<p>{ fmt.Sprintf("%d total entries", model.Page.TotalCount) }</p>
@@ -104,8 +104,8 @@ templ LogsListPartial(model LogsListViewModel) {
 		<tr>
 			<td colspan="4">
 				<a
-					href={ templ.SafeURL(*model.NextPage) }
-					hx-get={ *model.NextPage }
+					href={ MakePublicURL(ctx, *model.NextPage) }
+					hx-get={ MakePublicURL(ctx, *model.NextPage) }
 					hx-target="closest tr"
 					hx-swap="outerHTML"
 				>Load more</a>

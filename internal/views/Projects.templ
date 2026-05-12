@@ -40,7 +40,7 @@ templ Projects(model ProjectsViewModel) {
 
 templ projectPreview(name string, conf config.Project) {
 	<div class="project-preview">
-		<a href={ fmt.Sprintf("/pipelines?project=%s", url.QueryEscape(name)) }>
+		<a href={ MakePublicURL(ctx, fmt.Sprintf("/pipelines?project=%s", url.QueryEscape(name))) }>
 			<h3 class="project-preview__name">{ name }</h3>
 		</a>
 		<p>

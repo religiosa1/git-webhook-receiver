@@ -13,13 +13,13 @@ type PipelineItemViewModel struct {
 
 templ PipelineItem(model PipelineItemViewModel) {
 	@base(fmt.Sprintf("Pipeline %s", model.Record.PipeID)) {
-		<p><a href="/pipelines">Back to pipelines</a></p>
+		<p><a href={ MakePublicURL(ctx, "/pipelines") }>Back to pipelines</a></p>
 		@pipelineItemPreview(model.Record, false)
 		if model.Record.Output.Valid {
 			<details class="pipeline-page-output">
 				<summary>Output</summary>
 				<div
-					hx-get={ fmt.Sprintf("/pipelines/%s/output", url.PathEscape(model.Record.PipeID)) }
+					hx-get={ MakePublicURL(ctx, fmt.Sprintf("/pipelines/%s/output", url.PathEscape(model.Record.PipeID))) }
 					hx-trigger="toggle from:closest details once"
 					hx-swap="outerHTML"
 				>

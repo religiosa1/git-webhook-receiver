@@ -3,6 +3,6 @@ package views
 templ NotFound() {
 	@base("Page not found") {
 		<p>Sorry, the requested page cannot be found on the server.</p>
-		<p><a href="/">go back to homepage</a></p>
+		<p><a href={ MakePublicURL(ctx, "/") }>go back to homepage</a></p>
 	}
 }

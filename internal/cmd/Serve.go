@@ -22,6 +22,7 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/http/webhook"
 	"github.com/religiosa1/git-webhook-receiver/internal/logger"
 	"github.com/religiosa1/git-webhook-receiver/internal/logsdb"
+	"github.com/religiosa1/git-webhook-receiver/internal/views"
 	"github.com/religiosa1/git-webhook-receiver/internal/whreceiver"
 )
 
@@ -82,11 +83,12 @@ func Serve(cfg config.Config) {
 		logger.Error("Error creating the server", slog.Any("error", err))
 		os.Exit(ExitReadConfig)
 	}
-	middlewares := middleware.Chain(
-		middleware.WithLogger(logger),
-		middleware.WithBasicAuth(cfg.AuthUser, cfg.AuthPassword.RawContents()),
-	)
 	if !cfg.DisableUI {
+		middlewares := middleware.Chain(
+			middleware.WithLogger(logger),
+			middleware.WithBasicAuth(cfg.AuthUser, cfg.AuthPassword.RawContents()),
+			views.WithBaseViewModel(cfg),
+		)
 		staticFS, err := fs.Sub(admin.StaticFiles, "static")
 		if err != nil {
 			logger.Error("Error setting up static files", slog.Any("error", err))
@@ -124,6 +126,10 @@ func Serve(cfg config.Config) {
 		mux.Handle("GET /logs", logsPage)
 	}
 	if !cfg.DisableAPI {
+		middlewares := middleware.Chain(
+			middleware.WithLogger(logger),
+			middleware.WithBasicAuth(cfg.AuthUser, cfg.AuthPassword.RawContents()),
+		)
 		mux.Handle("GET /api/projects", middlewares(api.ListProjects{Projects: cfg.Projects}))
 		if dbActions != nil {
 			logger.Debug("HTTP API enabled for pipelines")

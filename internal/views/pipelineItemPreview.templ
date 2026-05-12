@@ -46,7 +46,7 @@ templ pipelineItemPreview(item actionsdb.PipeLineRecord, showLink bool) {
 		{{
 			var link string
 			if showLink {
-				link = fmt.Sprintf("/pipelines/%s", url.PathEscape(item.PipeID))
+				link = MakePublicURL(ctx, fmt.Sprintf("/pipelines/%s", url.PathEscape(item.PipeID)))
 			}
 		}}
 		@maybeLink(link) {

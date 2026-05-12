@@ -3,7 +3,7 @@ module github.com/religiosa1/git-webhook-receiver
 go 1.26.3
 
 require (
-	github.com/a-h/templ v0.3.1001
+	github.com/a-h/templ v0.3.1020
 	github.com/alecthomas/kong v1.15.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jmoiron/sqlx v1.4.0
