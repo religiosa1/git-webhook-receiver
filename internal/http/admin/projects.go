@@ -17,7 +17,10 @@ type ListProjects struct {
 
 func (l ListProjects) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	logger := middleware.GetLogger(req.Context())
-	if err := views.ToDo("Projects and their actions").Render(req.Context(), w); err != nil {
+	viewModel := views.ProjectsViewModel{
+		Projects: l.Projects,
+	}
+	if err := views.Projects(viewModel).Render(req.Context(), w); err != nil {
 		logger.Error("Error while writing response", slog.Any("error", err))
 	}
 }

@@ -1,0 +1,110 @@
+package views
+
+import (
+	"fmt"
+	"github.com/religiosa1/git-webhook-receiver/internal/config"
+	"net/url"
+	"strings"
+)
+
+func scriptPreview(script string) string {
+	const maxLines = 5
+	const maxCols = 80
+	lines := strings.SplitN(script, "\n", maxLines+1)
+	truncatedBottom := len(lines) > maxLines
+	if truncatedBottom {
+		lines = lines[:maxLines]
+	}
+	for i, line := range lines {
+		if len(line) > maxCols {
+			lines[i] = line[:maxCols] + "..."
+		}
+	}
+	if truncatedBottom {
+		lines = append(lines, "...")
+	}
+	return strings.Join(lines, "\n")
+}
+
+type ProjectsViewModel struct {
+	Projects map[string]config.Project
+}
+
+templ Projects(model ProjectsViewModel) {
+	@base("Projects") {
+		for projectName, conf := range model.Projects {
+			@projectPreview(projectName, conf)
+		}
+	}
+}
+
+templ projectPreview(name string, conf config.Project) {
+	<div class="project-preview">
+		<a href={ fmt.Sprintf("/pipelines?project=%s", url.QueryEscape(name)) }>
+			<h3 class="project-preview__name">{ name }</h3>
+		</a>
+		<p>
+			<span class="project-preview__git-provider">
+				{ conf.GitProvider }
+			</span>
+			<span class="project-preview__repo">
+				{ conf.Repo }
+			</span>
+		</p>
+		<p>
+			@secretDisplay("authorization", conf.Authorization)
+		</p>
+		<p>
+			@secretDisplay("signature", conf.Secret)
+		</p>
+		<h4>Actions</h4>
+		<ol>
+			for _, action := range conf.Actions {
+				<li>
+					@actionPreview(action)
+				</li>
+			}
+		</ol>
+	</div>
+}
+
+templ secretDisplay(secretName string, value config.Secret) {
+	{{ isEmpty := value.IsZero() }}
+	<span class={ "secret-display", templ.KV("secret-display_empty", isEmpty) }>
+		{ secretName }: 
+		if isEmpty {
+			unset
+		} else {
+			set
+		}
+	</span>
+}
+
+templ actionPreview(action config.Action) {
+	<div class="project-action">
+		<h5 class="project-action__on">
+			<span class="project-action__on-branch">Branch: { action.Branch }</span>
+			<span class="project-action__on-event">On: { action.On }</span>
+		</h5>
+		<dl class="project-action__settings">
+			@dli("User", action.User)
+			@dli("CWD", action.Cwd)
+			@dli("Timeout", action.Timeout.String())
+			@dli("Graceful Shutdown", action.GracefulShutdown.String())
+			if len(action.Run) > 0 {
+				@dli("Runs", strings.Join(action.Run, " "))
+			} else {
+				@dli("Script", scriptPreview(action.Script))
+			}
+		</dl>
+	</div>
+}
+
+templ dli(term, value string) {
+	if value != "" {
+		<div class="project-action__settings-item">
+			<dt class="project-action__settings-item-term">{ term }</dt>
+			<dd class="project-action__settings-item-data">{ value }</dd>
+		</div>
+	}
+}
