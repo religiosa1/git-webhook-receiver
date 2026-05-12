@@ -7,15 +7,74 @@ import (
 
 	"github.com/religiosa1/git-webhook-receiver/internal/logsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/models"
+	"slices"
 )
+
+type LogsListFilter struct {
+	Project    string
+	DeliveryID string
+	PipeID     string
+	Message    string
+	Levels     []string
+}
+
+func logsFilterHasLevel(filter LogsListFilter, level string) bool {
+	return slices.Contains(filter.Levels, level)
+}
 
 type LogsListViewModel struct {
 	Page     models.PagedDB[logsdb.LogEntry]
 	NextPage *string
+	Projects []string
+	Filter   LogsListFilter
 }
 
 templ LogsList(model LogsListViewModel) {
 	@base("Logs") {
+		<form class="logs-filter" method="get" action="/logs">
+			<label>
+				Project
+				<input
+					type="text"
+					name="project"
+					list="logs-filter__projects"
+					value={ model.Filter.Project }
+				/>
+			</label>
+			<datalist id="logs-filter__projects">
+				for _, p := range model.Projects {
+					<option value={ p }></option>
+				}
+			</datalist>
+			<label>
+				Delivery ID
+				<input type="text" name="deliveryId" value={ model.Filter.DeliveryID }/>
+			</label>
+			<label>
+				Pipe ID
+				<input type="text" name="pipeId" value={ model.Filter.PipeID }/>
+			</label>
+			<label>
+				Message
+				<input type="text" name="message" value={ model.Filter.Message }/>
+			</label>
+			<fieldset class="logs-filter__levels">
+				<legend>Level</legend>
+				for _, lvl := range []string{"debug", "info", "warn", "error"} {
+					<label>
+						<input
+							type="checkbox"
+							name="level"
+							value={ lvl }
+							checked?={ logsFilterHasLevel(model.Filter, lvl) }
+						/>
+						{ lvl }
+					</label>
+				}
+			</fieldset>
+			<button class="btn btn-search" type="submit">Search</button>
+			<a class="btn btn-reset" href="/logs">Clear</a>
+		</form>
 		if len(model.Page.Items) > 0 {
 			<p>{ fmt.Sprintf("%d total entries", model.Page.TotalCount) }</p>
 			<table class="logs-table">

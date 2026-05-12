@@ -98,12 +98,12 @@ func Serve(cfg config.Config) {
 		if dbActions == nil && dbLogs == nil {
 			mux.Handle("GET /", projectsPage)
 		}
+		projectNames := make([]string, 0, len(cfg.Projects))
+		for name := range cfg.Projects {
+			projectNames = append(projectNames, name)
+		}
 		if dbActions != nil {
 			logger.Debug("Web admin enabled for pipelines")
-			projectNames := make([]string, 0, len(cfg.Projects))
-			for name := range cfg.Projects {
-				projectNames = append(projectNames, name)
-			}
 			listPipelinesPage := middlewares(admin.ListPipelines{DB: dbActions, Projects: projectNames})
 			mux.Handle("GET /", listPipelinesPage)
 			mux.Handle("GET /pipelines", listPipelinesPage)
@@ -112,7 +112,7 @@ func Serve(cfg config.Config) {
 		} else {
 			logger.Info("actions_db_file config value is an empty string. All of /pipelines pages won't be available")
 		}
-		logsPage := middlewares(admin.GetLogs{DB: dbLogs})
+		logsPage := middlewares(admin.GetLogs{DB: dbLogs, Projects: projectNames})
 		if dbLogs != nil {
 			logger.Debug("Web admin enabled for logs")
 			if dbActions == nil {
