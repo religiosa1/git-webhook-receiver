@@ -122,21 +122,23 @@ templ logEntryRow(entry logsdb.LogEntry) {
 		<td class="log-entry__level">{ logLevelName(entry.Level) }</td>
 		<td class="log-entry__message">{ entry.Message }</td>
 		<td class="log-entry__context">
-			if entry.Project.Valid {
-				<span class="log-ctx__project">{ entry.Project.String }</span>
-			}
-			if entry.DeliveryID.Valid {
-				<span class="log-ctx__delivery">{ entry.DeliveryID.String }</span>
-			}
-			if entry.PipeID.Valid {
-				<span class="log-ctx__pipe">{ entry.PipeID.String }</span>
-			}
-			if entry.Data != "" && entry.Data != "null" {
-				<details>
-					<summary>data</summary>
-					<pre class="log-entry__data">{ entry.Data }</pre>
-				</details>
-			}
+			<div class="log-entry__context-wrap">
+				if entry.Project.Valid {
+					<span class="log-ctx__project">{ entry.Project.String }</span>
+				}
+				if entry.DeliveryID.Valid {
+					<span class="log-ctx__delivery">{ entry.DeliveryID.String }</span>
+				}
+				if entry.PipeID.Valid {
+					<span class="log-ctx__pipe">{ entry.PipeID.String }</span>
+				}
+				if entry.Data != "" && entry.Data != "null" {
+					<details>
+						<summary>data</summary>
+						<pre class="log-entry__data">{ entry.Data }</pre>
+					</details>
+				}
+			</div>
 		</td>
 	</tr>
 }
