@@ -62,8 +62,8 @@ func (h GetLogs) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func parseLevels(levels []string) []int {
-	result := make([]int, 0)
+func parseLevels(levels []string) []slog.Level {
+	result := make([]slog.Level, 0)
 	for _, lvl := range levels {
 		l, err := logsdb.ParseLogLevel(lvl)
 		if err == nil {

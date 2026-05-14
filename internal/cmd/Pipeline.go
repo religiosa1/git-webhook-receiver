@@ -37,7 +37,12 @@ func Pipeline(cfg config.Config, args PipelineArgs) {
 		}
 	}()
 
-	pipe, err := dbActions.GetPipelineRecord(args.PipeID)
+	var pipe actionsdb.PipeLineRecord
+	if args.PipeID == "" {
+		pipe, err = dbActions.GetLastPipelineRecord()
+	} else {
+		pipe, err = dbActions.GetPipelineRecord(args.PipeID)
+	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to get the pipeline record: %s\n", err)
 		os.Exit(ExitCodeActionsDB)
@@ -57,7 +62,7 @@ func Pipeline(cfg config.Config, args PipelineArgs) {
 func displayPipeDetails(pipe actionsdb.PipeLineRecord) {
 	var endedAt string
 	if pipe.EndedAt.Valid {
-		endedAt = time.Unix(pipe.EndedAt.Int64, 0).Format(time.DateTime)
+		endedAt = pipe.EndedAt.Time.Format(time.DateTime)
 	} else {
 		endedAt = ""
 	}
@@ -68,6 +73,6 @@ func displayPipeDetails(pipe actionsdb.PipeLineRecord) {
 	fmt.Printf("config        : %s\n", pipe.Config)
 	fmt.Printf("error         : %s\n", pipe.Error.String)
 	fmt.Printf("output length : %s\n", formatLength(pipe.Output))
-	fmt.Printf("created at    : %s\n", time.Unix(pipe.CreatedAt, 0).Format(time.DateTime))
+	fmt.Printf("created at    : %s\n", pipe.CreatedAt.Format(time.DateTime))
 	fmt.Printf("ended at      : %s\n", endedAt)
 }

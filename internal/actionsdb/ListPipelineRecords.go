@@ -64,12 +64,11 @@ FROM
 		args = append(args, search.Offset)
 	}
 
-	var rows []PipeLineRecord
+	var rows []pipelineRecordDTO
 	err = d.db.Select(&rows, qb.String(), args...)
 	if err != nil {
 		return result, err
 	}
-	result.Items = rows[:min(search.Limit, len(rows))]
 	result.TotalCount, err = d.CountPipelineRecords(search)
 	if err != nil {
 		return result, fmt.Errorf("error while getting the total count of pipeline records: %w", err)
@@ -82,6 +81,11 @@ FROM
 			ID:        lastReturnedRow.ID,
 		}.String()
 		result.Cursor = &c
+		rows = rows[0:search.Limit]
+	}
+	result.Items = make([]PipeLineRecord, len(rows))
+	for i, item := range rows {
+		result.Items[i] = item.ToModel()
 	}
 	return result, nil
 }

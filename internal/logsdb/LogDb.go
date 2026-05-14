@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
@@ -62,7 +63,7 @@ func (d LogsDB) IsOpen() bool {
 	return d.db != nil
 }
 
-type LogEntry struct {
+type logEntryDto struct {
 	ID         int64          `db:"id"`
 	Level      int            `db:"level"`
 	Project    sql.NullString `db:"project"`
@@ -73,8 +74,32 @@ type LogEntry struct {
 	TS         int64          `db:"ts"`
 }
 
+type LogEntry struct {
+	ID         int64
+	Level      slog.Level
+	Project    sql.NullString
+	DeliveryID sql.NullString
+	PipeID     sql.NullString
+	Message    string
+	Data       string
+	TS         time.Time
+}
+
+func (e logEntryDto) ToModel() LogEntry {
+	return LogEntry{
+		ID:         e.ID,
+		Level:      slog.Level(e.Level),
+		Project:    e.Project,
+		DeliveryID: e.DeliveryID,
+		PipeID:     e.PipeID,
+		Message:    e.Message,
+		Data:       e.Data,
+		TS:         time.UnixMilli(e.TS).UTC(),
+	}
+}
+
 func (d LogsDB) CreateEntry(entry LogEntry) error {
-	query := "INSERT INTO logs (level, project, delivery_id, pipe_id, message, data) VALUES (?, ?, ?, ?, ?, ?)"
+	query := "INSERT INTO logs (level, project, delivery_id, pipe_id, message, data, ts) VALUES (?, ?, ?, ?, ?, ?, ?)"
 	_, err := d.db.Exec(
 		query,
 		entry.Level,
@@ -83,6 +108,7 @@ func (d LogsDB) CreateEntry(entry LogEntry) error {
 		entry.PipeID,
 		entry.Message,
 		entry.Data,
+		entry.TS.UnixMilli(),
 	)
 	return err
 }
@@ -97,14 +123,14 @@ var (
 )
 
 type GetEntryFilteredQuery struct {
-	Levels     []int  `json:"levels"`
-	Project    string `json:"project"`
-	DeliveryID string `json:"deliveryId"`
-	PipeID     string `json:"pipeId"`
-	Message    string `json:"message"`
-	Offset     int    `json:"offset"`
-	Limit      int    `json:"limit"`
-	Cursor     string `json:"cursor"`
+	Levels     []slog.Level `json:"levels"`
+	Project    string       `json:"project"`
+	DeliveryID string       `json:"deliveryId"`
+	PipeID     string       `json:"pipeId"`
+	Message    string       `json:"message"`
+	Offset     int          `json:"offset"`
+	Limit      int          `json:"limit"`
+	Cursor     string       `json:"cursor"`
 }
 
 func (d LogsDB) GetEntryFiltered(search GetEntryFilteredQuery) (models.PagedDB[LogEntry], error) {
@@ -118,11 +144,11 @@ func (d LogsDB) GetEntryFiltered(search GetEntryFilteredQuery) (models.PagedDB[L
 	}
 
 	if len(search.Levels) == 0 {
-		search.Levels = []int{
-			int(slog.LevelDebug),
-			int(slog.LevelInfo),
-			int(slog.LevelWarn),
-			int(slog.LevelError),
+		search.Levels = []slog.Level{
+			slog.LevelDebug,
+			slog.LevelInfo,
+			slog.LevelWarn,
+			slog.LevelError,
 		}
 	}
 
@@ -154,7 +180,8 @@ func (d LogsDB) GetEntryFiltered(search GetEntryFilteredQuery) (models.PagedDB[L
 		args = append(args, search.Offset)
 	}
 
-	err = d.db.Select(&result.Items, qb.String(), args...)
+	var items []logEntryDto
+	err = d.db.Select(&items, qb.String(), args...)
 	if err != nil {
 		return result, err
 	}
@@ -162,11 +189,15 @@ func (d LogsDB) GetEntryFiltered(search GetEntryFilteredQuery) (models.PagedDB[L
 	if err != nil {
 		return result, err
 	}
-	if len(result.Items) > search.Limit {
-		lastRow := result.Items[search.Limit-1]
+	if len(items) > search.Limit {
+		lastRow := items[search.Limit-1]
 		cursorStr := paginationCursor{TS: lastRow.TS, ID: lastRow.ID}.String()
 		result.Cursor = &cursorStr
-		result.Items = result.Items[0:search.Limit]
+		items = items[0:search.Limit]
+	}
+	result.Items = make([]LogEntry, len(items))
+	for i, item := range items {
+		result.Items[i] = item.ToModel()
 	}
 	return result, err
 }
@@ -178,8 +209,11 @@ func buildWhereClauses(search GetEntryFilteredQuery) *sqlfilterbuilder.Builder {
 	fb.AddEqFilter("pipe_id", search.PipeID)
 
 	fb.AddLikeFilter("message", search.Message)
-
-	fb.AddInFilter("level", search.Levels)
+	levels := make([]int, len(search.Levels))
+	for i, l := range search.Levels {
+		levels[i] = int(l)
+	}
+	fb.AddInFilter("level", levels)
 
 	return fb
 }
@@ -205,16 +239,16 @@ func (d LogsDB) CountEntries(search GetEntryFilteredQuery) (int, error) {
 	return count, nil
 }
 
-func ParseLogLevel(level string) (int, error) {
+func ParseLogLevel(level string) (slog.Level, error) {
 	switch level {
 	case "debug":
-		return int(slog.LevelDebug), nil
+		return slog.LevelDebug, nil
 	case "info":
-		return int(slog.LevelInfo), nil
+		return slog.LevelInfo, nil
 	case "warn":
-		return int(slog.LevelWarn), nil
+		return slog.LevelWarn, nil
 	case "error":
-		return int(slog.LevelError), nil
+		return slog.LevelError, nil
 	default:
 		return 0, fmt.Errorf("unknown log level %q", level)
 	}

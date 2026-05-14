@@ -30,8 +30,7 @@ templ pipelineRunStatus(item actionsdb.PipeLineRecord) {
 				</span>
 			}
 			<span class="pipeline-status__duration">
-				{{ duration := time.UnixMilli(item.EndedAt.Int64).Sub(time.UnixMilli(item.CreatedAt)) }}
-				Took { duration }
+				Took { item.EndedAt.Time.Sub(item.CreatedAt) }
 			</span>
 		} else {
 			<span class="pipeline-status__pending">
@@ -66,9 +65,8 @@ templ pipelineItemPreview(item actionsdb.PipeLineRecord, showLink bool) {
 			</span>
 		}
 		<span class="pipeline-preview__started-at">
-			{{ startedAT := time.UnixMilli(item.CreatedAt).UTC() }}
 			Started at:
-			<time datetime={ startedAT.Format(time.RFC3339) }>{ startedAT.Format(time.RFC3339) }</time>
+			<time datetime={ item.CreatedAt.Format(time.RFC3339) }>{  item.CreatedAt.Format("2006-01-02 15:04:05") }</time>
 		</span>
 		@pipelineRunStatus(item)
 	</article>

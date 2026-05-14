@@ -2,6 +2,7 @@ package serialization
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/logsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/models"
@@ -14,7 +15,7 @@ type PrettyLogEntry struct {
 	PipeID     NullString `json:"pipeId"`
 	Message    string     `json:"message"`
 	Data       JSONData   `json:"data"`
-	TS         Timestamp  `json:"ts"`
+	TS         time.Time  `json:"ts"`
 }
 
 func LogEntry(e logsdb.LogEntry) PrettyLogEntry {
@@ -39,7 +40,7 @@ func LogEntry(e logsdb.LogEntry) PrettyLogEntry {
 		PipeID:     NullString{e.PipeID},
 		Message:    e.Message,
 		Data:       data,
-		TS:         Timestamp{e.TS},
+		TS:         e.TS,
 	}
 }
 

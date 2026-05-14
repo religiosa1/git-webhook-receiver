@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS pipelines (
   config      BLOB NOT NULL,
   error       TEXT,
   output      BLOB,
-  created_at  INTEGER DEFAULT (strftime('%s','now') * 1000 + strftime('%f','now') * 1000 % 1000) NOT NULL,
+  created_at  INTEGER DEFAULT (unixepoch('subsec') * 1000) NOT NULL,
   ended_at    INTEGER
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ix_unique_pipelines_pipeId on pipelines(pipe_id);

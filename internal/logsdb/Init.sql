@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS logs (
   pipe_id     TEXT,
   message     TEXT NOT NULL,
   data        BLOB, -- additional data passed as logs attr (besides project, deliveryId and pipeId)
-  ts          INTEGER DEFAULT (strftime('%s', 'now')) NOT NULL
+  ts          INTEGER DEFAULT (unixepoch('subsec') * 1000) NOT NULL
 );
 CREATE INDEX IF NOT EXISTS logs_ts_id_idx          ON logs (             ts DESC, id DESC);
 CREATE INDEX IF NOT EXISTS logs_project_ts_idx     ON logs (project,     ts DESC, id DESC) WHERE project     IS NOT NULL;

@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"time"
 
@@ -43,7 +44,7 @@ func Logs(cfg config.Config, args LogsArgs) {
 		Offset:     args.Skip,
 	}
 
-	query.Levels = make([]int, 0)
+	query.Levels = make([]slog.Level, 0)
 	for _, lvl := range args.Levels {
 		l, err := logsdb.ParseLogLevel(lvl)
 		if err == nil {
@@ -91,7 +92,7 @@ func getLogOutputFormatter(format string) func([]logsdb.LogEntry) error {
 
 func formatLogRecordsSimple(entries []logsdb.LogEntry) error {
 	for _, e := range entries {
-		ts := time.Unix(e.TS, 0).Format(time.DateTime)
+		ts := e.TS.Format(time.DateTime)
 		fmt.Printf("%s %s %s %s %s %s\n", ts, e.Message, e.Project.String, e.DeliveryID.String, e.PipeID.String, e.Data)
 	}
 	return nil

@@ -91,7 +91,7 @@ func TestActionDb(t *testing.T) {
 			DeliveryID: deliveryID,
 			Output:     sql.NullString{Valid: true, String: actionOutput},
 			Error:      sql.NullString{Valid: false},
-			EndedAt:    sql.NullInt64{Valid: true},
+			EndedAt:    sql.NullTime{Valid: true},
 		}
 		compareRecord(t, want, record)
 		compareAction(t, action, record)
@@ -126,7 +126,7 @@ func TestActionDb(t *testing.T) {
 			DeliveryID: deliveryID,
 			Output:     sql.NullString{Valid: true, String: actionOutput},
 			Error:      sql.NullString{Valid: true, String: actionErr.Error()},
-			EndedAt:    sql.NullInt64{Valid: true},
+			EndedAt:    sql.NullTime{Valid: true},
 		}
 		compareRecord(t, want, record)
 		compareAction(t, action, record)
@@ -371,8 +371,8 @@ func compareRecord(t *testing.T, want actionsdb.PipeLineRecord, got actionsdb.Pi
 	if want.Error != got.Error {
 		t.Errorf("Unexpected error value in created record: want %v, got %v", want.Error, got.Error)
 	}
-	if got.CreatedAt == 0 {
-		t.Errorf("Unexpected empty created date: want %d, got %d", want.CreatedAt, got.CreatedAt)
+	if got.CreatedAt.IsZero() {
+		t.Errorf("Unexpected empty created date: want %s, got %s", want.CreatedAt, got.CreatedAt)
 	}
 	if want.EndedAt.Valid != got.EndedAt.Valid {
 		t.Errorf("Unexpected emptiness of ended date: want %t, got %t", want.EndedAt.Valid, got.EndedAt.Valid)

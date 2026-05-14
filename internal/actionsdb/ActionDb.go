@@ -19,7 +19,7 @@ var (
 	ErrBadCursor       = errors.New("bad cursor")
 )
 
-type PipeLineRecord struct {
+type pipelineRecordDTO struct {
 	ID         int64           `db:"id"`
 	PipeID     string          `db:"pipe_id"`
 	Project    string          `db:"project"`
@@ -29,6 +29,35 @@ type PipeLineRecord struct {
 	Output     sql.NullString  `db:"output"`
 	CreatedAt  int64           `db:"created_at"`
 	EndedAt    sql.NullInt64   `db:"ended_at"`
+}
+
+func (r pipelineRecordDTO) ToModel() PipeLineRecord {
+	return PipeLineRecord{
+		ID:         r.ID,
+		PipeID:     r.PipeID,
+		Project:    r.Project,
+		DeliveryID: r.DeliveryID,
+		Config:     r.Config,
+		Error:      r.Error,
+		Output:     r.Output,
+		CreatedAt:  time.UnixMilli(r.CreatedAt).UTC(),
+		EndedAt: sql.NullTime{
+			Valid: r.EndedAt.Valid,
+			Time:  time.UnixMilli(r.EndedAt.Int64).UTC(),
+		},
+	}
+}
+
+type PipeLineRecord struct {
+	ID         int64
+	PipeID     string
+	Project    string
+	DeliveryID string
+	Config     json.RawMessage
+	Error      sql.NullString
+	Output     sql.NullString
+	CreatedAt  time.Time
+	EndedAt    sql.NullTime
 }
 
 type PipeLineConfigSummary struct {
@@ -163,11 +192,13 @@ func readOutput(r io.Reader, maxBytes int) (string, error) {
 }
 
 func (d ActionDB) GetPipelineRecord(pipeID string) (PipeLineRecord, error) {
-	var record PipeLineRecord
-	if pipeID == "" {
-		err := d.db.Get(&record, "SELECT * FROM pipelines ORDER BY created_at DESC LIMIT 1;")
-		return record, err
-	}
-	err := d.db.Get(&record, "SELECT * FROM pipelines WHERE pipe_id=?;", pipeID)
-	return record, err
+	var entry pipelineRecordDTO
+	err := d.db.Get(&entry, "SELECT * FROM pipelines WHERE pipe_id=?;", pipeID)
+	return entry.ToModel(), err
+}
+
+func (d ActionDB) GetLastPipelineRecord() (PipeLineRecord, error) {
+	var entry pipelineRecordDTO
+	err := d.db.Get(&entry, "SELECT * FROM pipelines ORDER BY created_at DESC LIMIT 1;")
+	return entry.ToModel(), err
 }

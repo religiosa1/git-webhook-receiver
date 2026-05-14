@@ -34,9 +34,9 @@ func (logger *SlogSqlite) Handle(ctx context.Context, record slog.Record) error 
 	}
 
 	dbRecord := logsdb.LogEntry{
-		Level:   int(record.Level),
+		Level:   record.Level,
 		Message: record.Message,
-		TS:      record.Time.UTC().Unix(),
+		TS:      record.Time,
 	}
 
 	dataObj := make(map[string]any)

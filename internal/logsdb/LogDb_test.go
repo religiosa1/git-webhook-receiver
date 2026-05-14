@@ -10,7 +10,7 @@ import (
 )
 
 var testEntry = logsdb.LogEntry{
-	Level:      int(slog.LevelInfo),
+	Level:      slog.LevelInfo,
 	Project:    sql.NullString{Valid: true, String: "testProject"},
 	DeliveryID: sql.NullString{Valid: true, String: "testDeliveryId"},
 	PipeID:     sql.NullString{Valid: true, String: "testPipeId"},
@@ -257,10 +257,10 @@ func TestLogDbFiltering(t *testing.T) {
 		}
 
 		entryA := testEntry
-		entryA.Level = int(slog.LevelError)
+		entryA.Level = slog.LevelError
 
 		entryB := testEntry
-		entryB.Level = int(slog.LevelWarn)
+		entryB.Level = slog.LevelWarn
 
 		allEntries := []logsdb.LogEntry{
 			testEntry,
@@ -274,9 +274,9 @@ func TestLogDbFiltering(t *testing.T) {
 			}
 		}
 
-		s1, err := db.GetEntryFiltered(logsdb.GetEntryFilteredQuery{Levels: []int{
-			int(slog.LevelError),
-			int(slog.LevelWarn),
+		s1, err := db.GetEntryFiltered(logsdb.GetEntryFilteredQuery{Levels: []slog.Level{
+			slog.LevelError,
+			slog.LevelWarn,
 		}})
 		if err != nil {
 			t.Fatalf("Error while retrieving entries: %s", err)

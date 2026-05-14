@@ -81,11 +81,11 @@ func getActionRecordOutputFormatter(format string) func([]actionsdb.PipeLineReco
 
 func formatActionRecordsSimple(pipelines []actionsdb.PipeLineRecord) error {
 	for _, pl := range pipelines {
-		createAt := time.Unix(pl.CreatedAt, 0).Format(time.DateTime)
+		createAt := pl.CreatedAt.Format(time.DateTime)
 
 		var endedAt string
 		if pl.EndedAt.Valid {
-			endedAt = time.Unix(pl.EndedAt.Int64, 0).Format(time.TimeOnly)
+			endedAt = pl.EndedAt.Time.Format(time.TimeOnly)
 		} else {
 			endedAt = "..."
 		}

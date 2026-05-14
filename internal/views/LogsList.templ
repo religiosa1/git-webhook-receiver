@@ -117,8 +117,7 @@ templ LogsListPartial(model LogsListViewModel) {
 templ logEntryRow(entry logsdb.LogEntry) {
 	<tr class={ "log-entry", "log-entry--" + logLevelName(entry.Level) }>
 		<td class="log-entry__ts">
-			{{ ts := time.Unix(entry.TS, 0).UTC() }}
-			<time datetime={ ts.Format(time.RFC3339) }>{ ts.Format("2006-01-02 15:04:05") }</time>
+			<time datetime={ entry.TS.Format(time.RFC3339) }>{ entry.TS.Format("2006-01-02 15:04:05") }</time>
 		</td>
 		<td class="log-entry__level">{ logLevelName(entry.Level) }</td>
 		<td class="log-entry__message">{ entry.Message }</td>
@@ -142,8 +141,8 @@ templ logEntryRow(entry logsdb.LogEntry) {
 	</tr>
 }
 
-func logLevelName(level int) string {
-	switch slog.Level(level) {
+func logLevelName(level slog.Level) string {
+	switch level {
 	case slog.LevelDebug:
 		return "debug"
 	case slog.LevelInfo:

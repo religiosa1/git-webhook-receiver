@@ -1,6 +1,8 @@
 package serialization
 
 import (
+	"time"
+
 	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/models"
 )
@@ -11,7 +13,7 @@ type PrettyPipelineRecord struct {
 	DeliveryID string     `json:"deliveryId"`
 	Config     JSONData   `json:"config"`
 	Error      NullString `json:"error"`
-	CreatedAt  Timestamp  `json:"createdAt"`
+	CreatedAt  time.Time  `json:"createdAt"`
 	EndedAt    NullTS     `json:"endedAt"`
 }
 
@@ -24,7 +26,7 @@ func PipelineRecord(r actionsdb.PipeLineRecord) PrettyPipelineRecord {
 		DeliveryID: r.DeliveryID,
 		Config:     config,
 		Error:      NullString{r.Error},
-		CreatedAt:  Timestamp{r.CreatedAt},
+		CreatedAt:  r.CreatedAt,
 		EndedAt:    NullTS{r.EndedAt},
 	}
 }
