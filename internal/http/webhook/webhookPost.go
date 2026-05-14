@@ -88,10 +88,24 @@ func (h Webhook) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	for _, actionDescriptor := range actions {
-		h.ActionsCh <- actionrunner.ActionArgs{Logger: deliveryLogger, Action: actionDescriptor}
+		actionLogger := deliveryLogger.With(slog.Any("action", actionDescriptor.ActionIdentifier))
+		args := actionrunner.ActionArgs{
+			Logger:     actionLogger,
+			Action:     actionDescriptor,
+			DeliveryID: webhookInfo.DeliveryID,
+		}
+		select {
+		case h.ActionsCh <- args:
+			actionLogger.Info("Launched action")
+		default:
+			actionLogger.Error("Unable to queue the action, as action runner is at full queue capacity")
+			w.WriteHeader(http.StatusServiceUnavailable)
+			// we're not accounting for partial success here, returning 503 on any blockage.
+			// The idea is -- there will be a retry; trade-off is that successful actions
+			// will run twice on retries, than failed ones
+			return
+		}
 	}
-
-	deliveryLogger.Info("Launched actions", slog.Any("actions", actions))
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -116,7 +130,11 @@ func getWebhookErrorCode(err error) ErrorInfo {
 	return ErrorInfo{http.StatusBadRequest, err.Error()}
 }
 
-func getProjectsActionsForWebhookPost(projectName string, project config.Project, webhookInfo *whreceiver.WebhookPostInfo) []actionrunner.ActionDescriptor {
+func getProjectsActionsForWebhookPost(
+	projectName string,
+	project config.Project,
+	webhookInfo *whreceiver.WebhookPostInfo,
+) []actionrunner.ActionDescriptor {
 	actions := make([]actionrunner.ActionDescriptor, 0)
 	for index, action := range project.Actions {
 		if action.Branch != "*" && action.Branch != webhookInfo.Branch {
@@ -127,10 +145,9 @@ func getProjectsActionsForWebhookPost(projectName string, project config.Project
 		}
 		actions = append(actions, actionrunner.ActionDescriptor{
 			ActionIdentifier: actionrunner.ActionIdentifier{
-				Index:      index,
-				PipeID:     ulid.Make().String(),
-				Project:    projectName,
-				DeliveryID: webhookInfo.DeliveryID,
+				Index:   index,
+				PipeID:  ulid.Make().String(),
+				Project: projectName,
 			},
 			Action: action,
 		})

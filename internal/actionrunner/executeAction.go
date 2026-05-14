@@ -11,13 +11,14 @@ import (
 func (r ActionRunner) executeAction(
 	logger *slog.Logger,
 	actionDescriptor ActionDescriptor,
+	deliveryID string,
 ) {
 	action := actionDescriptor.Action
 	pipeLogger := logger.With(slog.String("pipeId", actionDescriptor.PipeID))
 	pipeLogger.Info("Running action", slog.Int("action_index", actionDescriptor.Index))
 
 	if r.actionsDB != nil {
-		err := r.actionsDB.CreateRecord(actionDescriptor.PipeID, actionDescriptor.Project, actionDescriptor.DeliveryID, action)
+		err := r.actionsDB.CreateRecord(actionDescriptor.PipeID, actionDescriptor.Project, deliveryID, action)
 		if err != nil {
 			pipeLogger.Error("Error creating pipeline record in the db", slog.Any("error", err))
 			return

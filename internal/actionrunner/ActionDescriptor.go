@@ -3,10 +3,9 @@ package actionrunner
 import "github.com/religiosa1/git-webhook-receiver/internal/config"
 
 type ActionIdentifier struct {
-	Index      int    `json:"actionIdx"`
-	Project    string `json:"project"`
-	PipeID     string `json:"pipeId"`
-	DeliveryID string `json:"-"`
+	Index   int    `json:"actionIdx"`
+	Project string `json:"project"`
+	PipeID  string `json:"pipeId"`
 }
 type ActionDescriptor struct {
 	ActionIdentifier

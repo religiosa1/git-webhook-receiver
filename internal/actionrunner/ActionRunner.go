@@ -9,8 +9,9 @@ import (
 )
 
 type ActionArgs struct {
-	Logger *slog.Logger
-	Action ActionDescriptor
+	Logger     *slog.Logger
+	Action     ActionDescriptor
+	DeliveryID string
 }
 
 type ActionRunner struct {
@@ -58,7 +59,7 @@ func (r ActionRunner) listen() {
 			return
 		case args := <-r.ch:
 			r.wg.Go(func() {
-				r.executeAction(args.Logger, args.Action)
+				r.executeAction(args.Logger, args.Action, args.DeliveryID)
 			})
 		}
 	}
