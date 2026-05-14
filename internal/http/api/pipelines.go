@@ -22,6 +22,15 @@ func (h ListPipelines) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	logger := middleware.GetLogger(req.Context())
 	queryParams := req.URL.Query()
 
+	if h.DB == nil {
+		logger.Error("pipelines endpoint accessed, while no actions db is provided")
+		w.WriteHeader(http.StatusNotFound)
+		if writeErr := utils.WriteErrorResponse(w, http.StatusNotFound, "not found"); writeErr != nil {
+			logger.Error("error while writing error response", slog.Any("error", writeErr))
+		}
+		return
+	}
+
 	pagination, err := utils.ParsePagination(queryParams)
 	if err != nil {
 		if writeErr := utils.WriteErrorResponse(w, http.StatusBadRequest, err.Error()); writeErr != nil {
@@ -71,6 +80,16 @@ type GetPipeline struct {
 func (h GetPipeline) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	logger := middleware.GetLogger(req.Context())
 	pipeID := req.PathValue("pipeId")
+
+	if h.DB == nil {
+		logger.Error("pipeline endpoint accessed, while no actions db is provided")
+		w.WriteHeader(http.StatusNotFound)
+		if writeErr := utils.WriteErrorResponse(w, http.StatusNotFound, "not found"); writeErr != nil {
+			logger.Error("error while writing error response", slog.Any("error", writeErr))
+		}
+		return
+	}
+
 	record, err := h.DB.GetPipelineRecord(pipeID)
 	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "Not Found", http.StatusNotFound)
@@ -98,6 +117,16 @@ type GetPipelineOutput struct {
 func (h GetPipelineOutput) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	logger := middleware.GetLogger(req.Context())
 	pipeID := req.PathValue("pipeId")
+
+	if h.DB == nil {
+		logger.Error("pipeline output endpoint accessed, while no actions db is provided")
+		w.WriteHeader(http.StatusNotFound)
+		if writeErr := utils.WriteErrorResponse(w, http.StatusNotFound, "not found"); writeErr != nil {
+			logger.Error("error while writing error response", slog.Any("error", writeErr))
+		}
+		return
+	}
+
 	record, err := h.DB.GetPipelineRecord(pipeID)
 	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "Not Found", http.StatusNotFound)

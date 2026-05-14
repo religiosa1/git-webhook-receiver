@@ -35,6 +35,7 @@ type ListPipelines struct {
 func (s ListPipelines) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	logger := middleware.GetLogger(req.Context())
 	if s.DB == nil {
+		logger.Error("pipelines page accessed, while no actions db is provided")
 		w.WriteHeader(http.StatusNotFound)
 		if writeErr := views.NotFound().Render(req.Context(), w); writeErr != nil {
 			logger.Error("error while writing error response", slog.Any("error", writeErr))
@@ -98,6 +99,7 @@ func (s GetPipeline) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	pipeID := req.PathValue("pipeId")
 	logger := middleware.GetLogger(req.Context()).With(slog.String("pipe_id", pipeID))
 	if s.DB == nil {
+		logger.Error("pipeline page accessed, while no actions db is provided")
 		w.WriteHeader(http.StatusNotFound)
 		if writeErr := views.NotFound().Render(req.Context(), w); writeErr != nil {
 			logger.Error("error while writing error response", slog.Any("error", writeErr))
@@ -137,6 +139,7 @@ func (s GetPipelineOutput) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	pipeID := req.PathValue("pipeId")
 	logger := middleware.GetLogger(req.Context()).With(slog.String("pipe_id", pipeID))
 	if s.DB == nil {
+		logger.Error("pipeline output page accessed, while no actions db is provided")
 		w.WriteHeader(http.StatusNotFound)
 		if writeErr := views.NotFound().Render(req.Context(), w); writeErr != nil {
 			logger.Error("error while writing error response", slog.Any("error", writeErr))

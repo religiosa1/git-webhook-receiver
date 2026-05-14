@@ -20,6 +20,15 @@ type GetLogs struct {
 func (h GetLogs) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	logger := middleware.GetLogger(req.Context())
 	w.Header().Set("Content-Type", "application/json")
+	if h.DB == nil {
+		logger.Error("logs endpoint accessed, while no logs db is provided")
+		w.WriteHeader(http.StatusNotFound)
+		if writeErr := utils.WriteErrorResponse(w, 404, "not found"); writeErr != nil {
+			logger.Error("error while writing error response", slog.Any("error", writeErr))
+		}
+		return
+	}
+
 	queryParams := req.URL.Query()
 
 	pagination, err := utils.ParsePagination(queryParams)

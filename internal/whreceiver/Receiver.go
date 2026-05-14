@@ -1,6 +1,7 @@
 package whreceiver
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
@@ -45,6 +46,8 @@ func New(project config.Project) Receiver {
 		receiver = GithubReceiver{project}
 	case "gitlab":
 		receiver = GitlabReceiver{project}
+	default:
+		panic(fmt.Sprintf("unknown receiver provided: %q", project.GitProvider))
 	}
 
 	return receiver
