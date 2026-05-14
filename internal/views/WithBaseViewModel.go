@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
 )
@@ -30,11 +31,14 @@ func MakePublicURL(ctx context.Context, relative string) string {
 	if publicURL == "" {
 		publicURL = "/"
 	}
-	result, err := url.JoinPath(publicURL, relative)
+	path, query, hasQuery := strings.Cut(relative, "?")
+	result, err := url.JoinPath(publicURL, path)
 	if err != nil {
 		return relative
 	}
-
+	if hasQuery {
+		result += "?" + query
+	}
 	return result
 }
 
