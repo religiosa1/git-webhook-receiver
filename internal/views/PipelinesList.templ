@@ -52,7 +52,7 @@ templ PipelinesList(model PipelinesListViewModel) {
 			<a class="btn btn-reset" href={ MakePublicURL(ctx, "/pipelines") }>Clear</a>
 		</form>
 		if len(model.Page.Items) > 0 {
-			<ul>
+			<ul class="pipelines-list">
 				@PipelinesListPartial(model)
 			</ul>
 		} else {
@@ -63,13 +63,14 @@ templ PipelinesList(model PipelinesListViewModel) {
 
 templ PipelinesListPartial(model PipelinesListViewModel) {
 	for _, item := range model.Page.Items {
-		<li>
+		<li class="pipelines-list__item">
 			@pipelineItemPreview(item, true)
 		</li>
 	}
 	if model.NextPage != nil {
-		<li>
+		<li class="pipelines-list__item pipelines-list__item_load-more">
 			<a
+				class="pipelines-list__load-more"
 				href={ MakePublicURL(ctx, *model.NextPage) }
 				hx-get={ MakePublicURL(ctx, *model.NextPage) }
 				hx-target="closest li"

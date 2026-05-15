@@ -166,7 +166,7 @@ func PipelinesList(model PipelinesListViewModel) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if len(model.Page.Items) > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<ul>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<ul class=\"pipelines-list\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -216,7 +216,7 @@ func PipelinesListPartial(model PipelinesListViewModel) templ.Component {
 		}
 		ctx = templ.ClearChildren(ctx)
 		for _, item := range model.Page.Items {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<li>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<li class=\"pipelines-list__item\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -230,14 +230,14 @@ func PipelinesListPartial(model PipelinesListViewModel) templ.Component {
 			}
 		}
 		if model.NextPage != nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<li><a href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<li class=\"pipelines-list__item pipelines-list__item_load-more\"><a class=\"pipelines-list__load-more\" href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var8 templ.SafeURL
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinURLErrs(MakePublicURL(ctx, *model.NextPage))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/PipelinesList.templ`, Line: 73, Col: 46}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/PipelinesList.templ`, Line: 74, Col: 46}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
@@ -250,7 +250,7 @@ func PipelinesListPartial(model PipelinesListViewModel) templ.Component {
 			var templ_7745c5c3_Var9 string
 			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.ResolveAttributeValue(MakePublicURL(ctx, *model.NextPage))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/PipelinesList.templ`, Line: 74, Col: 48}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/PipelinesList.templ`, Line: 75, Col: 48}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
 			if templ_7745c5c3_Err != nil {

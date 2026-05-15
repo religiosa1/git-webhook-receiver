@@ -10,9 +10,10 @@ import (
 )
 
 type baseViewModel struct {
-	hasLogsPages     bool
-	hasPipelinePages bool
-	publicURL        string
+	HasLogsPages     bool
+	HasPipelinePages bool
+	PublicURL        string
+	CurrentPath      string
 }
 
 type viewModelContextKey string
@@ -27,7 +28,7 @@ func GetBaseViewModel(ctx context.Context) baseViewModel {
 }
 
 func MakePublicURL(ctx context.Context, relative string) string {
-	publicURL := GetBaseViewModel(ctx).publicURL
+	publicURL := GetBaseViewModel(ctx).PublicURL
 	if publicURL == "" {
 		publicURL = "/"
 	}
@@ -44,14 +45,36 @@ func MakePublicURL(ctx context.Context, relative string) string {
 
 func WithBaseViewModel(cfg config.Config) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-		model := baseViewModel{
-			hasLogsPages:     cfg.LogsDBFile != "",
-			hasPipelinePages: cfg.ActionsDBFile != "",
-			publicURL:        cfg.PublicURL,
-		}
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			currentPath := cutPublicPathPrefix(cfg.PublicURL, r.URL.Path)
+			model := baseViewModel{
+				HasLogsPages:     cfg.LogsDBFile != "",
+				HasPipelinePages: cfg.ActionsDBFile != "",
+				PublicURL:        cfg.PublicURL,
+				CurrentPath:      currentPath,
+			}
 			ctx := context.WithValue(r.Context(), baseViewModelContextKey, model)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+func cutPublicPathPrefix(publicURL, currentPath string) string {
+	if publicURL == "" {
+		return currentPath
+	}
+	url, err := url.Parse(publicURL)
+	if err != nil {
+		return currentPath
+	}
+	if url.Path == "" || url.Path == "/" {
+		return currentPath
+	}
+	path, _ := strings.CutSuffix(url.Path, "/")
+	stripped, _ := strings.CutPrefix(currentPath, path)
+	if stripped == "" {
+		stripped = "/"
+	}
+
+	return stripped
 }

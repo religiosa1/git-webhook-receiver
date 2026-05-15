@@ -283,14 +283,14 @@ func pipelineItemPreview(item actionsdb.PipeLineRecord, showLink bool) templ.Com
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<span class=\"pipeline-preview__started-at\">Started at: <time datetime=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<span class=\"pipeline-preview__started-at\">Started at: <time class=\"pipeline-preview__time\" datetime=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.ResolveAttributeValue(item.CreatedAt.Format(time.RFC3339))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pipelineItemPreview.templ`, Line: 69, Col: 55}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pipelineItemPreview.templ`, Line: 69, Col: 86}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var12)
 		if templ_7745c5c3_Err != nil {
@@ -303,7 +303,7 @@ func pipelineItemPreview(item actionsdb.PipeLineRecord, showLink bool) templ.Com
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(item.CreatedAt.Format("2006-01-02 15:04:05"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pipelineItemPreview.templ`, Line: 69, Col: 105}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pipelineItemPreview.templ`, Line: 70, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {

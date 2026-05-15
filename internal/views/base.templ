@@ -1,5 +1,23 @@
 package views
 
+import "strings"
+
+templ headerNavLink(text, path string) {
+	{{
+		currentPath := GetBaseViewModel(ctx).CurrentPath
+		isCurrent := currentPath == path || strings.HasPrefix(currentPath, path+"/")
+	}}
+	<a
+		class={ "main-nav__link", templ.KV("main-nav__link_current", isCurrent) }
+		if isCurrent {
+			aria-current="page"
+		}
+		href={ MakePublicURL(ctx, path) }
+	>
+		{ text }
+	</a>
+}
+
 templ base(title string) {
 	{{ model := GetBaseViewModel(ctx) }}
 	<!DOCTYPE html>
@@ -14,12 +32,12 @@ templ base(title string) {
 		<body>
 			<header class="main-header">
 				<nav class="main-nav">
-					<a href={ MakePublicURL(ctx, "/projects") }>Projects</a>
-					if model.hasPipelinePages {
-						<a href={ MakePublicURL(ctx, "/pipelines") }>Pipelines</a>
+					@headerNavLink("Projects", "/projects")
+					if model.HasPipelinePages {
+						@headerNavLink("Pipelines", "/pipelines")
 					}
-					if model.hasLogsPages {
-						<a href={ MakePublicURL(ctx, "/logs") }>Logs</a>
+					if model.HasLogsPages {
+						@headerNavLink("Logs", "/logs")
 					}
 				</nav>
 			</header>

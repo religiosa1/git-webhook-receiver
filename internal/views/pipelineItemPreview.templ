@@ -66,7 +66,9 @@ templ pipelineItemPreview(item actionsdb.PipeLineRecord, showLink bool) {
 		}
 		<span class="pipeline-preview__started-at">
 			Started at:
-			<time datetime={ item.CreatedAt.Format(time.RFC3339) }>{  item.CreatedAt.Format("2006-01-02 15:04:05") }</time>
+			<time class="pipeline-preview__time" datetime={ item.CreatedAt.Format(time.RFC3339) }>
+				{  item.CreatedAt.Format("2006-01-02 15:04:05") }
+			</time>
 		</span>
 		@pipelineRunStatus(item)
 	</article>
