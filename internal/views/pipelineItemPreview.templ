@@ -40,6 +40,12 @@ templ pipelineRunStatus(item actionsdb.PipeLineRecord) {
 	</span>
 }
 
+templ PipelinePreviewPartial(item actionsdb.PipeLineRecord) {
+	<div id="pipeline-preview">
+		@pipelineItemPreview(item, false)
+	</div>
+}
+
 templ pipelineItemPreview(item actionsdb.PipeLineRecord, showLink bool) {
 	<article class="pipeline-preview">
 		{{

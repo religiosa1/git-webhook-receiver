@@ -15,11 +15,21 @@ type PipelineItemViewModel struct {
 templ PipelineItem(model PipelineItemViewModel) {
 	@base(fmt.Sprintf("Pipeline %s", model.Record.PipeID)) {
 		<p><a href={ MakePublicURL(ctx, "/pipelines") }>Back to pipelines</a></p>
-		@pipelineItemPreview(model.Record, false)
+		<div
+			id="pipeline-preview"
+			if model.IsLive {
+				hx-get={ MakePublicURL(ctx, fmt.Sprintf("/pipelines/%s", url.PathEscape(model.Record.PipeID))) }
+				hx-trigger="htmx:sseClose from:#pipeline-sse-source"
+				hx-swap="outerHTML"
+			}
+		>
+			@pipelineItemPreview(model.Record, false)
+		</div>
 		<details class="pipeline-page-output" if model.IsLive { open }>
 			<summary>Output</summary>
 			if model.IsLive {
 				<div
+					id="pipeline-sse-source"
 					hx-ext="sse"
 					sse-connect={ MakePublicURL(ctx, fmt.Sprintf("/pipelines/%s/output/stream", url.PathEscape(model.Record.PipeID))) }
 					sse-close="done"

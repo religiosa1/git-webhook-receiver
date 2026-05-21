@@ -116,6 +116,12 @@ func (s GetPipeline) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 		return
 	}
+	if req.Header.Get("HX-Request") == "true" {
+		if err := views.PipelinePreviewPartial(record).Render(req.Context(), w); err != nil {
+			logger.Error("Error while writing response", slog.Any("error", err))
+		}
+		return
+	}
 	_, isLive := s.TmpOutputMgr.Reader(req.Context(), pipeID)
 	viewModel := views.PipelineItemViewModel{
 		Record: record,
