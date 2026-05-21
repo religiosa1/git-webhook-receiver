@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/models"
-	"github.com/religiosa1/git-webhook-receiver/internal/sqlfilterbuilder"
+	"github.com/religiosa1/git-webhook-receiver/internal/sqlhelpers"
 )
 
 type ListPipelineRecordsQuery struct {
@@ -19,7 +19,7 @@ type ListPipelineRecordsQuery struct {
 
 const defaultPageSize = 20
 
-func (d ActionDB) ListPipelineRecords(search ListPipelineRecordsQuery) (models.PagedDB[PipeLineRecord], error) {
+func (d *ActionDB) ListPipelineRecords(search ListPipelineRecordsQuery) (models.PagedDB[PipeLineRecord], error) {
 	if search.Limit <= 0 {
 		search.Limit = defaultPageSize
 	}
@@ -92,7 +92,7 @@ FROM
 
 // CountPipelineRecords counts the amount of pipeline records matching provided
 // search query, disregarding pagination params (offset or cursor)
-func (d ActionDB) CountPipelineRecords(search ListPipelineRecordsQuery) (int, error) {
+func (d *ActionDB) CountPipelineRecords(search ListPipelineRecordsQuery) (int, error) {
 	args := make([]any, 0)
 	var qb strings.Builder
 	qb.WriteString(`SELECT count(*) FROM pipelines`)
@@ -111,8 +111,8 @@ func (d ActionDB) CountPipelineRecords(search ListPipelineRecordsQuery) (int, er
 	return count, nil
 }
 
-func createListPipelineWhereQuery(search ListPipelineRecordsQuery) *sqlfilterbuilder.Builder {
-	fb := sqlfilterbuilder.New()
+func createListPipelineWhereQuery(search ListPipelineRecordsQuery) *sqlhelpers.Builder {
+	fb := sqlhelpers.New()
 
 	fb.AddEqFilter("delivery_id", search.DeliveryID)
 	fb.AddEqFilter("project", search.Project)

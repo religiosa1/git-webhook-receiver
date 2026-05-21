@@ -1,4 +1,4 @@
-package sqlfilterbuilder
+package sqlhelpers
 
 import (
 	"strings"

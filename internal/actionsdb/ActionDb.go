@@ -11,6 +11,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
+	"github.com/religiosa1/git-webhook-receiver/internal/sqlhelpers"
 )
 
 var (
@@ -74,46 +75,38 @@ type ActionDB struct {
 	maxActions int
 }
 
+//go:embed Init.sql
+var schema string
+
 func New(dbFileName string, maxActions int) (*ActionDB, error) {
 	if dbFileName == "" {
 		return nil, nil
 	}
-	db := ActionDB{maxActions: maxActions}
 	pragmas := "?_journal_mode=WAL&_foreign_keys=1&_busy_timeout=5000&_cache_size=2000&_synchronous=NORMAL"
-	d, err := sqlx.Open("sqlite3", dbFileName+pragmas)
+	db, err := sqlx.Open("sqlite3", dbFileName+pragmas)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error opening the actions db: %w", err)
 	}
-	db.db = d
-	err = db.open() // trying to open and migrate if necessary the db
+	err = sqlhelpers.NewMigrator(db).Migrate([]string{schema})
 	if err != nil {
-		return nil, err
+		closeErr := db.Close()
+		return nil, errors.Join(fmt.Errorf("error applying actions db migrations: %w", err), closeErr)
 	}
-	return &db, nil
+	return &ActionDB{db: db, maxActions: maxActions}, nil
 }
 
-//go:embed Init.sql
-var schema string
-
-func (d ActionDB) open() error {
-	var userVersion int
-	err := d.db.Get(&userVersion, "PRAGMA user_version;")
-
-	if err == nil && userVersion == 0 {
-		_, err = d.db.Exec(schema)
+func (d *ActionDB) Close() (err error) {
+	if d.db != nil {
+		err = d.db.Close()
 	}
-
+	d.db = nil
 	return err
-}
-
-func (d ActionDB) Close() error {
-	return d.db.Close()
 }
 
 // SweepStaleRecords moves all pending pipeline records to errored state; to
 // be called during a service startup, to cleanup records that were left stale
 // after a non-graceful shutdown
-func (d ActionDB) SweepStaleRecords() (int64, error) {
+func (d *ActionDB) SweepStaleRecords() (int64, error) {
 	const stalePipelineError = "pipeline was killed abruptly during a server crash"
 	query := `UPDATE pipelines SET error = ?, ended_at = ? WHERE ended_at IS NULL AND error IS NULL`
 
@@ -128,7 +121,7 @@ func (d ActionDB) SweepStaleRecords() (int64, error) {
 	return rowsAffected, nil
 }
 
-func (d ActionDB) CreateRecord(pipeID string, project string, deliveryID string, conf config.Action) error {
+func (d *ActionDB) CreateRecord(pipeID string, project string, deliveryID string, conf config.Action) error {
 	configJSON, err := json.Marshal(conf)
 	if err != nil {
 		return err
@@ -161,7 +154,7 @@ DELETE FROM pipelines WHERE pipe_id IN (
 	return err
 }
 
-func (d ActionDB) CloseRecord(pipeID string, actionErr error, output []byte) error {
+func (d *ActionDB) CloseRecord(pipeID string, actionErr error, output []byte) error {
 	var actionErrValue sql.NullString
 
 	if actionErr == nil {
@@ -188,7 +181,7 @@ func (d ActionDB) CloseRecord(pipeID string, actionErr error, output []byte) err
 
 const recordColumns = "id, pipe_id, project, delivery_id, config, error, created_at, ended_at"
 
-func (d ActionDB) GetPipelineRecord(pipeID string) (PipeLineRecord, error) {
+func (d *ActionDB) GetPipelineRecord(pipeID string) (PipeLineRecord, error) {
 	var record pipelineRecordDTO
 	err := d.db.Get(
 		&record,
@@ -198,7 +191,7 @@ func (d ActionDB) GetPipelineRecord(pipeID string) (PipeLineRecord, error) {
 	return record.ToModel(), err
 }
 
-func (d ActionDB) GetLastPipelineRecord() (PipeLineRecord, error) {
+func (d *ActionDB) GetLastPipelineRecord() (PipeLineRecord, error) {
 	var entry pipelineRecordDTO
 	err := d.db.Get(
 		&entry,
@@ -211,7 +204,7 @@ type output struct {
 	Output sql.NullString `db:"output"`
 }
 
-func (d ActionDB) GetPipelineOutput(pipeID string) ([]byte, error) {
+func (d *ActionDB) GetPipelineOutput(pipeID string) ([]byte, error) {
 	var record output
 	err := d.db.Get(
 		&record, `SELECT output FROM pipelines WHERE pipe_id=?;`,
@@ -223,7 +216,7 @@ func (d ActionDB) GetPipelineOutput(pipeID string) ([]byte, error) {
 	return []byte(record.Output.String), nil
 }
 
-func (d ActionDB) GetLastPipelineOutput() ([]byte, error) {
+func (d *ActionDB) GetLastPipelineOutput() ([]byte, error) {
 	var record output
 	err := d.db.Get(
 		&record, `SELECT output FROM pipelines ORDER BY created_at DESC LIMIT 1;`,

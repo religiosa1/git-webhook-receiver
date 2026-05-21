@@ -12,43 +12,31 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/religiosa1/git-webhook-receiver/internal/models"
-	"github.com/religiosa1/git-webhook-receiver/internal/sqlfilterbuilder"
+	"github.com/religiosa1/git-webhook-receiver/internal/sqlhelpers"
 )
 
 type LogsDB struct {
 	db *sqlx.DB
 }
 
+//go:embed Init.sql
+var schema string
+
 func New(dbFileName string) (*LogsDB, error) {
 	if dbFileName == "" {
 		return nil, nil
 	}
-	db := LogsDB{}
 	pragmas := "?_journal_mode=WAL&_foreign_keys=1&_busy_timeout=5000&_cache_size=2000&_synchronous=NORMAL"
-	d, err := sqlx.Open("sqlite3", dbFileName+pragmas)
+	db, err := sqlx.Open("sqlite3", dbFileName+pragmas)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error opening the logs db: %w", err)
 	}
-	db.db = d
-	err = db.open() // trying to open and migrate if necessary the db
+	err = sqlhelpers.NewMigrator(db).Migrate([]string{schema})
 	if err != nil {
-		return nil, err
+		closeErr := db.Close()
+		return nil, errors.Join(fmt.Errorf("error applying logs migrations: %w", err), closeErr)
 	}
-	return &db, nil
-}
-
-//go:embed Init.sql
-var schema string
-
-func (d LogsDB) open() error {
-	var userVersion int
-	err := d.db.Get(&userVersion, "PRAGMA user_version;")
-
-	if err == nil && userVersion == 0 {
-		_, err = d.db.Exec(schema)
-	}
-
-	return err
+	return &LogsDB{db: db}, nil
 }
 
 func (d *LogsDB) Close() (err error) {
@@ -59,7 +47,7 @@ func (d *LogsDB) Close() (err error) {
 	return err
 }
 
-func (d LogsDB) IsOpen() bool {
+func (d *LogsDB) IsOpen() bool {
 	return d.db != nil
 }
 
@@ -98,7 +86,7 @@ func (e logEntryDto) ToModel() LogEntry {
 	}
 }
 
-func (d LogsDB) CreateEntry(entry LogEntry) error {
+func (d *LogsDB) CreateEntry(entry LogEntry) error {
 	query := "INSERT INTO logs (level, project, delivery_id, pipe_id, message, data, ts) VALUES (?, ?, ?, ?, ?, ?, ?)"
 	_, err := d.db.Exec(
 		query,
@@ -133,7 +121,7 @@ type GetEntryFilteredQuery struct {
 	Cursor     string       `json:"cursor"`
 }
 
-func (d LogsDB) GetEntryFiltered(search GetEntryFilteredQuery) (models.PagedDB[LogEntry], error) {
+func (d *LogsDB) GetEntryFiltered(search GetEntryFilteredQuery) (models.PagedDB[LogEntry], error) {
 	if search.Limit <= 0 {
 		search.Limit = defaultPageSize
 	}
@@ -202,8 +190,8 @@ func (d LogsDB) GetEntryFiltered(search GetEntryFilteredQuery) (models.PagedDB[L
 	return result, err
 }
 
-func buildWhereClauses(search GetEntryFilteredQuery) *sqlfilterbuilder.Builder {
-	fb := sqlfilterbuilder.New()
+func buildWhereClauses(search GetEntryFilteredQuery) *sqlhelpers.Builder {
+	fb := sqlhelpers.New()
 	fb.AddEqFilter("project", search.Project)
 	fb.AddEqFilter("delivery_id", search.DeliveryID)
 	fb.AddEqFilter("pipe_id", search.PipeID)
@@ -218,7 +206,7 @@ func buildWhereClauses(search GetEntryFilteredQuery) *sqlfilterbuilder.Builder {
 	return fb
 }
 
-func (d LogsDB) CountEntries(search GetEntryFilteredQuery) (int, error) {
+func (d *LogsDB) CountEntries(search GetEntryFilteredQuery) (int, error) {
 	var qb strings.Builder
 	qb.WriteString("SELECT count(*) from logs\n")
 	args := []any{}
