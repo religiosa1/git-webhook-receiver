@@ -10,21 +10,15 @@ import (
 )
 
 type PipelineArgs struct {
-	PipeID     string `arg:"" optional:"" name:"pipeId" help:"Id of the pipeline output to extract (if empty returns the last created pipeline)"`
-	File       string `short:"f" help:"Actions db file (default to the file, specified in config)" type:"path"`
-	Info       bool   `short:"i" help:"Display only pipeline general info, without its output"`
-	OutputOnly bool   `short:"o" help:"Display only pipeline output, without general info"`
+	PipeID string `arg:"" optional:"" name:"pipeId" help:"Id of the pipeline info to extract (if empty returns the last created pipeline)"`
+	File   string `short:"f" help:"Actions db file (default to the file, specified in config)" type:"path"`
 }
 
 func Pipeline(cfg config.Config, args PipelineArgs) {
-	if args.Info && args.OutputOnly {
-		fmt.Fprintln(os.Stderr, "Unable to specify both header-only and output-only flags")
-		os.Exit(ExitCodeCLI)
-	}
 	if args.File == "" {
 		args.File = cfg.ActionsDBFile
 	}
-	dbActions, err := actionsdb.New(args.File, cfg.MaxActionsStored, cfg.MaxOutputBytes)
+	dbActions, err := actionsdb.New(args.File, cfg.MaxActionsStored)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error opening actions db: %s\n", err)
 		os.Exit(ExitCodeActionsDB)
@@ -48,15 +42,8 @@ func Pipeline(cfg config.Config, args PipelineArgs) {
 		os.Exit(ExitCodeActionsDB)
 	}
 
-	if !args.OutputOnly {
-		displayPipeDetails(pipe)
-		if !args.Info {
-			fmt.Print("\n")
-		}
-	}
-	if !args.Info && pipe.Output.Valid {
-		fmt.Print(pipe.Output.String)
-	}
+	displayPipeDetails(pipe)
+	fmt.Print("\n")
 }
 
 func displayPipeDetails(pipe actionsdb.PipeLineRecord) {
@@ -67,12 +54,11 @@ func displayPipeDetails(pipe actionsdb.PipeLineRecord) {
 		endedAt = ""
 	}
 
-	fmt.Printf("pipeId        : %s\n", pipe.PipeID)
-	fmt.Printf("project       : %s\n", pipe.Project)
-	fmt.Printf("deliveryId    : %s\n", pipe.DeliveryID)
-	fmt.Printf("config        : %s\n", pipe.Config)
-	fmt.Printf("error         : %s\n", pipe.Error.String)
-	fmt.Printf("output length : %s\n", formatLength(pipe.Output))
-	fmt.Printf("created at    : %s\n", pipe.CreatedAt.Format(time.DateTime))
-	fmt.Printf("ended at      : %s\n", endedAt)
+	fmt.Printf("pipeId     : %s\n", pipe.PipeID)
+	fmt.Printf("project    : %s\n", pipe.Project)
+	fmt.Printf("deliveryId : %s\n", pipe.DeliveryID)
+	fmt.Printf("config     : %s\n", pipe.Config)
+	fmt.Printf("error      : %s\n", pipe.Error.String)
+	fmt.Printf("created at : %s\n", pipe.CreatedAt.Format(time.DateTime))
+	fmt.Printf("ended at   : %s\n", endedAt)
 }

@@ -54,17 +54,10 @@ func (s ListPipelines) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	page, err := s.DB.ListPipelineRecords(query)
 	if err != nil {
-		var errView templ.Component
-		if errors.Is(err, actionsdb.ErrBadCursor) || errors.Is(err, actionsdb.ErrCursorAndOffset) {
-			w.WriteHeader(http.StatusBadRequest)
-			errView = views.BadRequest(err)
-		} else {
-			logger.Error("error while getting a list of pipelines", slog.Any("error", err))
-			w.WriteHeader(http.StatusInternalServerError)
-			requestID := middleware.GetRequestID(req.Context())
-			errView = views.InternalError(requestID)
+		if mapError(err) == http.StatusInternalServerError {
+			logger.Error("Error processing pipeline ui request", slog.Any("error", err))
 		}
-		if writeErr := errView.Render(req.Context(), w); writeErr != nil {
+		if writeErr := renderErr(w, req, err); writeErr != nil {
 			logger.Error("error while writing error response", slog.Any("error", writeErr))
 		}
 		return
@@ -108,17 +101,10 @@ func (s GetPipeline) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	record, err := s.DB.GetPipelineRecord(pipeID)
 	if err != nil {
-		var errView templ.Component
-		if errors.Is(err, sql.ErrNoRows) {
-			w.WriteHeader(http.StatusNotFound)
-			errView = views.NotFound()
-		} else {
+		if mapError(err) == http.StatusInternalServerError {
 			logger.Error("Error processing pipeline ui request", slog.Any("error", err))
-			w.WriteHeader(http.StatusInternalServerError)
-			requestID := middleware.GetRequestID(req.Context())
-			errView = views.InternalError(requestID)
 		}
-		if writeErr := errView.Render(req.Context(), w); writeErr != nil {
+		if writeErr := renderErr(w, req, err); writeErr != nil {
 			logger.Error("error while writing error response", slog.Any("error", writeErr))
 		}
 		return
@@ -130,6 +116,8 @@ func (s GetPipeline) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		logger.Error("Error while writing response", slog.Any("error", err))
 	}
 }
+
+// TODO: support for live streaming in UI
 
 type GetPipelineOutput struct {
 	DB *actionsdb.ActionDB
@@ -146,31 +134,51 @@ func (s GetPipelineOutput) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 		return
 	}
-	record, err := s.DB.GetPipelineRecord(pipeID)
+	output, err := s.DB.GetPipelineOutput(pipeID)
 	if err != nil {
-		var errView templ.Component
-		if errors.Is(err, sql.ErrNoRows) {
-			w.WriteHeader(http.StatusNotFound)
-			errView = views.NotFound()
-		} else {
-			logger.Error("Error processing pipeline output ui request", slog.Any("error", err))
-			w.WriteHeader(http.StatusInternalServerError)
-			requestID := middleware.GetRequestID(req.Context())
-			errView = views.InternalError(requestID)
+		if mapError(err) == http.StatusInternalServerError {
+			logger.Error("Error processing pipeline ui request", slog.Any("error", err))
 		}
-		if writeErr := errView.Render(req.Context(), w); writeErr != nil {
+		if writeErr := renderErr(w, req, err); writeErr != nil {
 			logger.Error("error while writing error response", slog.Any("error", writeErr))
 		}
 		return
 	}
 	if req.Header.Get("HX-Request") == "true" {
-		if err := views.PipelineOutputPartial(record.Output.String).Render(req.Context(), w); err != nil {
+		if err := views.PipelineOutputPartial(string(output)).Render(req.Context(), w); err != nil {
 			logger.Error("Error while writing response", slog.Any("error", err))
 		}
 	} else {
 		w.Header().Set("Content-Type", "text/plain")
-		if _, err := w.Write([]byte(record.Output.String)); err != nil {
+		if _, err := w.Write(output); err != nil {
 			logger.Error("Error writing output", slog.Any("error", err))
 		}
 	}
+}
+
+func mapError(err error) int {
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return http.StatusNotFound
+	case errors.Is(err, actionsdb.ErrBadCursor), errors.Is(err, actionsdb.ErrCursorAndOffset):
+		return http.StatusBadRequest
+	default:
+		return http.StatusInternalServerError
+	}
+}
+
+func renderErr(w http.ResponseWriter, req *http.Request, err error) error {
+	statusCode := mapError(err)
+	w.WriteHeader(statusCode)
+	var errView templ.Component
+	switch statusCode {
+	case http.StatusNotFound:
+		errView = views.NotFound()
+	case http.StatusBadRequest:
+		errView = views.BadRequest(err)
+	default:
+		requestID := middleware.GetRequestID(req.Context())
+		errView = views.InternalError(requestID)
+	}
+	return errView.Render(req.Context(), w)
 }

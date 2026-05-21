@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -19,6 +18,7 @@ var (
 	ErrBadCursor       = errors.New("bad cursor")
 )
 
+// output is also stored in a row, but it's only fetched via a separate query
 type pipelineRecordDTO struct {
 	ID         int64           `db:"id"`
 	PipeID     string          `db:"pipe_id"`
@@ -26,7 +26,6 @@ type pipelineRecordDTO struct {
 	DeliveryID string          `db:"delivery_id"`
 	Config     json.RawMessage `db:"config"`
 	Error      sql.NullString  `db:"error"`
-	Output     sql.NullString  `db:"output"`
 	CreatedAt  int64           `db:"created_at"`
 	EndedAt    sql.NullInt64   `db:"ended_at"`
 }
@@ -39,7 +38,6 @@ func (r pipelineRecordDTO) ToModel() PipeLineRecord {
 		DeliveryID: r.DeliveryID,
 		Config:     r.Config,
 		Error:      r.Error,
-		Output:     r.Output,
 		CreatedAt:  time.UnixMilli(r.CreatedAt).UTC(),
 		EndedAt: sql.NullTime{
 			Valid: r.EndedAt.Valid,
@@ -55,7 +53,6 @@ type PipeLineRecord struct {
 	DeliveryID string
 	Config     json.RawMessage
 	Error      sql.NullString
-	Output     sql.NullString
 	CreatedAt  time.Time
 	EndedAt    sql.NullTime
 }
@@ -72,16 +69,16 @@ func (r PipeLineRecord) ParseConfigSummary() (PipeLineConfigSummary, error) {
 }
 
 type ActionDB struct {
-	db             *sqlx.DB
-	maxActions     int
-	maxOutputBytes int
+	db *sqlx.DB
+	// maxActions is max count of actions to store, before truncating older ones
+	maxActions int
 }
 
-func New(dbFileName string, maxActions int, maxOutputBytes int) (*ActionDB, error) {
+func New(dbFileName string, maxActions int) (*ActionDB, error) {
 	if dbFileName == "" {
 		return nil, nil
 	}
-	db := ActionDB{maxActions: maxActions, maxOutputBytes: maxOutputBytes}
+	db := ActionDB{maxActions: maxActions}
 	pragmas := "?_journal_mode=WAL&_foreign_keys=1&_busy_timeout=5000&_cache_size=2000&_synchronous=NORMAL"
 	d, err := sqlx.Open("sqlite3", dbFileName+pragmas)
 	if err != nil {
@@ -146,7 +143,7 @@ DELETE FROM pipelines WHERE pipe_id IN (
 	return err
 }
 
-func (d ActionDB) CloseRecord(pipeID string, actionErr error, output io.Reader) error {
+func (d ActionDB) CloseRecord(pipeID string, actionErr error, output []byte) error {
 	var actionErrValue sql.NullString
 
 	if actionErr == nil {
@@ -156,13 +153,8 @@ func (d ActionDB) CloseRecord(pipeID string, actionErr error, output io.Reader) 
 		actionErrValue.String = actionErr.Error()
 	}
 
-	outputStr, err := readOutput(output, d.maxOutputBytes)
-	if err != nil {
-		return fmt.Errorf("error reading action output: %w", err)
-	}
-
 	query := `UPDATE pipelines SET error = ?, output = ?, ended_at = ? WHERE pipe_id = ? AND ended_at IS NULL;`
-	result, err := d.db.Exec(query, actionErrValue, outputStr, time.Now().UTC().UnixMilli(), pipeID)
+	result, err := d.db.Exec(query, actionErrValue, output, time.Now().UTC().UnixMilli(), pipeID)
 	if err != nil {
 		return fmt.Errorf("error while updating pipeline record: %w", err)
 	}
@@ -176,29 +168,50 @@ func (d ActionDB) CloseRecord(pipeID string, actionErr error, output io.Reader) 
 	return err
 }
 
-func readOutput(r io.Reader, maxBytes int) (string, error) {
-	if maxBytes <= 0 {
-		buf, err := io.ReadAll(r)
-		return string(buf), err
-	}
-	buf, err := io.ReadAll(io.LimitReader(r, int64(maxBytes)+1))
-	if err != nil {
-		return "", err
-	}
-	if len(buf) > maxBytes {
-		return string(buf[:maxBytes]) + fmt.Sprintf("\n[output truncated at %d bytes]", maxBytes), nil
-	}
-	return string(buf), nil
-}
+const recordColumns = "id, pipe_id, project, delivery_id, config, error, created_at, ended_at"
 
 func (d ActionDB) GetPipelineRecord(pipeID string) (PipeLineRecord, error) {
-	var entry pipelineRecordDTO
-	err := d.db.Get(&entry, "SELECT * FROM pipelines WHERE pipe_id=?;", pipeID)
-	return entry.ToModel(), err
+	var record pipelineRecordDTO
+	err := d.db.Get(
+		&record,
+		"SELECT "+recordColumns+" FROM pipelines WHERE pipe_id=?;",
+		pipeID,
+	)
+	return record.ToModel(), err
 }
 
 func (d ActionDB) GetLastPipelineRecord() (PipeLineRecord, error) {
 	var entry pipelineRecordDTO
-	err := d.db.Get(&entry, "SELECT * FROM pipelines ORDER BY created_at DESC LIMIT 1;")
+	err := d.db.Get(
+		&entry,
+		"SELECT "+recordColumns+" FROM pipelines ORDER BY created_at DESC LIMIT 1;",
+	)
 	return entry.ToModel(), err
+}
+
+type output struct {
+	Output sql.NullString `db:"output"`
+}
+
+func (d ActionDB) GetPipelineOutput(pipeID string) ([]byte, error) {
+	var record output
+	err := d.db.Get(
+		&record, `SELECT output FROM pipelines WHERE pipe_id=?;`,
+		pipeID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return []byte(record.Output.String), nil
+}
+
+func (d ActionDB) GetLastPipelineOutput() ([]byte, error) {
+	var record output
+	err := d.db.Get(
+		&record, `SELECT output FROM pipelines ORDER BY created_at DESC LIMIT 1;`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return []byte(record.Output.String), nil
 }

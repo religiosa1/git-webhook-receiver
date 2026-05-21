@@ -11,12 +11,13 @@ import (
 )
 
 var CLI struct {
-	ConfigPath    string                `short:"c" help:"Configuration file name"`
-	Version       bool                  `short:"v" help:"Show version information and exit"`
-	Serve         struct{}              `cmd:"" default:"1" help:"Run the webhook receiver server (default mode)"`
-	Pipeline      cmd.PipelineArgs      `cmd:"" aliases:"pl,get" help:"Display pipeline output"`
-	ListPipelines cmd.ListPipelinesArgs `cmd:"" aliases:"ls" help:"Display a list of last N pipelines"`
-	Logs          cmd.LogsArgs          `cmd:"" help:"Display logs"`
+	ConfigPath    string                 `short:"c" help:"Configuration file name"`
+	Version       bool                   `short:"v" help:"Show version information and exit"`
+	Serve         struct{}               `cmd:"" default:"1" help:"Run the webhook receiver server (default mode)"`
+	Pipeline      cmd.PipelineArgs       `cmd:"" aliases:"pl,get" help:"Display pipeline record info"`
+	Output        cmd.PipelineOutputArgs `cmd:"" aliases:"cat" help:"Display pipeline output"`
+	ListPipelines cmd.ListPipelinesArgs  `cmd:"" aliases:"ls" help:"Display a list of last N pipelines"`
+	Logs          cmd.LogsArgs           `cmd:"" help:"Display logs"`
 }
 
 func main() {
@@ -36,6 +37,8 @@ func main() {
 	switch args.Command() {
 	case "pipeline", "pipeline <pipeId>":
 		cmd.Pipeline(cfg, CLI.Pipeline)
+	case "output", "output <pipeId>":
+		cmd.PipelineOutput(cfg, CLI.Output)
 	case "list-pipelines":
 		cmd.ListPipelines(cfg, CLI.ListPipelines)
 	case "logs":

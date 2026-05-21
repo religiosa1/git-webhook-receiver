@@ -16,6 +16,7 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/api"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/middleware"
+	"github.com/religiosa1/git-webhook-receiver/internal/tmpoutput"
 )
 
 var testAction = config.Action{
@@ -26,7 +27,7 @@ var testAction = config.Action{
 
 func newTestDB(t *testing.T) *actionsdb.ActionDB {
 	t.Helper()
-	db, err := actionsdb.New(":memory:", 1000, 0)
+	db, err := actionsdb.New(":memory:", 1000)
 	if err != nil {
 		t.Fatalf("failed to create test DB: %v", err)
 	}
@@ -44,7 +45,7 @@ func seedRecord(t *testing.T, db *actionsdb.ActionDB, pipeID, project, deliveryI
 func seedCompletedRecord(t *testing.T, db *actionsdb.ActionDB, pipeID, project, deliveryID, output string, cmdErr error) {
 	t.Helper()
 	seedRecord(t, db, pipeID, project, deliveryID)
-	if err := db.CloseRecord(pipeID, cmdErr, strings.NewReader(output)); err != nil {
+	if err := db.CloseRecord(pipeID, cmdErr, []byte(output)); err != nil {
 		t.Fatalf("close record %s: %v", pipeID, err)
 	}
 }
@@ -463,7 +464,7 @@ func TestGetPipelineOutput(t *testing.T) {
 	const outputText = "line one\nline two\n"
 	seedCompletedRecord(t, db, pipeID, "proj", "del", outputText, nil)
 
-	handler := api.GetPipelineOutput{DB: db}
+	handler := api.GetPipelineOutput{DB: db, TmpOutputMgr: tmpoutput.NewInMemoryTmpOutput(0)}
 
 	t.Run("returns 200 with plain text output", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/pipelines/"+pipeID+"/output", nil)
@@ -493,17 +494,17 @@ func TestGetPipelineOutput(t *testing.T) {
 		}
 	})
 
-	t.Run("returns empty body for pending record with no output", func(t *testing.T) {
-		pendingID := ulid.Make().String()
-		seedRecord(t, db, pendingID, "proj", "del")
+	t.Run("returns empty body for record with no output", func(t *testing.T) {
+		recordID := ulid.Make().String()
+		seedRecord(t, db, recordID, "proj", "del")
 
-		req := httptest.NewRequest(http.MethodGet, "/pipelines/"+pendingID+"/output", nil)
-		req.SetPathValue("pipeId", pendingID)
+		req := httptest.NewRequest(http.MethodGet, "/pipelines/"+recordID+"/output", nil)
+		req.SetPathValue("pipeId", recordID)
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
 
-		if got := rec.Code; got != http.StatusOK {
-			t.Errorf("status: want %d, got %d", http.StatusOK, got)
+		if got := rec.Code; got != http.StatusNoContent {
+			t.Errorf("status: want %d, got %d", http.StatusNoContent, got)
 		}
 		if got := rec.Body.String(); got != "" {
 			t.Errorf("body: want empty, got %q", got)

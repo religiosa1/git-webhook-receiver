@@ -26,7 +26,7 @@ func ListPipelines(cfg config.Config, args ListPipelinesArgs) {
 		args.File = cfg.ActionsDBFile
 	}
 
-	dbActions, err := actionsdb.New(args.File, cfg.MaxActionsStored, cfg.MaxOutputBytes)
+	dbActions, err := actionsdb.New(args.File, cfg.MaxActionsStored)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error opening actions db: %s\n", err)
 		os.Exit(ExitCodeActionsDB)

@@ -22,6 +22,7 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/http/webhook"
 	"github.com/religiosa1/git-webhook-receiver/internal/logger"
 	"github.com/religiosa1/git-webhook-receiver/internal/logsdb"
+	"github.com/religiosa1/git-webhook-receiver/internal/tmpoutput"
 	"github.com/religiosa1/git-webhook-receiver/internal/views"
 	"github.com/religiosa1/git-webhook-receiver/internal/whreceiver"
 )
@@ -33,7 +34,7 @@ func Serve(cfg config.Config) {
 	//==========================================================================
 	// Logger and Action DBs
 
-	dbActions, err := actionsdb.New(cfg.ActionsDBFile, cfg.MaxActionsStored, cfg.MaxOutputBytes)
+	dbActions, err := actionsdb.New(cfg.ActionsDBFile, cfg.MaxActionsStored)
 	if err != nil {
 		log.Printf("Error opening actions db: %s", err)
 		os.Exit(ExitCodeActionsDB)
@@ -71,9 +72,11 @@ func Serve(cfg config.Config) {
 		logger.Warn("PublicURL is not set in the config, URL generation in responses will be falling back to relative paths")
 	}
 
+	tmpOutputMgr := tmpoutput.NewInMemoryTmpOutput(cfg.MaxOutputBytes)
 	actionRunner := actionrunner.New(
 		context.Background(),
 		dbActions,
+		tmpOutputMgr,
 	)
 
 	//==========================================================================
@@ -135,7 +138,7 @@ func Serve(cfg config.Config) {
 			logger.Debug("HTTP API enabled for pipelines")
 			mux.Handle("GET /api/pipelines", middlewares(api.ListPipelines{DB: dbActions, PublicURL: cfg.PublicURL}))
 			mux.Handle("GET /api/pipelines/{pipeId}", middlewares(api.GetPipeline{DB: dbActions}))
-			mux.Handle("GET /api/pipelines/{pipeId}/output", middlewares(api.GetPipelineOutput{DB: dbActions}))
+			mux.Handle("GET /api/pipelines/{pipeId}/output", middlewares(api.GetPipelineOutput{DB: dbActions, TmpOutputMgr: tmpOutputMgr}))
 		} else {
 			logger.Info("actions_db_file config value is an empty string. All of /api/pipelines API endpoints won't be available")
 		}

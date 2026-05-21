@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/http/middleware"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/utils"
 	"github.com/religiosa1/git-webhook-receiver/internal/serialization"
+	"github.com/religiosa1/git-webhook-receiver/internal/tmpoutput"
 )
 
 type ListPipelines struct {
@@ -111,7 +113,8 @@ func (h GetPipeline) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 type GetPipelineOutput struct {
-	DB *actionsdb.ActionDB
+	DB           *actionsdb.ActionDB
+	TmpOutputMgr tmpoutput.Manager
 }
 
 func (h GetPipelineOutput) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -127,7 +130,15 @@ func (h GetPipelineOutput) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	record, err := h.DB.GetPipelineRecord(pipeID)
+	w.Header().Set("Content-Type", "text/plain")
+	if output, ok := h.TmpOutputMgr.Reader(req.Context(), pipeID); ok {
+		if _, writeErr := io.Copy(w, output); writeErr != nil {
+			logger.Error("error while streaming the output", slog.Any("error", writeErr))
+		}
+		return
+	}
+
+	output, err := h.DB.GetPipelineOutput(pipeID)
 	if errors.Is(err, sql.ErrNoRows) {
 		http.Error(w, "Not Found", http.StatusNotFound)
 		return
@@ -140,9 +151,11 @@ func (h GetPipelineOutput) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 		return
 	}
-	w.Header().Set("Content-Type", "text/plain")
-	_, err = w.Write([]byte(record.Output.String))
-	if err != nil {
-		logger.Error("Error writing output", slog.Any("error", err))
+	if len(output) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	if _, writeErr := w.Write(output); writeErr != nil {
+		logger.Error("error while writing the output", slog.Any("error", writeErr))
 	}
 }
