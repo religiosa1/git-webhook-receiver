@@ -72,6 +72,17 @@ func Serve(cfg config.Config) {
 		logger.Warn("PublicURL is not set in the config, URL generation in responses will be falling back to relative paths")
 	}
 
+	if dbActions != nil {
+		n, err := dbActions.SweepStaleRecords()
+		if err != nil {
+			logger.Error("Error while sweeping stale DB records", slog.Any("error", err))
+		} else if n != 0 {
+			logger.Info("Marked stale pipeline records as errored", slog.Int64("n_records", n))
+		} else {
+			logger.Debug("No stale pipeline records found")
+		}
+	}
+
 	tmpOutputMgr := tmpoutput.NewInMemoryTmpOutput(cfg.MaxOutputBytes)
 	actionRunner := actionrunner.New(
 		context.Background(),

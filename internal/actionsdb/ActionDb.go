@@ -110,6 +110,24 @@ func (d ActionDB) Close() error {
 	return d.db.Close()
 }
 
+// SweepStaleRecords moves all pending pipeline records to errored state; to
+// be called during a service startup, to cleanup records that were left stale
+// after a non-graceful shutdown
+func (d ActionDB) SweepStaleRecords() (int64, error) {
+	const stalePipelineError = "pipeline was killed abruptly during a server crash"
+	query := `UPDATE pipelines SET error = ?, ended_at = ? WHERE ended_at IS NULL AND error IS NULL`
+
+	result, err := d.db.Exec(query, stalePipelineError, time.Now().UTC().UnixMilli())
+	if err != nil {
+		return 0, fmt.Errorf("error while updating stale pipeline record: %w", err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("error while retrieving the amount of stale records updated: %w", err)
+	}
+	return rowsAffected, nil
+}
+
 func (d ActionDB) CreateRecord(pipeID string, project string, deliveryID string, conf config.Action) error {
 	configJSON, err := json.Marshal(conf)
 	if err != nil {

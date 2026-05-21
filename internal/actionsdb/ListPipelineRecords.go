@@ -119,9 +119,9 @@ func createListPipelineWhereQuery(search ListPipelineRecordsQuery) *sqlfilterbui
 
 	switch search.Status {
 	case PipeStatusOk:
-		fb.AddFilter("(ended_at IS NOT NULL AND (error IS NULL OR error = ''))\n")
+		fb.AddFilter("(ended_at IS NOT NULL AND error IS NULL)\n")
 	case PipeStatusError:
-		fb.AddFilter("(ended_at IS NOT NULL AND (error IS NOT NULL AND error <> ''))\n")
+		fb.AddFilter("(ended_at IS NOT NULL AND error IS NOT NULL)\n")
 	case PipeStatusPending:
 		fb.AddFilter("ended_at IS NULL\n")
 	}

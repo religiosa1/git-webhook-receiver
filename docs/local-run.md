@@ -12,8 +12,12 @@ projects:
     repo: "username/reponame"
     actions:
       - on: push
-        script: /usr/bin/env
-        # run: ["sleep", "10"] # or run syntax:
+        # run: ["sleep", "10"]
+        script: |
+          for i in $(seq 1 30); do
+            echo "Iteration $i"
+            sleep 1
+          done
 ```
 
 Then you can run the project:
