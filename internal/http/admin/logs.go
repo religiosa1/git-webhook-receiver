@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"errors"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -61,17 +60,10 @@ func (s GetLogs) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	page, err := s.DB.GetEntryFiltered(query)
 	if err != nil {
-		var errView templ.Component
-		if errors.Is(err, logsdb.ErrBadCursor) || errors.Is(err, logsdb.ErrCursorAndOffset) {
-			w.WriteHeader(http.StatusBadRequest)
-			errView = views.BadRequest(err)
-		} else {
+		if mapError(err) == http.StatusInternalServerError {
 			logger.Error("Error processing logs ui request", slog.Any("error", err))
-			w.WriteHeader(http.StatusInternalServerError)
-			requestID := middleware.GetRequestID(req.Context())
-			errView = views.InternalError(requestID)
 		}
-		if writeErr := errView.Render(req.Context(), w); writeErr != nil {
+		if writeErr := renderErr(w, req, err); writeErr != nil {
 			logger.Error("error while writing error response", slog.Any("error", writeErr))
 		}
 		return
