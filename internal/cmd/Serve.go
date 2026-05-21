@@ -112,8 +112,9 @@ func Serve(cfg config.Config) {
 			listPipelinesPage := middlewares(admin.ListPipelines{DB: dbActions, Projects: projectNames})
 			mux.Handle("GET /", listPipelinesPage)
 			mux.Handle("GET /pipelines", listPipelinesPage)
-			mux.Handle("GET /pipelines/{pipeId}", middlewares(admin.GetPipeline{DB: dbActions}))
+			mux.Handle("GET /pipelines/{pipeId}", middlewares(admin.GetPipeline{DB: dbActions, TmpOutputMgr: tmpOutputMgr}))
 			mux.Handle("GET /pipelines/{pipeId}/output", middlewares(admin.GetPipelineOutput{DB: dbActions}))
+			mux.Handle("GET /pipelines/{pipeId}/output/stream", middlewares(admin.GetPipelineOutputStream{DB: dbActions, TmpOutputMgr: tmpOutputMgr}))
 		} else {
 			logger.Info("actions_db_file config value is an empty string. All of /pipelines pages won't be available")
 		}

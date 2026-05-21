@@ -9,21 +9,32 @@ import (
 
 type PipelineItemViewModel struct {
 	Record actionsdb.PipeLineRecord
+	IsLive bool
 }
 
 templ PipelineItem(model PipelineItemViewModel) {
 	@base(fmt.Sprintf("Pipeline %s", model.Record.PipeID)) {
 		<p><a href={ MakePublicURL(ctx, "/pipelines") }>Back to pipelines</a></p>
 		@pipelineItemPreview(model.Record, false)
-		<details class="pipeline-page-output">
+		<details class="pipeline-page-output" if model.IsLive { open }>
 			<summary>Output</summary>
-			<div
-				hx-get={ MakePublicURL(ctx, fmt.Sprintf("/pipelines/%s/output", url.PathEscape(model.Record.PipeID))) }
-				hx-trigger="toggle from:closest details once"
-				hx-swap="outerHTML"
-			>
-				<p class="pipeline-output-loading">Loading...</p>
-			</div>
+			if model.IsLive {
+				<div
+					hx-ext="sse"
+					sse-connect={ MakePublicURL(ctx, fmt.Sprintf("/pipelines/%s/output/stream", url.PathEscape(model.Record.PipeID))) }
+					sse-close="done"
+				>
+					<code class="pipeline-output"><pre sse-swap="message" hx-swap="beforeend"></pre></code>
+				</div>
+			} else {
+				<div
+					hx-get={ MakePublicURL(ctx, fmt.Sprintf("/pipelines/%s/output", url.PathEscape(model.Record.PipeID))) }
+					hx-trigger="toggle from:closest details once"
+					hx-swap="outerHTML"
+				>
+					<p class="pipeline-output-loading">Loading...</p>
+				</div>
+			}
 		</details>
 	}
 }

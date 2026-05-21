@@ -64,6 +64,10 @@ func (rw *responseWriter) WriteHeader(code int) {
 	rw.ResponseWriter.WriteHeader(code)
 }
 
+func (rw *responseWriter) Unwrap() http.ResponseWriter {
+	return rw.ResponseWriter
+}
+
 func GetLogger(ctx context.Context) *slog.Logger {
 	logger, ok := ctx.Value(loggingContextLogger).(*slog.Logger)
 	if !ok {

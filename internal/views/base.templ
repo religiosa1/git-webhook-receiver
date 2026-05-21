@@ -28,6 +28,7 @@ templ base(title string) {
 			<title>{ title }</title>
 			<link rel="stylesheet" href={ MakePublicURL(ctx, "/static/css/main.css") }/>
 			<script src={ MakePublicURL(ctx, "/static/js/htmx.min.js") }></script>
+			<script src={ MakePublicURL(ctx, "/static/js/htmx-ext-sse.js") }></script>
 		</head>
 		<body>
 			<header class="main-header">
