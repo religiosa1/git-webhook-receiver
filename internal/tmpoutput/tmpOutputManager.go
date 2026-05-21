@@ -40,36 +40,37 @@ func newLiveBuffer(maxSize int) *liveBuffer {
 
 func (b *liveBuffer) Write(p []byte) (int, error) {
 	b.mu.Lock()
+	defer b.mu.Unlock()
+
 	if b.done {
-		b.mu.Unlock()
 		return 0, ErrBufferClosed
 	}
 	if b.maxSize > 0 && len(b.data)+len(p) > b.maxSize {
-		b.mu.Unlock()
 		return 0, ErrOutputTooLarge
 	}
 	b.data = append(b.data, p...)
 	old := b.notify
 	b.notify = make(chan struct{})
-	b.mu.Unlock()
 	close(old)
 	return len(p), nil
 }
 
 func (b *liveBuffer) close() {
 	b.mu.Lock()
+	defer b.mu.Unlock()
+
 	b.done = true
-	b.mu.Unlock()
 	close(b.notify)
 }
 
 func (b *liveBuffer) drain() []byte {
 	b.mu.Lock()
+	defer b.mu.Unlock()
+
 	snapshot := make([]byte, len(b.data))
 	copy(snapshot, b.data)
 	old := b.notify
 	b.done = true
-	b.mu.Unlock()
 	close(old)
 	return snapshot
 }

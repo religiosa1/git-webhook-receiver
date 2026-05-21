@@ -74,7 +74,7 @@ FROM
 		return result, fmt.Errorf("error while getting the total count of pipeline records: %w", err)
 	}
 
-	if len(rows) > search.Limit {
+	if len(rows) > search.Limit { // Limit >= 1 (defaulted above), so Limit-1 >= 0 and in-bounds
 		lastReturnedRow := rows[search.Limit-1]
 		c := paginationCursor{
 			CreatedAt: lastReturnedRow.CreatedAt,

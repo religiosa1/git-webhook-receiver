@@ -269,6 +269,23 @@ func TestReader(t *testing.T) {
 	})
 }
 
+func TestConcurrentWriteClose(t *testing.T) {
+	const iterations = 500
+	for range iterations {
+		mgr := tmpoutput.NewInMemoryTmpOutput(0)
+		w := mustCreate(t, mgr, testPipeID)
+
+		var wg sync.WaitGroup
+		wg.Go(func() {
+			io.WriteString(w, "data") //nolint:errcheck
+		})
+		wg.Go(func() {
+			mgr.Close(testPipeID) //nolint:errcheck
+		})
+		wg.Wait()
+	}
+}
+
 func TestConcurrentWriteRead(t *testing.T) {
 	mgr := tmpoutput.NewInMemoryTmpOutput(0)
 	w := mustCreate(t, mgr, testPipeID)

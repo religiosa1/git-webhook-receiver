@@ -189,7 +189,7 @@ func (d LogsDB) GetEntryFiltered(search GetEntryFilteredQuery) (models.PagedDB[L
 	if err != nil {
 		return result, err
 	}
-	if len(items) > search.Limit {
+	if len(items) > search.Limit { // Limit >= 1 (defaulted above), so Limit-1 >= 0 and in-bounds
 		lastRow := items[search.Limit-1]
 		cursorStr := paginationCursor{TS: lastRow.TS, ID: lastRow.ID}.String()
 		result.Cursor = &cursorStr
