@@ -45,8 +45,18 @@ func (b *liveBuffer) Write(p []byte) (int, error) {
 	if b.done {
 		return 0, ErrBufferClosed
 	}
-	if b.maxSize > 0 && len(b.data)+len(p) > b.maxSize {
-		return 0, ErrOutputTooLarge
+	if b.maxSize > 0 {
+		if len(b.data) >= b.maxSize {
+			return 0, ErrOutputTooLarge
+		}
+		if len(b.data)+len(p) > b.maxSize {
+			remaining := b.maxSize - len(b.data)
+			b.data = append(b.data, p[:remaining]...)
+			old := b.notify
+			b.notify = make(chan struct{})
+			close(old)
+			return remaining, ErrOutputTooLarge
+		}
 	}
 	b.data = append(b.data, p...)
 	old := b.notify

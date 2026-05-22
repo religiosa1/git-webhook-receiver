@@ -2,6 +2,6 @@ package views
 
 templ BadRequest(err error) {
 	@base("Bad Request") {
-		<code class="bad-request" { TestID("bad-request")... }>{ err.Error() }</code>
+		<code class="error-output" { TestID("bad-request")... }>{ err.Error() }</code>
 	}
 }

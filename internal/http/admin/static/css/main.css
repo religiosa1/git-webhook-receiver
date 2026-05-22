@@ -422,6 +422,10 @@ ol {
 }
 
 /* === Pipeline Detail / Output === */
+.pipeline-page-error {
+	margin-top: var(--space-4);
+}
+
 .pipeline-page-output {
 	margin-top: var(--space-4);
 	border: 1px solid var(--border-muted);
@@ -470,7 +474,7 @@ ol {
 }
 
 /* === Error Pages === */
-.bad-request {
+.error-output {
 	display: block;
 	padding: var(--space-4);
 	background: var(--bg-secondary);

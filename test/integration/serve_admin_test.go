@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -194,6 +195,25 @@ func TestServe_AdminUI_PipelineDetail(t *testing.T) {
 		assertTestID(t, doc, "pipeline-detail")
 		if !strings.Contains(doc.Text(), pipeIDs[0]) {
 			t.Errorf("expected pipeId %q in pipeline detail page", pipeIDs[0])
+		}
+	})
+
+	t.Run("FailedPipelineShowsError", func(t *testing.T) {
+		s := startServer(t, WithScript("exit 1"))
+		ids := postGitHubWebhook(t, s)
+		waitForPipeline(t, s.ActionsDB, ids[0], 10*time.Second)
+
+		resp := uiGet(t, s.BaseURL, "/pipelines/"+ids[0], nil)
+		if resp.StatusCode != http.StatusOK {
+			_, _ = io.Copy(io.Discard, resp.Body)
+			resp.Body.Close()
+			t.Fatalf("status = %d, want 200", resp.StatusCode)
+		}
+		doc := parseHTMLBody(t, resp)
+		assertTestID(t, doc, "pipeline-error")
+		errText := doc.Find(`[data-testid="pipeline-error"]`).Text()
+		if !strings.Contains(errText, "exit status 1") {
+			t.Errorf("error block text = %q, want it to contain %q", errText, "exit status 1")
 		}
 	})
 

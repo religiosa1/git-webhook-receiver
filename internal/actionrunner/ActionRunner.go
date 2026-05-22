@@ -2,6 +2,8 @@ package actionrunner
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"sync"
@@ -29,6 +31,22 @@ type ActionRunner struct {
 // actionChanBufferSize controls how many webhook dispatches can queue before
 // HTTP handlers block waiting for the runner to consume them.
 const actionChanBufferSize = 10
+
+// overflowWriter wraps an io.Writer and records whether ErrOutputTooLarge was ever returned.
+// This is needed because ErrOutputTooLarge gets lost in transit -- cmd can be killed
+// with whatever other status,  we want to capture the actual cause at the source.
+type overflowWriter struct {
+	io.Writer
+	overflowed bool
+}
+
+func (w *overflowWriter) Write(p []byte) (int, error) {
+	n, err := w.Writer.Write(p)
+	if errors.Is(err, tmpoutput.ErrOutputTooLarge) {
+		w.overflowed = true
+	}
+	return n, err
+}
 
 func New(ctx context.Context, actionsDB *actionsdb.ActionDB, tmpOutputMgr tmpoutput.Manager) *ActionRunner {
 	ctx, cancel := context.WithCancel(ctx)
@@ -94,11 +112,12 @@ func (r *ActionRunner) executeAction(
 		}
 	}
 
-	outputWriter, err := r.tmpOutputMgr.Create(actionDescriptor.PipeID)
+	rawOutput, err := r.tmpOutputMgr.Create(actionDescriptor.PipeID)
 	if err != nil {
 		pipeLogger.Error("Error creating temporary file to capture action's output", slog.Any("error", err))
 		return
 	}
+	outputWriter := &overflowWriter{Writer: rawOutput}
 	defer func() {
 		err := r.tmpOutputMgr.Close(actionDescriptor.PipeID)
 		if err != nil {
@@ -126,6 +145,10 @@ func (r *ActionRunner) executeAction(
 	} else {
 		logger.Debug("Running the script", slog.String("script", action.Script))
 		actionErr = executeActionScript(actionCtx, action, sysProcAttr, outputWriter)
+	}
+
+	if outputWriter.overflowed {
+		actionErr = fmt.Errorf("action output exceeded the maximum allowed size: %w", tmpoutput.ErrOutputTooLarge)
 	}
 
 	if actionErr != nil {

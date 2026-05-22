@@ -55,15 +55,16 @@ func init() {
 }
 
 type serverOpts struct {
-	Provider      string
-	Secret        string
-	Authorization string
-	Run           []string
-	Script        string
-	DisableAPI    bool
-	DisableUI     bool
-	APIUser       string
-	APIPassword   string
+	Provider       string
+	Secret         string
+	Authorization  string
+	Run            []string
+	Script         string
+	DisableAPI     bool
+	DisableUI      bool
+	APIUser        string
+	APIPassword    string
+	MaxOutputBytes int
 }
 
 type Option func(*serverOpts)
@@ -74,7 +75,8 @@ func WithAuthorization(s string) Option { return func(o *serverOpts) { o.Authori
 func WithRun(args []string) Option      { return func(o *serverOpts) { o.Run = args; o.Script = "" } }
 func WithScript(s string) Option        { return func(o *serverOpts) { o.Script = s; o.Run = nil } }
 func WithDisableAPI(b bool) Option      { return func(o *serverOpts) { o.DisableAPI = b } }
-func WithDisableUI(b bool) Option       { return func(o *serverOpts) { o.DisableUI = b } }
+func WithDisableUI(b bool) Option        { return func(o *serverOpts) { o.DisableUI = b } }
+func WithMaxOutputBytes(n int) Option    { return func(o *serverOpts) { o.MaxOutputBytes = n } }
 func WithBasicAuth(user, pass string) Option {
 	return func(o *serverOpts) { o.APIUser = user; o.APIPassword = pass }
 }
@@ -201,6 +203,9 @@ func renderConfigYAML(addr, actionsDB, logsDB string, prov providerInfo, o serve
 	fmt.Fprintf(&b, "logs_db_file: %q\n", logsDB)
 	fmt.Fprintf(&b, "disable_api: %t\n", o.DisableAPI)
 	fmt.Fprintf(&b, "disable_ui: %t\n", o.DisableUI)
+	if o.MaxOutputBytes > 0 {
+		fmt.Fprintf(&b, "max_output_bytes: %d\n", o.MaxOutputBytes)
+	}
 	if o.APIUser != "" {
 		fmt.Fprintf(&b, "auth_user: %q\n", o.APIUser)
 	}

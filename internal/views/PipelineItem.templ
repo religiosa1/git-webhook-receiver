@@ -26,7 +26,17 @@ templ PipelineItem(model PipelineItemViewModel) {
 		>
 			@pipelineItemPreview(model.Record, false)
 		</div>
-		<details class="pipeline-page-output" if model.IsLive { open }>
+		if model.Record.Error.Valid {
+			<div class="pipeline-page-error">
+				<code class="error-output" { TestID("pipeline-error")... }>{ model.Record.Error.String }</code>
+			</div>
+		}
+		<details
+			class="pipeline-page-output"
+			if model.IsLive {
+				open
+			}
+		>
 			<summary>Output</summary>
 			if model.IsLive {
 				<div
