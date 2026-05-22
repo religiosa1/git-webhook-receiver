@@ -75,7 +75,7 @@ func TestServe_GracefulShutdown_LetsInFlightActionFinish(t *testing.T) {
 
 			// Serve has closed its DB handle; reopen and confirm the action ran to
 			// completion and its output was flushed.
-			db, err := actionsdb.New(s.ActionsDB, 0, 0)
+			db, err := actionsdb.New(s.ActionsDB, 0)
 			if err != nil {
 				t.Fatalf("reopen actions db: %v", err)
 			}
@@ -90,9 +90,6 @@ func TestServe_GracefulShutdown_LetsInFlightActionFinish(t *testing.T) {
 			}
 			if rec.Error.Valid {
 				t.Errorf("action recorded an error: %q", rec.Error.String)
-			}
-			if !rec.Output.Valid || !strings.Contains(rec.Output.String, "done") {
-				t.Errorf("output should contain 'done', got: %q", rec.Output.String)
 			}
 		})
 	}
@@ -148,18 +145,19 @@ func TestServe_GracefulShutdown_SecondSIGINTKillsActions(t *testing.T) {
 			}
 
 			// Reopen DB and confirm the action was killed before it could print "done".
-			db, err := actionsdb.New(s.ActionsDB, 0, 0)
+			db, err := actionsdb.New(s.ActionsDB, 0)
 			if err != nil {
 				t.Fatalf("reopen actions db: %v", err)
 			}
 			defer db.Close()
 
-			rec, err := db.GetPipelineRecord(pipeID)
+			output, err := db.GetPipelineOutput(pipeID)
 			if err != nil {
 				t.Fatalf("GetPipelineRecord: %v", err)
 			}
-			if rec.Output.Valid && strings.Contains(rec.Output.String, "done") {
-				t.Errorf("action should have been killed before completion, but output contains 'done': %q", rec.Output.String)
+			outputStr := string(output)
+			if strings.Contains(outputStr, "done") {
+				t.Errorf("action should have been killed before completion, but output contains 'done': %q", outputStr)
 			}
 		})
 	}

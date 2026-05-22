@@ -12,43 +12,8 @@ import (
 	"testing"
 
 	"github.com/oklog/ulid/v2"
-	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
-	"github.com/religiosa1/git-webhook-receiver/internal/config"
 	"github.com/religiosa1/git-webhook-receiver/internal/http/api"
-	"github.com/religiosa1/git-webhook-receiver/internal/http/middleware"
-	"github.com/religiosa1/git-webhook-receiver/internal/tmpoutput"
 )
-
-var testAction = config.Action{
-	On:     "push",
-	Branch: "main",
-	Script: "echo test",
-}
-
-func newTestDB(t *testing.T) *actionsdb.ActionDB {
-	t.Helper()
-	db, err := actionsdb.New(":memory:", 1000)
-	if err != nil {
-		t.Fatalf("failed to create test DB: %v", err)
-	}
-	t.Cleanup(func() { _ = db.Close() })
-	return db
-}
-
-func seedRecord(t *testing.T, db *actionsdb.ActionDB, pipeID, project, deliveryID string) {
-	t.Helper()
-	if err := db.CreateRecord(pipeID, project, deliveryID, testAction); err != nil {
-		t.Fatalf("seed record %s: %v", pipeID, err)
-	}
-}
-
-func seedCompletedRecord(t *testing.T, db *actionsdb.ActionDB, pipeID, project, deliveryID, output string, cmdErr error) {
-	t.Helper()
-	seedRecord(t, db, pipeID, project, deliveryID)
-	if err := db.CloseRecord(pipeID, cmdErr, []byte(output)); err != nil {
-		t.Fatalf("close record %s: %v", pipeID, err)
-	}
-}
 
 type listResponse struct {
 	Items      []itemResponse `json:"items"`
@@ -71,17 +36,9 @@ func decodeListResponse(t *testing.T, body io.Reader) listResponse {
 	return resp
 }
 
-func collectPipeIDs(items []itemResponse) map[string]bool {
-	ids := make(map[string]bool, len(items))
-	for _, item := range items {
-		ids[item.PipeID] = true
-	}
-	return ids
-}
-
 func TestListPipelines(t *testing.T) {
 	t.Run("empty db returns empty items and zero total", func(t *testing.T) {
-		db := newTestDB(t)
+		db := newTestActionDB(t)
 		handler := api.ListPipelines{DB: db}
 
 		req := httptest.NewRequest(http.MethodGet, "/pipelines", nil)
@@ -104,7 +61,7 @@ func TestListPipelines(t *testing.T) {
 	})
 
 	t.Run("returns correct content-type", func(t *testing.T) {
-		db := newTestDB(t)
+		db := newTestActionDB(t)
 		handler := api.ListPipelines{DB: db}
 
 		req := httptest.NewRequest(http.MethodGet, "/pipelines", nil)
@@ -117,10 +74,10 @@ func TestListPipelines(t *testing.T) {
 	})
 
 	t.Run("returns all seeded records with correct totalCount", func(t *testing.T) {
-		db := newTestDB(t)
+		db := newTestActionDB(t)
 		const n = 5
 		for range n {
-			seedRecord(t, db, ulid.Make().String(), "proj", "del")
+			seedActionDBRecord(t, db, ulid.Make().String(), "proj", "del")
 		}
 
 		handler := api.ListPipelines{DB: db}
@@ -139,25 +96,25 @@ func TestListPipelines(t *testing.T) {
 }
 
 func TestListPipelinesFiltering(t *testing.T) {
-	db := newTestDB(t)
+	db := newTestActionDB(t)
 
 	// 3 pending for projectA
 	const nA = 3
 	for range nA {
-		seedRecord(t, db, ulid.Make().String(), "projectA", "delivery-a")
+		seedActionDBRecord(t, db, ulid.Make().String(), "projectA", "delivery-a")
 	}
 	// 2 ok for projectB
 	const nBOK = 2
 	for range nBOK {
-		seedCompletedRecord(t, db, ulid.Make().String(), "projectB", "delivery-b", "out", nil)
+		seedActionDBCompletedRecord(t, db, ulid.Make().String(), "projectB", "delivery-b", "out", nil)
 	}
 	// 2 error for projectC
 	const nCErr = 2
 	for range nCErr {
-		seedCompletedRecord(t, db, ulid.Make().String(), "projectC", "delivery-c", "out", errors.New("fail"))
+		seedActionDBCompletedRecord(t, db, ulid.Make().String(), "projectC", "delivery-c", "out", errors.New("fail"))
 	}
 	// 1 pending for projectB
-	seedRecord(t, db, ulid.Make().String(), "projectB", "delivery-b2")
+	seedActionDBRecord(t, db, ulid.Make().String(), "projectB", "delivery-b2")
 
 	const total = nA + nBOK + nCErr + 1
 
@@ -232,10 +189,10 @@ func TestListPipelinesFiltering(t *testing.T) {
 }
 
 func TestListPipelinesPagination(t *testing.T) {
-	db := newTestDB(t)
+	db := newTestActionDB(t)
 	const total = 25
 	for range total {
-		seedRecord(t, db, ulid.Make().String(), "proj", "del")
+		seedActionDBRecord(t, db, ulid.Make().String(), "proj", "del")
 	}
 
 	handler := api.ListPipelines{DB: db}
@@ -266,6 +223,14 @@ func TestListPipelinesPagination(t *testing.T) {
 	})
 
 	t.Run("offset pagination yields non-overlapping pages", func(t *testing.T) {
+		collectPipeIDs := func(items []itemResponse) map[string]bool {
+			ids := make(map[string]bool, len(items))
+			for _, item := range items {
+				ids[item.PipeID] = true
+			}
+			return ids
+		}
+
 		resp1, _ := doRequest(t, "limit=10")
 		resp2, _ := doRequest(t, "limit=10&offset=10")
 
@@ -408,163 +373,6 @@ func TestListPipelinesPagination(t *testing.T) {
 		handler.ServeHTTP(rec, req)
 		if got := rec.Code; got != http.StatusBadRequest {
 			t.Errorf("status: want %d, got %d", http.StatusBadRequest, got)
-		}
-	})
-}
-
-func TestGetPipeline(t *testing.T) {
-	db := newTestDB(t)
-	pipeID := ulid.Make().String()
-	seedCompletedRecord(t, db, pipeID, "myproject", "del-123", "hello output", nil)
-
-	handler := api.GetPipeline{DB: db}
-
-	t.Run("returns 200 with record data for existing pipeId", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/pipelines/"+pipeID, nil)
-		req.SetPathValue("pipeId", pipeID)
-		rec := httptest.NewRecorder()
-		handler.ServeHTTP(rec, req)
-
-		if got := rec.Code; got != http.StatusOK {
-			t.Errorf("status: want %d, got %d", http.StatusOK, got)
-		}
-		if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
-			t.Errorf("Content-Type: want application/json, got %q", ct)
-		}
-		var resp itemResponse
-		if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
-			t.Fatalf("decode response: %v", err)
-		}
-		if resp.PipeID != pipeID {
-			t.Errorf("pipeId: want %q, got %q", pipeID, resp.PipeID)
-		}
-		if resp.Project != "myproject" {
-			t.Errorf("project: want %q, got %q", "myproject", resp.Project)
-		}
-		if resp.DeliveryID != "del-123" {
-			t.Errorf("deliveryId: want %q, got %q", "del-123", resp.DeliveryID)
-		}
-	})
-
-	t.Run("returns 404 for non-existent pipeId", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/pipelines/nosuchid", nil)
-		req.SetPathValue("pipeId", "nosuchid")
-		rec := httptest.NewRecorder()
-		handler.ServeHTTP(rec, req)
-
-		if got := rec.Code; got != http.StatusNotFound {
-			t.Errorf("status: want %d, got %d", http.StatusNotFound, got)
-		}
-	})
-}
-
-func TestGetPipelineOutput(t *testing.T) {
-	db := newTestDB(t)
-	pipeID := ulid.Make().String()
-	const outputText = "line one\nline two\n"
-	seedCompletedRecord(t, db, pipeID, "proj", "del", outputText, nil)
-
-	handler := api.GetPipelineOutput{DB: db, TmpOutputMgr: tmpoutput.NewInMemoryTmpOutput(0)}
-
-	t.Run("returns 200 with plain text output", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/pipelines/"+pipeID+"/output", nil)
-		req.SetPathValue("pipeId", pipeID)
-		rec := httptest.NewRecorder()
-		handler.ServeHTTP(rec, req)
-
-		if got := rec.Code; got != http.StatusOK {
-			t.Errorf("status: want %d, got %d", http.StatusOK, got)
-		}
-		if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/plain") {
-			t.Errorf("Content-Type: want text/plain, got %q", ct)
-		}
-		if got := rec.Body.String(); got != outputText {
-			t.Errorf("body: want %q, got %q", outputText, got)
-		}
-	})
-
-	t.Run("returns 404 for non-existent pipeId", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/pipelines/nosuchid/output", nil)
-		req.SetPathValue("pipeId", "nosuchid")
-		rec := httptest.NewRecorder()
-		handler.ServeHTTP(rec, req)
-
-		if got := rec.Code; got != http.StatusNotFound {
-			t.Errorf("status: want %d, got %d", http.StatusNotFound, got)
-		}
-	})
-
-	t.Run("returns empty body for record with no output", func(t *testing.T) {
-		recordID := ulid.Make().String()
-		seedRecord(t, db, recordID, "proj", "del")
-
-		req := httptest.NewRequest(http.MethodGet, "/pipelines/"+recordID+"/output", nil)
-		req.SetPathValue("pipeId", recordID)
-		rec := httptest.NewRecorder()
-		handler.ServeHTTP(rec, req)
-
-		if got := rec.Code; got != http.StatusNoContent {
-			t.Errorf("status: want %d, got %d", http.StatusNoContent, got)
-		}
-		if got := rec.Body.String(); got != "" {
-			t.Errorf("body: want empty, got %q", got)
-		}
-	})
-}
-
-// TODO: move to integration tests
-func TestPipelinesAuthorization(t *testing.T) {
-	db := newTestDB(t)
-
-	const (
-		user     = "admin"
-		password = "secret"
-	)
-
-	auth := middleware.WithBasicAuth(user, password)
-	handler := auth(api.ListPipelines{DB: db})
-
-	doRequest := func(username, pass string) int {
-		req := httptest.NewRequest(http.MethodGet, "/pipelines", nil)
-		if username != "" || pass != "" {
-			req.SetBasicAuth(username, pass)
-		}
-		rec := httptest.NewRecorder()
-		handler.ServeHTTP(rec, req)
-		return rec.Code
-	}
-
-	t.Run("no credentials returns 401", func(t *testing.T) {
-		if got := doRequest("", ""); got != http.StatusUnauthorized {
-			t.Errorf("status: want %d, got %d", http.StatusUnauthorized, got)
-		}
-	})
-
-	t.Run("wrong password returns 401", func(t *testing.T) {
-		if got := doRequest(user, "wrongpass"); got != http.StatusUnauthorized {
-			t.Errorf("status: want %d, got %d", http.StatusUnauthorized, got)
-		}
-	})
-
-	t.Run("wrong username returns 401", func(t *testing.T) {
-		if got := doRequest("notadmin", password); got != http.StatusUnauthorized {
-			t.Errorf("status: want %d, got %d", http.StatusUnauthorized, got)
-		}
-	})
-
-	t.Run("correct credentials returns 200", func(t *testing.T) {
-		if got := doRequest(user, password); got != http.StatusOK {
-			t.Errorf("status: want %d, got %d", http.StatusOK, got)
-		}
-	})
-
-	t.Run("no auth configured allows unauthenticated access", func(t *testing.T) {
-		openHandler := middleware.WithBasicAuth("", "")(api.ListPipelines{DB: db})
-		req := httptest.NewRequest(http.MethodGet, "/pipelines", nil)
-		rec := httptest.NewRecorder()
-		openHandler.ServeHTTP(rec, req)
-		if got := rec.Code; got != http.StatusOK {
-			t.Errorf("status: want %d, got %d", http.StatusOK, got)
 		}
 	})
 }

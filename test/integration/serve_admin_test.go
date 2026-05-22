@@ -87,7 +87,7 @@ func TestServe_Admin_RequiresBasicAuthWhenConfigured(t *testing.T) {
 				t.Errorf("%s: response Content-Type = %q, want application/json", path, got)
 			}
 			// Sanity-check the payload is valid JSON.
-			var any interface{}
+			var any any
 			if err := json.Unmarshal(body, &any); err != nil {
 				t.Errorf("%s: response is not valid JSON: %v; body=%s", path, err, body)
 			}
@@ -97,7 +97,7 @@ func TestServe_Admin_RequiresBasicAuthWhenConfigured(t *testing.T) {
 	t.Run("ListProjectsContainsTestProject", func(t *testing.T) {
 		resp := adminGet(t, s.BaseURL, "/api/projects", &basicCreds{User: user, Pass: pass})
 		defer resp.Body.Close()
-		var projects map[string]interface{}
+		var projects map[string]any
 		if err := json.NewDecoder(resp.Body).Decode(&projects); err != nil {
 			t.Fatalf("decode: %v", err)
 		}

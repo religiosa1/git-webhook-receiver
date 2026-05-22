@@ -293,7 +293,7 @@ func parsePipeIDs(t *testing.T, resp *http.Response) []string {
 
 func waitForPipeline(t *testing.T, dbPath, pipeID string, timeout time.Duration) actionsdb.PipeLineRecord {
 	t.Helper()
-	db, err := actionsdb.New(dbPath, 0, 0)
+	db, err := actionsdb.New(dbPath, 0)
 	if err != nil {
 		t.Fatalf("open actions db: %v", err)
 	}
@@ -339,7 +339,7 @@ func adminGet(t *testing.T, baseURL, path string, creds *basicCreds) *http.Respo
 // webhook never enqueued an action.
 func pipelineExists(t *testing.T, dbPath, pipeID string) bool {
 	t.Helper()
-	db, err := actionsdb.New(dbPath, 0, 0)
+	db, err := actionsdb.New(dbPath, 0)
 	if err != nil {
 		t.Fatalf("open actions db: %v", err)
 	}

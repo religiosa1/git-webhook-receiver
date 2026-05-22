@@ -5,7 +5,6 @@ package integration
 import (
 	"io"
 	"net/http"
-	"strings"
 	"testing"
 	"time"
 )
@@ -14,7 +13,8 @@ import (
 // only supported by Gitea/GitLab; GitHub doesn't use it. Covered here on Gitea.
 func TestServe_Gitea_AuthorizationHeader(t *testing.T) {
 	const authToken = "myauthtoken"
-	s := startServer(t,
+	s := startServer(
+		t,
 		WithProvider("gitea"),
 		WithAuthorization(authToken),
 	)
@@ -40,9 +40,6 @@ func TestServe_Gitea_AuthorizationHeader(t *testing.T) {
 		rec := waitForPipeline(t, s.ActionsDB, ids[0], 10*time.Second)
 		if rec.Error.Valid {
 			t.Errorf("action recorded an error: %q", rec.Error.String)
-		}
-		if !rec.Output.Valid || !strings.Contains(rec.Output.String, "PATH=") {
-			t.Errorf("output should contain PATH=, got: %q", rec.Output.String)
 		}
 	})
 

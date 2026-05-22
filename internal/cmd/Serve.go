@@ -160,6 +160,8 @@ func Serve(cfg config.Config) {
 		} else {
 			logger.Info("logs_db_file config value is an empty string. Logs inspection won't be available")
 		}
+	} else {
+		mux.HandleFunc("GET /api/", http.NotFound)
 	}
 
 	srv := &http.Server{

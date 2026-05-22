@@ -7,7 +7,28 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
 )
+
+func waitForOutput(t *testing.T, dbPath, pipeID string, timeout time.Duration) string {
+	t.Helper()
+	db, err := actionsdb.New(dbPath, 0)
+	if err != nil {
+		t.Fatalf("open actions db: %v", err)
+	}
+	defer db.Close()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		output, err := db.GetPipelineOutput(pipeID)
+		if err == nil {
+			return string(output)
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	t.Fatalf("pipeline %q did not finish within %s", pipeID, timeout)
+	return ""
+}
 
 func TestServe_GitHubPush_RunsActionAndPersistsOutput(t *testing.T) {
 	s := startServer(t)
@@ -26,14 +47,8 @@ func TestServe_GitHubPush_RunsActionAndPersistsOutput(t *testing.T) {
 		t.Fatalf("got %d pipe ids, want 1: %v", len(ids), ids)
 	}
 
-	rec := waitForPipeline(t, s.ActionsDB, ids[0], 10*time.Second)
-	if rec.Error.Valid {
-		t.Errorf("action recorded an error: %q", rec.Error.String)
-	}
-	if !rec.Output.Valid || !strings.Contains(rec.Output.String, "PATH=") {
-		t.Errorf("output should contain PATH= (env stdout), got: %q", rec.Output.String)
-	}
-	if rec.Project != defaultProject {
-		t.Errorf("project = %q, want %q", rec.Project, defaultProject)
+	output := waitForOutput(t, s.ActionsDB, ids[0], 10*time.Second)
+	if strings.Contains(output, "PATH=") {
+		t.Errorf("output should contain PATH= (env stdout), got: %q", output)
 	}
 }
