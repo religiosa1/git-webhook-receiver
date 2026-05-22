@@ -61,6 +61,7 @@ type serverOpts struct {
 	Run           []string
 	Script        string
 	DisableAPI    bool
+	DisableUI     bool
 	APIUser       string
 	APIPassword   string
 }
@@ -73,6 +74,7 @@ func WithAuthorization(s string) Option { return func(o *serverOpts) { o.Authori
 func WithRun(args []string) Option      { return func(o *serverOpts) { o.Run = args; o.Script = "" } }
 func WithScript(s string) Option        { return func(o *serverOpts) { o.Script = s; o.Run = nil } }
 func WithDisableAPI(b bool) Option      { return func(o *serverOpts) { o.DisableAPI = b } }
+func WithDisableUI(b bool) Option       { return func(o *serverOpts) { o.DisableUI = b } }
 func WithBasicAuth(user, pass string) Option {
 	return func(o *serverOpts) { o.APIUser = user; o.APIPassword = pass }
 }
@@ -198,6 +200,7 @@ func renderConfigYAML(addr, actionsDB, logsDB string, prov providerInfo, o serve
 	fmt.Fprintf(&b, "actions_db_file: %q\n", actionsDB)
 	fmt.Fprintf(&b, "logs_db_file: %q\n", logsDB)
 	fmt.Fprintf(&b, "disable_api: %t\n", o.DisableAPI)
+	fmt.Fprintf(&b, "disable_ui: %t\n", o.DisableUI)
 	if o.APIUser != "" {
 		fmt.Fprintf(&b, "auth_user: %q\n", o.APIUser)
 	}
@@ -324,6 +327,24 @@ func adminGet(t *testing.T, baseURL, path string, creds *basicCreds) *http.Respo
 		t.Fatalf("new request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if creds != nil {
+		req.SetBasicAuth(creds.User, creds.Pass)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("do request: %v", err)
+	}
+	return resp
+}
+
+// uiGet builds a GET request to an HTML admin page. If creds is non-nil,
+// basic auth is attached.
+func uiGet(t *testing.T, baseURL, path string, creds *basicCreds) *http.Response {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodGet, baseURL+path, nil)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
 	if creds != nil {
 		req.SetBasicAuth(creds.User, creds.Pass)
 	}

@@ -77,7 +77,7 @@ templ LogsList(model LogsListViewModel) {
 		</form>
 		if len(model.Page.Items) > 0 {
 			<p>{ fmt.Sprintf("%d total entries", model.Page.TotalCount) }</p>
-			<table class="logs-table">
+			<table class="logs-table" { TestID("logs-list")... }>
 				<thead>
 					<tr>
 						<th>Time</th>
@@ -91,7 +91,7 @@ templ LogsList(model LogsListViewModel) {
 				</tbody>
 			</table>
 		} else {
-			<p>No log entries</p>
+			<p { TestID("logs-empty")... }>No log entries</p>
 		}
 	}
 }

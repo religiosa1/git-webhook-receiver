@@ -17,6 +17,7 @@ templ PipelineItem(model PipelineItemViewModel) {
 		<p><a href={ MakePublicURL(ctx, "/pipelines") }>Back to pipelines</a></p>
 		<div
 			id="pipeline-preview"
+			{ TestID("pipeline-detail")... }
 			if model.IsLive {
 				hx-get={ MakePublicURL(ctx, fmt.Sprintf("/pipelines/%s", url.PathEscape(model.Record.PipeID))) }
 				hx-trigger="htmx:sseClose from:#pipeline-sse-source"

@@ -32,9 +32,11 @@ type ProjectsViewModel struct {
 
 templ Projects(model ProjectsViewModel) {
 	@base("Projects") {
-		for projectName, conf := range model.Projects {
-			@projectPreview(projectName, conf)
-		}
+		<div class="projects" { TestID("projects-page")... }>
+			for projectName, conf := range model.Projects {
+				@projectPreview(projectName, conf)
+			}
+		</div>
 	}
 }
 

@@ -52,11 +52,11 @@ templ PipelinesList(model PipelinesListViewModel) {
 			<a class="btn btn-reset" href={ MakePublicURL(ctx, "/pipelines") }>Clear</a>
 		</form>
 		if len(model.Page.Items) > 0 {
-			<ul class="pipelines-list">
+			<ul class="pipelines-list" { TestID("pipelines-list")... }>
 				@PipelinesListPartial(model)
 			</ul>
 		} else {
-			<p>No pipeline items</p>
+			<p { TestID("pipelines-empty")... }>No pipeline items</p>
 		}
 	}
 }
