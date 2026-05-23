@@ -32,8 +32,10 @@ func (h GetPipelineOutput) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 	if output, ok := h.TmpOutputMgr.Reader(req.Context(), pipeID); ok {
-		if _, writeErr := io.Copy(w, output); writeErr != nil {
+		fw := flushWriter{w: w, f: http.NewResponseController(w)}
+		if _, writeErr := io.Copy(fw, output); writeErr != nil && !errors.Is(writeErr, io.EOF) {
 			logger.Error("error while streaming the output", slog.Any("error", writeErr))
 		}
 		return
@@ -59,4 +61,19 @@ func (h GetPipelineOutput) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if _, writeErr := w.Write(output); writeErr != nil {
 		logger.Error("error while writing the output", slog.Any("error", writeErr))
 	}
+}
+
+// flushWriter wraps ResponseWriter and flushes after each Write call,
+// enabling live streaming to browsers without buffering.
+type flushWriter struct {
+	w http.ResponseWriter
+	f *http.ResponseController
+}
+
+func (fw flushWriter) Write(p []byte) (n int, err error) {
+	n, err = fw.w.Write(p)
+	if err == nil {
+		_ = fw.f.Flush()
+	}
+	return
 }
