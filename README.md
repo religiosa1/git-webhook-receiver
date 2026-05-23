@@ -184,10 +184,10 @@ By default, the app exposes inspection HTTP endpoints, unless
 status/output of a pipeline, list pipelines, or view the app logs.
 
 ```
-GET /pipelines/{:pipeId} # To see the pipeline status
-GET /pipelines/{:pipeId}/output # To see the pipe output
-GET /pipelines # To list last pipelines
-GET /logs # To see the logs result, must have logsdb on in config
+GET /api/pipelines/{:pipeId} # To see the pipeline status
+GET /api/pipelines/{:pipeId}/output # To see the pipe output
+GET /api/pipelines # To list last pipelines
+GET /api/logs # To see the logs result, must have logsdb on in config
 ```
 
 You can find the full documentation for endpoints and params they accept
@@ -211,21 +211,42 @@ subcommands to retrieve logs, inspect pipeline results, and retrieve their
 output. It duplicates the HTTP-API functionality for the local access or cases
 when HTTP-API is disabled.
 
-Run `git-webhook-receiver --help` to see the list of available subcommands
-or run `git-webhook-receiver <SUBCOMMAND> --help` to subcommand help.
+Run `git-webhook-receiver --help` to see the list of available subcommands:
+```
+Usage: git-webhook-receiver <command> [flags]
 
+Flags:
+  -h, --help                  Show context-sensitive help.
+  -c, --config-path=STRING    Configuration file name
+  -v, --version               Show version information and exit
+
+Commands:
+  serve [flags]
+    Run the webhook receiver server (default mode)
+
+  pipeline (pl,get) [<pipeId>] [flags]
+    Display pipeline record info
+
+  output (cat) [<pipeId>] [flags]
+    Display pipeline output
+
+  list-pipelines (ls) [flags]
+    Display a list of last N pipelines
+
+  logs [flags]
+    Display logs
+
+Run "git-webhook-receiver <command> --help" for more information on a command.
+```
 Some examples:
 
 You can use `pipeline` subcommand to check the last or given pipeline:
 
 ```sh
-git-webhook-receiver pipeline # shows the last pipeline
+git-webhook-receiver pipeline # shows the last pipeline info
 # OR
 git-webhook-receiver pipeline <PIPE_ID>
 ```
-
-Run `get-webhook-receiver ls` to see a list of the last N pipelines.
-Run `get-webhook-receiver logs` to inspect app logs.
 
 ## Logging
 
