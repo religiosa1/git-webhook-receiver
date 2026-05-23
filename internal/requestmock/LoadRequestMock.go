@@ -15,7 +15,7 @@ type RequestMock struct {
 	Headers map[string]string `json:"headers"`
 }
 
-func (dump RequestMock) ToHttpRequest(url string) *http.Request {
+func (dump RequestMock) ToHTTPRequest(url string) *http.Request {
 	req := httptest.NewRequest(http.MethodPost, url, bytes.NewBuffer([]byte(dump.Body)))
 	for key, value := range dump.Headers {
 		req.Header.Add(key, value)
@@ -30,7 +30,9 @@ func LoadRequestMock(t *testing.T, fileName string) (request RequestMock) {
 		t.Error(err)
 		return
 	}
-	defer jsonFile.Close()
+	defer func() {
+		_ = jsonFile.Close()
+	}()
 
 	byteValue, err := io.ReadAll(jsonFile)
 	if err != nil {

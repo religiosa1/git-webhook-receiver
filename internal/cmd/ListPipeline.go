@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"text/tabwriter"
 	"time"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
@@ -80,6 +81,10 @@ func getActionRecordOutputFormatter(format string) func([]actionsdb.PipeLineReco
 }
 
 func formatActionRecordsSimple(pipelines []actionsdb.PipeLineRecord) error {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	if _, err := fmt.Fprintf(w, "TIME start-end\tPIPE_ID\tDELIVERY_ID\tPROJECT\tRESULT\n"); err != nil {
+		return err
+	}
 	for _, pl := range pipelines {
 		createAt := pl.CreatedAt.Format(time.DateTime)
 
@@ -96,9 +101,12 @@ func formatActionRecordsSimple(pipelines []actionsdb.PipeLineRecord) error {
 		} else {
 			result = "ok"
 		}
-		fmt.Printf("%s-%s %s %s %s %s\n", createAt, endedAt, pl.PipeID, pl.DeliveryID, pl.Project, result)
+		_, err := fmt.Fprintf(w, "%s-%s\t%s\t%s\t%s\t%s\n", createAt, endedAt, pl.PipeID, pl.DeliveryID, pl.Project, result)
+		if err != nil {
+			return err
+		}
 	}
-	return nil
+	return w.Flush()
 }
 
 func formatActionRecordsJq(pipelines []actionsdb.PipeLineRecord) error {

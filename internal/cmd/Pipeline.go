@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
@@ -42,23 +44,28 @@ func Pipeline(cfg config.Config, args PipelineArgs) {
 		os.Exit(ExitCodeActionsDB)
 	}
 
-	displayPipeDetails(pipe)
-	fmt.Print("\n")
+	if err = displayPipeDetails(os.Stdout, pipe); err != nil {
+		fmt.Fprintf(os.Stderr, "error writing output: %v\n", err)
+		os.Exit(ExitCodeOutput)
+	}
 }
 
-func displayPipeDetails(pipe actionsdb.PipeLineRecord) {
+func displayPipeDetails(w io.Writer, pipe actionsdb.PipeLineRecord) error {
 	var endedAt string
 	if pipe.EndedAt.Valid {
 		endedAt = pipe.EndedAt.Time.Format(time.DateTime)
-	} else {
-		endedAt = ""
 	}
-
-	fmt.Printf("pipeId     : %s\n", pipe.PipeID)
-	fmt.Printf("project    : %s\n", pipe.Project)
-	fmt.Printf("deliveryId : %s\n", pipe.DeliveryID)
-	fmt.Printf("config     : %s\n", pipe.Config)
-	fmt.Printf("error      : %s\n", pipe.Error.String)
-	fmt.Printf("created at : %s\n", pipe.CreatedAt.Format(time.DateTime))
-	fmt.Printf("ended at   : %s\n", endedAt)
+	print := func(columnName string, value any) error {
+		_, err := fmt.Fprintf(w, "%s %s\n", columnName, value)
+		return err
+	}
+	return errors.Join(
+		print("pipeId    ", pipe.PipeID),
+		print("project   ", pipe.Project),
+		print("deliveryId", pipe.DeliveryID),
+		print("config    ", pipe.Config),
+		print("error     ", pipe.Error.String),
+		print("created at", pipe.CreatedAt.Format(time.DateTime)),
+		print("ended at  ", endedAt),
+	)
 }

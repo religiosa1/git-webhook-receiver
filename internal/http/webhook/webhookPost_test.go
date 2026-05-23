@@ -107,7 +107,7 @@ func TestProjectMatching(t *testing.T) {
 	}
 
 	t.Run("returns 201 if some of the actions matches", func(t *testing.T) {
-		request := requestDump.ToHttpRequest(projectEndPoint)
+		request := requestDump.ToHTTPRequest(projectEndPoint)
 		response := httptest.NewRecorder()
 		newTestHandler(cfg, prj).ServeHTTP(response, request)
 		got := response.Result().StatusCode
@@ -122,7 +122,7 @@ func TestProjectMatching(t *testing.T) {
 		prj2 := prj
 		prj2.Actions = makeActionsList(config.Action{Branch: "badbranch"})
 
-		request := requestDump.ToHttpRequest(projectEndPoint)
+		request := requestDump.ToHTTPRequest(projectEndPoint)
 		response := httptest.NewRecorder()
 		newTestHandler(cfg, prj2).ServeHTTP(response, request)
 
@@ -161,7 +161,7 @@ func TestProjectMatching(t *testing.T) {
 			prj2.Secret = config.Secret(tt.secret)
 			prj2.Actions = makeActionsList(actn)
 
-			request := requestDump.ToHttpRequest(projectEndPoint)
+			request := requestDump.ToHTTPRequest(projectEndPoint)
 			response := httptest.NewRecorder()
 
 			newTestHandler(cfg, prj2).ServeHTTP(response, request)
@@ -186,7 +186,7 @@ func TestActionMatching(t *testing.T) {
 
 	runHandler := func(t *testing.T, actions []config.Action) int {
 		t.Helper()
-		request := requestDump.ToHttpRequest(projectEndPoint) // branch: "master", event: "push"
+		request := requestDump.ToHTTPRequest(projectEndPoint) // branch: "master", event: "push"
 		prj := baseProject
 		prj.Actions = actions
 		response := httptest.NewRecorder()
@@ -264,7 +264,7 @@ func TestResponseBody(t *testing.T) {
 			},
 		},
 	}
-	request := loadMockRequest(t).ToHttpRequest(projectEndPoint)
+	request := loadMockRequest(t).ToHTTPRequest(projectEndPoint)
 	handler := newTestHandler(config.Config{}, prj)
 
 	t.Run("contains action identifier of matched action", func(t *testing.T) {
@@ -323,7 +323,7 @@ func TestPublicUrl(t *testing.T) {
 
 	for _, tt := range happyTests {
 		t.Run(tt.name, func(t *testing.T) {
-			action := newTestHandler(tt.cfg, prj).doRequestAndGetAction(t, requestDump.ToHttpRequest(projectEndPoint))
+			action := newTestHandler(tt.cfg, prj).doRequestAndGetAction(t, requestDump.ToHTTPRequest(projectEndPoint))
 			pipeID := url.PathEscape(action.PipeID)
 			want := strings.ReplaceAll(tt.want, "{pipeID}", pipeID)
 			if action.Links == nil {
@@ -341,7 +341,7 @@ func TestPublicUrl(t *testing.T) {
 
 	t.Run("no links field is present if inspection API and UI are disabled", func(t *testing.T) {
 		cfg := config.Config{PublicURL: publicURL, ActionsDBFile: "something", DisableAPI: true, DisableUI: true}
-		action := newTestHandler(cfg, prj).doRequestAndGetAction(t, requestDump.ToHttpRequest(projectEndPoint))
+		action := newTestHandler(cfg, prj).doRequestAndGetAction(t, requestDump.ToHTTPRequest(projectEndPoint))
 		if action.Links != nil {
 			t.Fatalf("Expected to get empty links, got %v", action.Links)
 		}
@@ -349,7 +349,7 @@ func TestPublicUrl(t *testing.T) {
 
 	t.Run("no links field is present if publicURL is not configured", func(t *testing.T) {
 		cfg := config.Config{ActionsDBFile: "something"}
-		action := newTestHandler(cfg, prj).doRequestAndGetAction(t, requestDump.ToHttpRequest(projectEndPoint))
+		action := newTestHandler(cfg, prj).doRequestAndGetAction(t, requestDump.ToHTTPRequest(projectEndPoint))
 		if action.Links != nil {
 			t.Fatalf("Expected to get empty links, got %v", action.Links)
 		}
@@ -357,7 +357,7 @@ func TestPublicUrl(t *testing.T) {
 
 	t.Run("no links field is present if actionsDb is disabled", func(t *testing.T) {
 		cfg := config.Config{PublicURL: publicURL}
-		action := newTestHandler(cfg, prj).doRequestAndGetAction(t, requestDump.ToHttpRequest(projectEndPoint))
+		action := newTestHandler(cfg, prj).doRequestAndGetAction(t, requestDump.ToHTTPRequest(projectEndPoint))
 		if action.Links != nil {
 			t.Fatalf("Expected to get empty links, got %v", action.Links)
 		}
