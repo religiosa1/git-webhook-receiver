@@ -31,7 +31,7 @@ type Config struct {
 	AuthPassword            Secret             `yaml:"auth_password" env:"AUTH_PASSWORD"`
 	LogLevel                string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
 	LogType                 string             `yaml:"log_type" env:"LOG_TYPE" env-default:"json"`
-	LogsDBFile              string             `yaml:"logs_db_file" env:"LOGS_DB_FILE"`
+	LogsDBFile              string             `yaml:"logs_db_file" env:"LOGS_DB_FILE" env-default:"logs.sqlite3"`
 	ActionsDBFile           string             `yaml:"actions_db_file" env:"ACTIONS_DB_FILE" env-default:"actions.sqlite3"`
 	MaxActionsStored        int                `yaml:"max_actions_stored" env:"MAX_ACTIONS_STORED" env-default:"1000"` // the same as DefaultMaxActionsStored
 	MaxOutputBytes          int                `yaml:"max_output_bytes" env:"MAX_OUTPUT_BYTES" env-default:"1048576"`  // the same as DefaultMaxOutputBytes

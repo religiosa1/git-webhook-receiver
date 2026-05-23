@@ -212,6 +212,7 @@ output. It duplicates the HTTP-API functionality for the local access or cases
 when HTTP-API is disabled.
 
 Run `git-webhook-receiver --help` to see the list of available subcommands:
+
 ```
 Usage: git-webhook-receiver <command> [flags]
 
@@ -238,6 +239,7 @@ Commands:
 
 Run "git-webhook-receiver <command> --help" for more information on a command.
 ```
+
 Some examples:
 
 You can use `pipeline` subcommand to check the last or given pipeline:
@@ -251,19 +253,15 @@ git-webhook-receiver pipeline <PIPE_ID>
 ## Logging
 
 By default, action outputs are stored in a SQLITE database. Logs by default are
-only output to stdout to be captured by journalctl, but they can also be stored
-persistently in a separate db, in case you want to expose them through an
-endpoint. This is controlled with the `logs_db_file` config option.
-
-By default, actions db filename is `actions.sqlite3`. This filenames are
-controlled by the `actions_db_file`.
+stored in SQLITE database and output to stdout to be captured by journalctl.
+Name of db files are controlled by the `actions_db_file` and `logs_db_file`.
 
 Actions' output is stored in the db once the action is completed.
 While the action is still in progress, data is stored in a temporary file.
 
-Setting those config values to an empty string will disable the persistent on
+Setting those config values to an empty string will disable the persistent
 storage of this information and in turn will also disable the corresponding
-HTTP-API and/or CLI subcommands.
+HTTP-API, admin UI pages and CLI subcommands.
 
 Both databases use [Write-Ahead Logging](https://www.sqlite.org/wal.html).
 This means, in addition to the file specified in the config, the app will also
