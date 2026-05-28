@@ -266,7 +266,7 @@ func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig
 	return <-errCh
 }
 
-func createProjectsMux(actionsCh chan actionrunner.ActionArgs, cfg config.Config, logger *slog.Logger) (*http.ServeMux, error) {
+func createProjectsMux(actionsCh chan<- actionrunner.ActionArgs, cfg config.Config, logger *slog.Logger) (*http.ServeMux, error) {
 	mux := http.NewServeMux()
 	basicAuth := middleware.WithBasicAuth(cfg.AuthUser, cfg.AuthPassword.RawContents())
 	for projectName, project := range cfg.Projects {

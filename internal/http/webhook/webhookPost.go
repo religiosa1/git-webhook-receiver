@@ -20,7 +20,7 @@ import (
 const maxBodySize int64 = 1024 * 300
 
 type Webhook struct {
-	ActionsCh   chan actionrunner.ActionArgs
+	ActionsCh   chan<- actionrunner.ActionArgs
 	Config      config.Config
 	ProjectName string
 	Project     config.Project
