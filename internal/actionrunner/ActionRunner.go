@@ -15,22 +15,16 @@ import (
 // ActionArgs are arguments passed to run an action/pipeline by an ActionRunner
 type ActionArgs struct {
 	Logger     *slog.Logger
-	Action     ActionDescriptor
+	ActionDesc ActionDescriptor
 	DeliveryID string
 }
 
 type ActionRunner struct {
-	ch           chan ActionArgs
 	wg           *sync.WaitGroup
-	ctx          context.Context
-	cancel       func()
+	listenDone   chan struct{}
 	actionsDB    *actionsdb.ActionDB
 	tmpOutputMgr tmpoutput.Manager
 }
-
-// actionChanBufferSize controls how many webhook dispatches can queue before
-// HTTP handlers block waiting for the runner to consume them.
-const actionChanBufferSize = 10
 
 // overflowWriter wraps an io.Writer and records whether ErrOutputTooLarge was ever returned.
 // This is needed because ErrOutputTooLarge gets lost in transit -- cmd can be killed
@@ -48,45 +42,36 @@ func (w *overflowWriter) Write(p []byte) (int, error) {
 	return n, err
 }
 
-func New(ctx context.Context, actionsDB *actionsdb.ActionDB, tmpOutputMgr tmpoutput.Manager) *ActionRunner {
-	ctx, cancel := context.WithCancel(ctx)
+func New(ctx context.Context, actionArgsStream <-chan ActionArgs, actionsDB *actionsdb.ActionDB, tmpOutputMgr tmpoutput.Manager) *ActionRunner {
 	r := ActionRunner{
-		ch:           make(chan ActionArgs, actionChanBufferSize),
 		wg:           &sync.WaitGroup{},
+		listenDone:   make(chan struct{}),
 		actionsDB:    actionsDB,
-		ctx:          ctx,
-		cancel:       cancel,
 		tmpOutputMgr: tmpOutputMgr,
 	}
-	go r.listen()
+	go r.listen(ctx, actionArgsStream)
 	return &r
 }
 
-func (r *ActionRunner) Chan() chan ActionArgs {
-	return r.ch
-}
-
-func (r *ActionRunner) Cancel() {
-	r.cancel()
-}
-
-func (r *ActionRunner) Done() <-chan struct{} {
-	return r.ctx.Done()
-}
-
+// Wait waits for the channel to close and all of actions to finish
 func (r *ActionRunner) Wait() {
+	<-r.listenDone // to make sure all wg.Go in listen are issued
 	r.wg.Wait()
-	r.cancel()
 }
 
-func (r *ActionRunner) listen() {
+func (r *ActionRunner) listen(ctx context.Context, actionArgsStream <-chan ActionArgs) {
+	defer close(r.listenDone)
 	for {
 		select {
-		case <-r.ctx.Done():
+		case <-ctx.Done():
 			return
-		case args := <-r.ch:
+		case args, ok := <-actionArgsStream:
+			if !ok {
+				return
+			}
+			// NOTE: limit the concurrency here potentially?
 			r.wg.Go(func() {
-				r.executeAction(args.Logger, args.Action, args.DeliveryID)
+				r.executeAction(ctx, args)
 			})
 		}
 	}
@@ -96,55 +81,54 @@ func (r *ActionRunner) listen() {
 // Private parts
 
 func (r *ActionRunner) executeAction(
-	logger *slog.Logger,
-	actionDescriptor ActionDescriptor,
-	deliveryID string,
+	ctx context.Context,
+	args ActionArgs,
 ) {
-	action := actionDescriptor.Action
-	pipeLogger := logger.With(slog.String("pipeId", actionDescriptor.PipeID))
-	pipeLogger.Info("Running action", slog.Int("action_index", actionDescriptor.Index))
+	actionDesc := args.ActionDesc
+	logger := args.Logger
+	logger.Info("Running action", slog.Int("action_index", actionDesc.Index))
 
 	if r.actionsDB != nil {
-		err := r.actionsDB.CreateRecord(actionDescriptor.PipeID, actionDescriptor.Project, deliveryID, action)
+		err := r.actionsDB.CreateRecord(actionDesc.PipeID, actionDesc.Project, args.DeliveryID, actionDesc.Config)
 		if err != nil {
-			pipeLogger.Error("Error creating pipeline record in the db", slog.Any("error", err))
+			logger.Error("Error creating pipeline record in the db", slog.Any("error", err))
 			return
 		}
 	}
 
-	rawOutput, err := r.tmpOutputMgr.Create(actionDescriptor.PipeID)
+	rawOutput, err := r.tmpOutputMgr.Create(actionDesc.PipeID)
 	if err != nil {
-		pipeLogger.Error("Error creating temporary file to capture action's output", slog.Any("error", err))
+		logger.Error("Error creating temporary file to capture action's output", slog.Any("error", err))
 		return
 	}
 	outputWriter := &overflowWriter{Writer: rawOutput}
 	defer func() {
-		err := r.tmpOutputMgr.Close(actionDescriptor.PipeID)
+		err := r.tmpOutputMgr.Close(actionDesc.PipeID)
 		if err != nil {
-			pipeLogger.Error("Error closing action output", slog.Any("error", err))
+			logger.Error("Error closing action output", slog.Any("error", err))
 		}
 	}()
 
-	sysProcAttr, err := getSysProcAttr(action.User)
+	sysProcAttr, err := getSysProcAttr(actionDesc.Config.User)
 	if err != nil {
 		logger.Error("Error creating process attributes for action", slog.Any("error", err))
 		return
 	}
 
-	if action.User != "" {
-		logger.Debug("Running from a user", slog.String("user", action.User))
+	if actionDesc.Config.User != "" {
+		logger.Debug("Running from a user", slog.String("user", actionDesc.Config.User))
 	}
 
-	actionCtx, cancelAction := context.WithTimeout(r.ctx, action.Timeout)
+	actionCtx, cancelAction := context.WithTimeout(ctx, actionDesc.Config.Timeout)
 	defer cancelAction()
 
 	var actionErr error
-	if len(action.Run) > 0 {
-		logger.Debug("Running the command", slog.Any("command", action.Run))
-		actionErr = executeActionRun(actionCtx, action, sysProcAttr, outputWriter)
+	if len(actionDesc.Config.Run) > 0 {
+		logger.Debug("Running the command", slog.Any("command", actionDesc.Config.Run))
+		actionErr = executeActionRun(actionCtx, actionDesc.Config, sysProcAttr, outputWriter)
 	} else {
-		logger.Debug("Running the script", slog.String("script", action.Script))
-		actionErr = executeActionScript(actionCtx, action, sysProcAttr, outputWriter)
+		logger.Debug("Running the script", slog.String("script", actionDesc.Config.Script))
+		actionErr = executeActionScript(actionCtx, actionDesc.Config, sysProcAttr, outputWriter)
 	}
 
 	if outputWriter.overflowed {
@@ -159,7 +143,7 @@ func (r *ActionRunner) executeAction(
 
 	if r.actionsDB != nil {
 		var outputForDB []byte
-		outputReader, err := r.tmpOutputMgr.Drain(actionDescriptor.PipeID)
+		outputReader, err := r.tmpOutputMgr.Drain(actionDesc.PipeID)
 		if err != nil {
 			logger.Error("Error obtaining output reader", slog.Any("error", err))
 		} else {
@@ -168,9 +152,9 @@ func (r *ActionRunner) executeAction(
 				logger.Error("Error reading the action output", slog.Any("error", err))
 			}
 		}
-		err = r.actionsDB.CloseRecord(actionDescriptor.PipeID, actionErr, outputForDB)
+		err = r.actionsDB.CloseRecord(actionDesc.PipeID, actionErr, outputForDB)
 		if err != nil {
-			pipeLogger.Error("Error closing action's db record", slog.Any("error", err))
+			logger.Error("Error closing action's db record", slog.Any("error", err))
 			return
 		}
 	}

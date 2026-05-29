@@ -28,9 +28,6 @@ import (
 )
 
 func Serve(cfg config.Config) {
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-
 	//==========================================================================
 	// Logger and Action DBs
 
@@ -83,16 +80,17 @@ func Serve(cfg config.Config) {
 		}
 	}
 
+	killCtx, cancelKillCtx := context.WithCancel(context.Background())
+	// buffer size here controls, how many actions can be waiting before processing
+	// before http endpoints start to shed load
+	actionArgsStream := make(chan actionrunner.ActionArgs, 10)
+	defer cancelKillCtx()
 	tmpOutputMgr := tmpoutput.NewInMemoryTmpOutput(cfg.MaxOutputBytes)
-	actionRunner := actionrunner.New(
-		context.Background(),
-		dbActions,
-		tmpOutputMgr,
-	)
+	actionRunner := actionrunner.New(killCtx, actionArgsStream, dbActions, tmpOutputMgr)
 
 	//==========================================================================
 	// HTTP-Server
-	mux, err := createProjectsMux(actionRunner.Chan(), cfg, logger)
+	mux, err := createProjectsMux(actionArgsStream, cfg, logger)
 	if err != nil {
 		logger.Error("Error creating the server", slog.Any("error", err))
 		os.Exit(ExitReadConfig)
@@ -164,19 +162,28 @@ func Serve(cfg config.Config) {
 		mux.HandleFunc("GET /api/", http.NotFound)
 	}
 
-	srv := &http.Server{
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
+	srvCtx, srvCancel := context.WithCancel(killCtx)
+	defer srvCancel()
+	go func() {
+		<-interrupt
+		srvCancel()
+		select {
+		case <-killCtx.Done():
+			logger.Info("Action runner closed")
+		case <-interrupt:
+			cancelKillCtx()
+			logger.Warn("Actions interrupted")
+		}
+	}()
+
+	server := &http.Server{
 		Addr:    cfg.Addr,
 		Handler: mux,
 	}
-
-	srvCtx, srcCancel := context.WithCancel(context.Background())
-	defer srcCancel()
-	go func() {
-		<-interrupt
-		srcCancel()
-	}()
-
-	if err := runServer(srvCtx, srv, cfg.Ssl, logger); err != nil {
+	if err := runServer(srvCtx, server, cfg.Ssl, logger); err != nil {
 		logger.Error("Error running the server", slog.Any("error", err))
 		if _, ok := err.(ErrShutdown); ok {
 			os.Exit(ExitCodeShutdown)
@@ -185,26 +192,19 @@ func Serve(cfg config.Config) {
 		}
 	}
 	logger.Info("Server closed")
+	close(actionArgsStream)
 
+	waitDone := make(chan struct{})
 	go func() {
-		select {
-		case <-actionRunner.Done():
-			// Action completed successfully within the timeout.
-		case <-time.After(500 * time.Millisecond):
-			logger.Info("Waiting for actions to complete... Press ctrl+c again to forcefully close")
-			<-actionRunner.Done()
-		}
+		actionRunner.Wait()
+		close(waitDone)
 	}()
-	go func() {
-		select {
-		case <-actionRunner.Done():
-			logger.Info("Action runner closed")
-		case <-interrupt:
-			actionRunner.Cancel()
-			logger.Warn("Actions interrupted")
-		}
-	}()
-	actionRunner.Wait()
+	select {
+	case <-waitDone: // fast exit below 500ms
+	case <-time.After(500 * time.Millisecond):
+		logger.Info("Waiting for actions to complete... Press ctrl+c again to forcefully close")
+		<-waitDone
+	}
 }
 
 func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig, logger *slog.Logger) error {

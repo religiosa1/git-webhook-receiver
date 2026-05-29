@@ -9,7 +9,7 @@ type ActionIdentifier struct {
 }
 type ActionDescriptor struct {
 	ActionIdentifier
-	Action config.Action `json:"-"`
+	Config config.Action `json:"-"`
 }
 
 func GetActionIds(descs []ActionDescriptor) []ActionIdentifier {

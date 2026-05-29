@@ -87,11 +87,11 @@ func (h Webhook) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	for _, actionDescriptor := range actions {
-		actionLogger := deliveryLogger.With(slog.Any("action", actionDescriptor.ActionIdentifier))
+	for _, actionDesc := range actions {
+		actionLogger := deliveryLogger.With(slog.Any("action", actionDesc.ActionIdentifier))
 		args := actionrunner.ActionArgs{
 			Logger:     actionLogger,
-			Action:     actionDescriptor,
+			ActionDesc: actionDesc,
 			DeliveryID: webhookInfo.DeliveryID,
 		}
 		select {
@@ -149,7 +149,7 @@ func getProjectsActionsForWebhookPost(
 				PipeID:  ulid.Make().String(),
 				Project: projectName,
 			},
-			Action: action,
+			Config: action,
 		})
 	}
 	return actions
