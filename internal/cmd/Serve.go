@@ -81,12 +81,10 @@ func Serve(cfg config.Config) {
 	}
 
 	killCtx, cancelKillCtx := context.WithCancel(context.Background())
-	// buffer size here controls, how many actions can be waiting before processing
-	// before http endpoints start to shed load
-	actionArgsStream := make(chan actionrunner.ActionArgs, 10)
+	actionArgsStream := make(chan actionrunner.ActionArgs)
 	defer cancelKillCtx()
 	tmpOutputMgr := tmpoutput.NewInMemoryTmpOutput(cfg.MaxOutputBytes)
-	actionRunner := actionrunner.New(killCtx, actionArgsStream, dbActions, tmpOutputMgr)
+	actionRunner := actionrunner.New(killCtx, actionArgsStream, cfg.MaxConcurrentActions, dbActions, tmpOutputMgr)
 
 	//==========================================================================
 	// HTTP-Server

@@ -21,9 +21,10 @@ type ActionArgs struct {
 
 type ActionRunner struct {
 	wg           *sync.WaitGroup
-	listenDone   chan struct{}
 	actionsDB    *actionsdb.ActionDB
 	tmpOutputMgr tmpoutput.Manager
+	listenDone   chan struct{}
+	semaphore    chan struct{}
 }
 
 // overflowWriter wraps an io.Writer and records whether ErrOutputTooLarge was ever returned.
@@ -42,12 +43,19 @@ func (w *overflowWriter) Write(p []byte) (int, error) {
 	return n, err
 }
 
-func New(ctx context.Context, actionArgsStream <-chan ActionArgs, actionsDB *actionsdb.ActionDB, tmpOutputMgr tmpoutput.Manager) *ActionRunner {
+func New(
+	ctx context.Context,
+	actionArgsStream <-chan ActionArgs,
+	maxConcurrentActions int,
+	actionsDB *actionsdb.ActionDB,
+	tmpOutputMgr tmpoutput.Manager,
+) *ActionRunner {
 	r := ActionRunner{
 		wg:           &sync.WaitGroup{},
-		listenDone:   make(chan struct{}),
 		actionsDB:    actionsDB,
 		tmpOutputMgr: tmpOutputMgr,
+		listenDone:   make(chan struct{}),
+		semaphore:    make(chan struct{}, maxConcurrentActions),
 	}
 	go r.listen(ctx, actionArgsStream)
 	return &r
@@ -60,7 +68,10 @@ func (r *ActionRunner) Wait() {
 }
 
 func (r *ActionRunner) listen(ctx context.Context, actionArgsStream <-chan ActionArgs) {
-	defer close(r.listenDone)
+	defer func() {
+		close(r.listenDone)
+		close(r.semaphore)
+	}()
 	for {
 		select {
 		case <-ctx.Done():
@@ -69,8 +80,11 @@ func (r *ActionRunner) listen(ctx context.Context, actionArgsStream <-chan Actio
 			if !ok {
 				return
 			}
-			// NOTE: limit the concurrency here potentially?
+			r.semaphore <- struct{}{}
 			r.wg.Go(func() {
+				defer func() {
+					<-r.semaphore
+				}()
 				r.executeAction(ctx, args)
 			})
 		}

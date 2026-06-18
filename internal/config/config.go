@@ -35,6 +35,7 @@ type Config struct {
 	ActionsDBFile           string             `yaml:"actions_db_file" env:"ACTIONS_DB_FILE" env-default:"actions.sqlite3"`
 	MaxActionsStored        int                `yaml:"max_actions_stored" env:"MAX_ACTIONS_STORED" env-default:"1000"` // the same as DefaultMaxActionsStored
 	MaxOutputBytes          int                `yaml:"max_output_bytes" env:"MAX_OUTPUT_BYTES" env-default:"1048576"`  // the same as DefaultMaxOutputBytes
+	MaxConcurrentActions    int                `yaml:"max_concurrent_actions" env:"MAX_CONCURRENT_ACTIONS" env-default:"8"`
 	ActionsTimeout          time.Duration      `yaml:"actions_timeout" env:"ACTIONS_TIMEOUT" env-default:"10m"`
 	ActionsGracefulShutdown time.Duration      `yaml:"actions_graceful_shutdown" env:"ACTIONS_GRACEFUL_SHUTDOWN" env-default:"15s"`
 	Ssl                     SslConfig          `yaml:"ssl" env-prefix:"SSL__"`
@@ -103,6 +104,9 @@ func Load(configPath string) (Config, error) {
 		return cfg, fmt.Errorf("'actions_graceful_shutdown' must be a non-negative duration")
 	} else if cfg.ActionsGracefulShutdown == 0 {
 		panic("global graceful shutdown value should've been set by the env-default in config parsing")
+	}
+	if cfg.MaxConcurrentActions <= 0 {
+		return cfg, fmt.Errorf("'max_concurrent_actions' must be a positive integer")
 	}
 
 	projectsWithDefaults, err := validateAndSetDefaultsConfigProjects(cfg.Projects, globalDefaults{

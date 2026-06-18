@@ -99,8 +99,8 @@ func (h Webhook) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			actionLogger.Info("Launched action")
 		default:
 			actionLogger.Error("Unable to queue the action, as action runner is at full queue capacity")
-			w.WriteHeader(http.StatusServiceUnavailable)
-			// we're not accounting for partial success here, returning 503 on any blockage.
+			w.WriteHeader(http.StatusTooManyRequests)
+			// we're not accounting for partial success here, returning 429 on any blockage.
 			// The idea is -- there will be a retry; trade-off is that successful actions
 			// will run twice on retries, than failed ones
 			return
