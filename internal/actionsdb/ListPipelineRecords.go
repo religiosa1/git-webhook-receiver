@@ -14,6 +14,7 @@ type ListPipelineRecordsQuery struct {
 	Status     PipeStatus
 	Project    string
 	DeliveryID string
+	Hash       string
 	Cursor     string
 }
 
@@ -39,7 +40,7 @@ func (d *ActionDB) ListPipelineRecords(search ListPipelineRecordsQuery) (models.
 
 	qb.WriteString(`
 SELECT
-	id, pipe_id, project, delivery_id, config, error, created_at, ended_at
+	id, pipe_id, project, delivery_id, hash, config, error, created_at, ended_at
 FROM
 	pipelines
 `)
@@ -116,6 +117,7 @@ func createListPipelineWhereQuery(search ListPipelineRecordsQuery) *sqlhelpers.B
 
 	fb.AddEqFilter("delivery_id", search.DeliveryID)
 	fb.AddEqFilter("project", search.Project)
+	fb.AddLikeFilter("hash", search.Hash)
 
 	switch search.Status {
 	case PipeStatusOk:

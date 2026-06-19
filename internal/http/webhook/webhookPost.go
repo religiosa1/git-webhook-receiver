@@ -93,6 +93,7 @@ func (h Webhook) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			Logger:     actionLogger,
 			ActionDesc: actionDesc,
 			DeliveryID: webhookInfo.DeliveryID,
+			Hash:       webhookInfo.Hash,
 		}
 		select {
 		case h.ActionsCh <- args:

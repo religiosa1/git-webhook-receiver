@@ -15,7 +15,7 @@ func TestGetPipelineOutput(t *testing.T) {
 	db := newTestActionDB(t)
 	pipeID := ulid.Make().String()
 	const outputText = "line one\nline two\n"
-	seedActionDBCompletedRecord(t, db, pipeID, "proj", "del", outputText, nil)
+	seedActionDBCompletedRecord(t, db, pipeID, "proj", "abc1234", "del", outputText, nil)
 
 	handler := api.GetPipelineOutput{DB: db, TmpOutputMgr: tmpoutput.NewInMemoryTmpOutput(0)}
 
@@ -49,7 +49,7 @@ func TestGetPipelineOutput(t *testing.T) {
 
 	t.Run("returns empty body for record with no output", func(t *testing.T) {
 		recordID := ulid.Make().String()
-		seedActionDBRecord(t, db, recordID, "proj", "del")
+		seedActionDBRecord(t, db, recordID, "proj", "abc1234", "del")
 
 		req := httptest.NewRequest(http.MethodGet, "/pipelines/"+recordID+"/output", nil)
 		req.SetPathValue("pipeId", recordID)

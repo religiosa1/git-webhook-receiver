@@ -55,6 +55,7 @@ func (s ListPipelines) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		Filter: views.PipelinesListFilter{
 			Project:    query.Project,
 			DeliveryID: query.DeliveryID,
+			Hash:       query.Hash,
 			Status:     query.Status.String(),
 		},
 	}
@@ -75,6 +76,7 @@ func parsePipelineFilterQuery(queryParams url.Values) (actionsdb.ListPipelineRec
 		Limit:      0,
 		Project:    queryParams.Get("project"),
 		DeliveryID: queryParams.Get("deliveryId"),
+		Hash:       queryParams.Get("hash"),
 		Cursor:     queryParams.Get("cursor"),
 	}
 	var err error

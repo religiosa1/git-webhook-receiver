@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS pipelines (
   pipe_id     TEXT NOT NULL,
   project     TEXT NOT NULL,
   delivery_id TEXT NOT NULL,
+  hash        TEXT,
   config      BLOB NOT NULL,
   error       TEXT,
   output      BLOB,

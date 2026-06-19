@@ -8,6 +8,7 @@ import (
 type PipelinesListFilter struct {
 	Project    string
 	DeliveryID string
+	Hash       string
 	Status     string
 }
 
@@ -38,6 +39,10 @@ templ PipelinesList(model PipelinesListViewModel) {
 			<label>
 				Delivery ID
 				<input type="text" name="deliveryId" value={ model.Filter.DeliveryID }/>
+			</label>
+			<label>
+				Commit hash
+				<input type="text" name="hash" value={ model.Filter.Hash }/>
 			</label>
 			<label>
 				Status

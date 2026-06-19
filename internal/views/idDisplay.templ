@@ -1,0 +1,27 @@
+package views
+
+func truncateHead(s string, n int) string {
+	runes := []rune(s)
+	if len(runes) <= n {
+		return s
+	}
+	return string(runes[:n])
+}
+
+func truncateTail(s string, n int) string {
+	runes := []rune(s)
+	if len(runes) <= n {
+		return s
+	}
+	return string(runes[len(runes)-n:])
+}
+
+// hashDisplay shows first 7 chars (git convention) with full value on hover.
+templ hashDisplay(prefix string, hash string) {
+	<code class="hash-display" title={ prefix + hash }>{ truncateHead(hash, 7) }</code>
+}
+
+// ulidDisplay shows last 8 chars (ULID random suffix) with full value on hover.
+templ ulidDisplay(prefix string, pipeID string) {
+	<code class="ulid-display" title={ prefix + pipeID }>{ truncateTail(pipeID, 8) }</code>
+}

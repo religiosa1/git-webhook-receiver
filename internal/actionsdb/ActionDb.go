@@ -25,6 +25,7 @@ type pipelineRecordDTO struct {
 	PipeID     string          `db:"pipe_id"`
 	Project    string          `db:"project"`
 	DeliveryID string          `db:"delivery_id"`
+	Hash       sql.NullString  `db:"hash"`
 	Config     json.RawMessage `db:"config"`
 	Error      sql.NullString  `db:"error"`
 	CreatedAt  int64           `db:"created_at"`
@@ -37,6 +38,7 @@ func (r pipelineRecordDTO) ToModel() PipeLineRecord {
 		PipeID:     r.PipeID,
 		Project:    r.Project,
 		DeliveryID: r.DeliveryID,
+		Hash:       r.Hash,
 		Config:     r.Config,
 		Error:      r.Error,
 		CreatedAt:  time.UnixMilli(r.CreatedAt).UTC(),
@@ -52,6 +54,7 @@ type PipeLineRecord struct {
 	PipeID     string
 	Project    string
 	DeliveryID string
+	Hash       sql.NullString
 	Config     json.RawMessage
 	Error      sql.NullString
 	CreatedAt  time.Time
@@ -121,7 +124,7 @@ func (d *ActionDB) SweepStaleRecords() (int64, error) {
 	return rowsAffected, nil
 }
 
-func (d *ActionDB) CreateRecord(pipeID string, project string, deliveryID string, conf config.Action) error {
+func (d *ActionDB) CreateRecord(pipeID, project, deliveryID, hash string, conf config.Action) error {
 	configJSON, err := json.Marshal(conf)
 	if err != nil {
 		return err
@@ -131,8 +134,12 @@ func (d *ActionDB) CreateRecord(pipeID string, project string, deliveryID string
 		return err
 	}
 
-	query := `INSERT INTO pipelines (pipe_id, project, delivery_id, config) VALUES (?, ?, ?, ?)`
-	_, err = tx.Exec(query, pipeID, project, deliveryID, configJSON)
+	var hashValue sql.NullString
+	if hash != "" {
+		hashValue = sql.NullString{Valid: true, String: hash}
+	}
+	query := `INSERT INTO pipelines (pipe_id, project, delivery_id, hash, config) VALUES (?, ?, ?, ?, ?)`
+	_, err = tx.Exec(query, pipeID, project, deliveryID, hashValue, configJSON)
 	if err != nil {
 		_ = tx.Rollback()
 		return err
@@ -179,7 +186,7 @@ func (d *ActionDB) CloseRecord(pipeID string, actionErr error, output []byte) er
 	return err
 }
 
-const recordColumns = "id, pipe_id, project, delivery_id, config, error, created_at, ended_at"
+const recordColumns = "id, pipe_id, project, delivery_id, hash, config, error, created_at, ended_at"
 
 func (d *ActionDB) GetPipelineRecord(pipeID string) (PipeLineRecord, error) {
 	var record pipelineRecordDTO

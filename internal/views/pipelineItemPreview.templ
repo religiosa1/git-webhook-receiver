@@ -56,9 +56,11 @@ templ pipelineItemPreview(item actionsdb.PipeLineRecord, showLink bool) {
 		}}
 		@maybeLink(link) {
 			<span title="project id" class="pipeline-preview__project">{ item.Project }</span>
-			<span title="pipeline id" class="pipeline-preview__id">{ item.PipeID }</span>
+			<span class="pipeline-preview__id">@ulidDisplay("pipe id: ", item.PipeID)</span>
 		}
-		<span title="delivery id" class="pipeline-preview__delivery-id">{ item.DeliveryID }</span>
+		if item.Hash.Valid {
+			<span class="pipeline-preview__hash">@hashDisplay("git hash: ", item.Hash.String)</span>
+		}
 		{{ cfg, _ := item.ParseConfigSummary() }}
 		if cfg.Branch != "" || cfg.On != "" {
 			<span class="pipeline-preview__config">

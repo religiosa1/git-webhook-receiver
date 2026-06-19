@@ -11,6 +11,7 @@ type PrettyPipelineRecord struct {
 	PipeID     string     `json:"pipeId"`
 	Project    string     `json:"project"`
 	DeliveryID string     `json:"deliveryId"`
+	Hash       NullString `json:"hash"`
 	Config     JSONData   `json:"config"`
 	Error      NullString `json:"error"`
 	CreatedAt  time.Time  `json:"createdAt"`
@@ -24,6 +25,7 @@ func PipelineRecord(r actionsdb.PipeLineRecord) PrettyPipelineRecord {
 		PipeID:     r.PipeID,
 		Project:    r.Project,
 		DeliveryID: r.DeliveryID,
+		Hash:       NullString{r.Hash},
 		Config:     config,
 		Error:      NullString{r.Error},
 		CreatedAt:  r.CreatedAt,

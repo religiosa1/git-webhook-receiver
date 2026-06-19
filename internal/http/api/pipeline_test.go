@@ -14,7 +14,7 @@ import (
 func TestGetPipeline(t *testing.T) {
 	db := newTestActionDB(t)
 	pipeID := ulid.Make().String()
-	seedActionDBCompletedRecord(t, db, pipeID, "myproject", "del-123", "hello output", nil)
+	seedActionDBCompletedRecord(t, db, pipeID, "myproject", "d3adb33f", "del-123", "hello output", nil)
 
 	handler := api.GetPipeline{DB: db}
 

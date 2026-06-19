@@ -19,6 +19,7 @@ const (
 	pipeID      = "123"
 	projectName = "testProj"
 	deliveryID  = "321"
+	hash        = "6789"
 )
 
 var action = config.Action{
@@ -42,7 +43,7 @@ func TestActionDb(t *testing.T) {
 			t.Fatalf("Unable to create a db: %s", err)
 		}
 
-		err = db.CreateRecord(pipeID, projectName, deliveryID, action)
+		err = db.CreateRecord(pipeID, projectName, deliveryID, hash, action)
 		if err != nil {
 			t.Fatalf("Unable to create a pipeline record: %s", err)
 		}
@@ -56,6 +57,7 @@ func TestActionDb(t *testing.T) {
 			PipeID:     pipeID,
 			Project:    projectName,
 			DeliveryID: deliveryID,
+			Hash:       sql.NullString{Valid: true, String: hash},
 		}
 
 		compareRecord(t, want, record)
@@ -69,7 +71,7 @@ func TestActionDb(t *testing.T) {
 			t.Fatalf("Unable to create a db: %s", err)
 		}
 
-		err = db.CreateRecord(pipeID, projectName, deliveryID, action)
+		err = db.CreateRecord(pipeID, projectName, deliveryID, hash, action)
 		if err != nil {
 			t.Fatalf("Unable to create a pipeline record: %s", err)
 		}
@@ -88,6 +90,7 @@ func TestActionDb(t *testing.T) {
 			PipeID:     pipeID,
 			Project:    projectName,
 			DeliveryID: deliveryID,
+			Hash:       sql.NullString{Valid: true, String: hash},
 			Error:      sql.NullString{Valid: false},
 			EndedAt:    sql.NullTime{Valid: true},
 		}
@@ -103,7 +106,7 @@ func TestActionDb(t *testing.T) {
 			t.Fatalf("Unable to create a db: %s", err)
 		}
 
-		err = db.CreateRecord(pipeID, projectName, deliveryID, action)
+		err = db.CreateRecord(pipeID, projectName, deliveryID, hash, action)
 		if err != nil {
 			t.Fatalf("Unable to create a pipeline record: %s", err)
 		}
@@ -122,6 +125,7 @@ func TestActionDb(t *testing.T) {
 			PipeID:     pipeID,
 			Project:    projectName,
 			DeliveryID: deliveryID,
+			Hash:       sql.NullString{Valid: true, String: hash},
 			Error:      sql.NullString{Valid: true, String: actionErr.Error()},
 			EndedAt:    sql.NullTime{Valid: true},
 		}
@@ -135,7 +139,7 @@ func TestActionDb(t *testing.T) {
 			t.Fatalf("Unable to create a db: %s", err)
 		}
 
-		err = db.CreateRecord(pipeID, projectName, deliveryID, action)
+		err = db.CreateRecord(pipeID, projectName, deliveryID, hash, action)
 		if err != nil {
 			t.Fatalf("Unable to create a pipeline record: %s", err)
 		}
@@ -165,7 +169,7 @@ func TestActionDb(t *testing.T) {
 			t.Fatalf("Unable to create a db: %s", err)
 		}
 
-		err = db.CreateRecord(pipeID, projectName, deliveryID, action)
+		err = db.CreateRecord(pipeID, projectName, deliveryID, hash, action)
 		if err != nil {
 			t.Fatalf("Unable to create a record: %s", err)
 		}
@@ -189,6 +193,7 @@ func TestActionDb(t *testing.T) {
 			PipeID:     pipeID,
 			Project:    projectName,
 			DeliveryID: deliveryID,
+			Hash:       sql.NullString{Valid: true, String: hash},
 		}
 
 		compareRecord(t, want, record)
@@ -200,7 +205,7 @@ func TestAutoRemoval(t *testing.T) {
 	createRecord := func(t *testing.T, db *actionsdb.ActionDB) string {
 		t.Helper()
 		pipeID := ulid.Make().String()
-		err := db.CreateRecord(pipeID, projectName, deliveryID, action)
+		err := db.CreateRecord(pipeID, projectName, deliveryID, hash, action)
 		if err != nil {
 			t.Fatalf("Unable to create a pipeline record: %s", err)
 		}
@@ -299,6 +304,9 @@ func compareRecord(t *testing.T, want actionsdb.PipeLineRecord, got actionsdb.Pi
 	}
 	if want.DeliveryID != got.DeliveryID {
 		t.Errorf("Bad deliveryId, want %s, got %s", want.DeliveryID, got.DeliveryID)
+	}
+	if want.Hash != got.Hash {
+		t.Errorf("Bad hash, want %v, got %v", want.Hash, got.Hash)
 	}
 	if want.Error != got.Error {
 		t.Errorf("Unexpected error value in created record: want %v, got %v", want.Error, got.Error)

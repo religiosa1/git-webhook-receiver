@@ -17,6 +17,7 @@ type ActionArgs struct {
 	Logger     *slog.Logger
 	ActionDesc ActionDescriptor
 	DeliveryID string
+	Hash       string
 }
 
 type ActionRunner struct {
@@ -103,7 +104,7 @@ func (r *ActionRunner) executeAction(
 	logger.Info("Running action", slog.Int("action_index", actionDesc.Index))
 
 	if r.actionsDB != nil {
-		err := r.actionsDB.CreateRecord(actionDesc.PipeID, actionDesc.Project, args.DeliveryID, actionDesc.Config)
+		err := r.actionsDB.CreateRecord(actionDesc.PipeID, actionDesc.Project, args.DeliveryID, args.Hash, actionDesc.Config)
 		if err != nil {
 			logger.Error("Error creating pipeline record in the db", slog.Any("error", err))
 			return

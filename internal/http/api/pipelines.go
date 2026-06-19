@@ -43,6 +43,7 @@ func (h ListPipelines) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		Limit:      pagination.Limit,
 		Project:    queryParams.Get("project"),
 		DeliveryID: queryParams.Get("deliveryId"),
+		Hash:       queryParams.Get("hash"),
 		Cursor:     queryParams.Get("cursor"),
 	}
 	query.Status, err = actionsdb.ParsePipelineStatus(queryParams.Get("status"))

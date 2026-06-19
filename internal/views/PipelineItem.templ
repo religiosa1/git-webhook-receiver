@@ -26,6 +26,18 @@ templ PipelineItem(model PipelineItemViewModel) {
 		>
 			@pipelineItemPreview(model.Record, false)
 		</div>
+		<dl class="pipeline-meta">
+			<dt>Pipeline ID</dt>
+			<dd><code class="pipeline-meta__pipe-id">{ model.Record.PipeID }</code></dd>
+			if model.Record.Hash.Valid {
+				<dt>Commit hash</dt>
+				<dd><code class="pipeline-meta__hash">{ model.Record.Hash.String }</code></dd>
+			}
+			if model.Record.DeliveryID != "" {
+				<dt>Delivery ID</dt>
+				<dd><code class="pipeline-meta__delivery-id">{ model.Record.DeliveryID }</code></dd>
+			}
+		</dl>
 		if model.Record.Error.Valid {
 			<div class="pipeline-page-error">
 				<code class="error-output" { TestID("pipeline-error")... }>{ model.Record.Error.String }</code>

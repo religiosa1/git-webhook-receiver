@@ -77,7 +77,7 @@ func TestListPipelines(t *testing.T) {
 		db := newTestActionDB(t)
 		const n = 5
 		for range n {
-			seedActionDBRecord(t, db, ulid.Make().String(), "proj", "del")
+			seedActionDBRecord(t, db, ulid.Make().String(), "proj", "abc1234", "del")
 		}
 
 		handler := api.ListPipelines{DB: db}
@@ -101,20 +101,20 @@ func TestListPipelinesFiltering(t *testing.T) {
 	// 3 pending for projectA
 	const nA = 3
 	for range nA {
-		seedActionDBRecord(t, db, ulid.Make().String(), "projectA", "delivery-a")
+		seedActionDBRecord(t, db, ulid.Make().String(), "projectA", "aaa1234", "delivery-a")
 	}
 	// 2 ok for projectB
 	const nBOK = 2
 	for range nBOK {
-		seedActionDBCompletedRecord(t, db, ulid.Make().String(), "projectB", "delivery-b", "out", nil)
+		seedActionDBCompletedRecord(t, db, ulid.Make().String(), "projectB", "bbb5678", "delivery-b", "out", nil)
 	}
 	// 2 error for projectC
 	const nCErr = 2
 	for range nCErr {
-		seedActionDBCompletedRecord(t, db, ulid.Make().String(), "projectC", "delivery-c", "out", errors.New("fail"))
+		seedActionDBCompletedRecord(t, db, ulid.Make().String(), "projectC", "ccc9012", "delivery-c", "out", errors.New("fail"))
 	}
 	// 1 pending for projectB
-	seedActionDBRecord(t, db, ulid.Make().String(), "projectB", "delivery-b2")
+	seedActionDBRecord(t, db, ulid.Make().String(), "projectB", "bbb5678", "delivery-b2")
 
 	const total = nA + nBOK + nCErr + 1
 
@@ -192,7 +192,7 @@ func TestListPipelinesPagination(t *testing.T) {
 	db := newTestActionDB(t)
 	const total = 25
 	for range total {
-		seedActionDBRecord(t, db, ulid.Make().String(), "proj", "del")
+		seedActionDBRecord(t, db, ulid.Make().String(), "proj", "abc1234", "del")
 	}
 
 	handler := api.ListPipelines{DB: db}

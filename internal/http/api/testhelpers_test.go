@@ -23,16 +23,16 @@ var testAction = config.Action{
 	Script: "echo test",
 }
 
-func seedActionDBRecord(t *testing.T, db *actionsdb.ActionDB, pipeID, project, deliveryID string) {
+func seedActionDBRecord(t *testing.T, db *actionsdb.ActionDB, pipeID, project, hash, deliveryID string) {
 	t.Helper()
-	if err := db.CreateRecord(pipeID, project, deliveryID, testAction); err != nil {
+	if err := db.CreateRecord(pipeID, project, deliveryID, hash, testAction); err != nil {
 		t.Fatalf("seed record %s: %v", pipeID, err)
 	}
 }
 
-func seedActionDBCompletedRecord(t *testing.T, db *actionsdb.ActionDB, pipeID, project, deliveryID, output string, cmdErr error) {
+func seedActionDBCompletedRecord(t *testing.T, db *actionsdb.ActionDB, pipeID, project, hash, deliveryID, output string, cmdErr error) {
 	t.Helper()
-	seedActionDBRecord(t, db, pipeID, project, deliveryID)
+	seedActionDBRecord(t, db, pipeID, project, hash, deliveryID)
 	if err := db.CloseRecord(pipeID, cmdErr, []byte(output)); err != nil {
 		t.Fatalf("close record %s: %v", pipeID, err)
 	}
