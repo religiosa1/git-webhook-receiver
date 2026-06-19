@@ -55,10 +55,10 @@ templ pipelineItemPreview(item actionsdb.PipeLineRecord, showLink bool) {
 			}
 		}}
 		@maybeLink(link) {
-			<span class="pipeline-preview__project">{ item.Project }</span>
-			<span class="pipeline-preview__id">{ item.PipeID }</span>
+			<span title="project id" class="pipeline-preview__project">{ item.Project }</span>
+			<span title="pipeline id" class="pipeline-preview__id">{ item.PipeID }</span>
 		}
-		<span class="pipeline-preview__delivery-id">{ item.DeliveryID }</span>
+		<span title="delivery id" class="pipeline-preview__delivery-id">{ item.DeliveryID }</span>
 		{{ cfg, _ := item.ParseConfigSummary() }}
 		if cfg.Branch != "" || cfg.On != "" {
 			<span class="pipeline-preview__config">
