@@ -309,7 +309,7 @@ func waitForPipeline(t *testing.T, dbPath, pipeID string, timeout time.Duration)
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		rec, err := db.GetPipelineRecord(pipeID)
-		if err == nil && rec.EndedAt.Valid {
+		if err == nil && rec.EndedAt != nil {
 			return rec
 		}
 		time.Sleep(50 * time.Millisecond)

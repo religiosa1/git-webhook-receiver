@@ -11,25 +11,35 @@ type PrettyPipelineRecord struct {
 	PipeID     string     `json:"pipeId"`
 	Project    string     `json:"project"`
 	DeliveryID string     `json:"deliveryId"`
-	Hash       NullString `json:"hash"`
+	Hash       *string    `json:"hash"`
 	Config     JSONData   `json:"config"`
-	Error      NullString `json:"error"`
+	Error      *string    `json:"error"`
 	CreatedAt  time.Time  `json:"createdAt"`
-	EndedAt    NullTS     `json:"endedAt"`
+	EndedAt    *time.Time `json:"endedAt"`
 }
 
 func PipelineRecord(r actionsdb.PipeLineRecord) PrettyPipelineRecord {
 	config, _ := NewJSONData(r.Config)
 
+	var hash *string
+	if r.Hash != "" {
+		hash = &r.Hash
+	}
+	var errStr *string
+	if r.Error != nil {
+		s := r.Error.Error()
+		errStr = &s
+	}
+
 	return PrettyPipelineRecord{
 		PipeID:     r.PipeID,
 		Project:    r.Project,
 		DeliveryID: r.DeliveryID,
-		Hash:       NullString{r.Hash},
+		Hash:       hash,
 		Config:     config,
-		Error:      NullString{r.Error},
+		Error:      errStr,
 		CreatedAt:  r.CreatedAt,
-		EndedAt:    NullTS{r.EndedAt},
+		EndedAt:    r.EndedAt,
 	}
 }
 

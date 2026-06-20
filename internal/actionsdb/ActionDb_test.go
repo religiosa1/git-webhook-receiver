@@ -1,12 +1,12 @@
 package actionsdb_test
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/oklog/ulid/v2"
 	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
@@ -57,7 +57,7 @@ func TestActionDb(t *testing.T) {
 			PipeID:     pipeID,
 			Project:    projectName,
 			DeliveryID: deliveryID,
-			Hash:       sql.NullString{Valid: true, String: hash},
+			Hash:       hash,
 		}
 
 		compareRecord(t, want, record)
@@ -90,9 +90,9 @@ func TestActionDb(t *testing.T) {
 			PipeID:     pipeID,
 			Project:    projectName,
 			DeliveryID: deliveryID,
-			Hash:       sql.NullString{Valid: true, String: hash},
-			Error:      sql.NullString{Valid: false},
-			EndedAt:    sql.NullTime{Valid: true},
+			Hash:       hash,
+			Error:      nil,
+			EndedAt:    &time.Time{},
 		}
 		compareRecord(t, want, record)
 		compareAction(t, action, record)
@@ -125,9 +125,9 @@ func TestActionDb(t *testing.T) {
 			PipeID:     pipeID,
 			Project:    projectName,
 			DeliveryID: deliveryID,
-			Hash:       sql.NullString{Valid: true, String: hash},
-			Error:      sql.NullString{Valid: true, String: actionErr.Error()},
-			EndedAt:    sql.NullTime{Valid: true},
+			Hash:       hash,
+			Error:      actionErr,
+			EndedAt:    &time.Time{},
 		}
 		compareRecord(t, want, record)
 		compareAction(t, action, record)
@@ -193,7 +193,7 @@ func TestActionDb(t *testing.T) {
 			PipeID:     pipeID,
 			Project:    projectName,
 			DeliveryID: deliveryID,
-			Hash:       sql.NullString{Valid: true, String: hash},
+			Hash:       hash,
 		}
 
 		compareRecord(t, want, record)
@@ -308,13 +308,13 @@ func compareRecord(t *testing.T, want actionsdb.PipeLineRecord, got actionsdb.Pi
 	if want.Hash != got.Hash {
 		t.Errorf("Bad hash, want %v, got %v", want.Hash, got.Hash)
 	}
-	if want.Error != got.Error {
+	if (want.Error == nil) != (got.Error == nil) || (want.Error != nil && want.Error.Error() != got.Error.Error()) {
 		t.Errorf("Unexpected error value in created record: want %v, got %v", want.Error, got.Error)
 	}
 	if got.CreatedAt.IsZero() {
 		t.Errorf("Unexpected empty created date: want %s, got %s", want.CreatedAt, got.CreatedAt)
 	}
-	if want.EndedAt.Valid != got.EndedAt.Valid {
-		t.Errorf("Unexpected emptiness of ended date: want %t, got %t", want.EndedAt.Valid, got.EndedAt.Valid)
+	if (want.EndedAt == nil) != (got.EndedAt == nil) {
+		t.Errorf("Unexpected emptiness of ended date: want %t, got %t", want.EndedAt != nil, got.EndedAt != nil)
 	}
 }

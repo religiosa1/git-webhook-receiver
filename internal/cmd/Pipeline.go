@@ -52,19 +52,23 @@ func Pipeline(cfg config.Config, args PipelineArgs) {
 
 func displayPipeDetails(w io.Writer, pipe actionsdb.PipeLineRecord) error {
 	var endedAt string
-	if pipe.EndedAt.Valid {
-		endedAt = pipe.EndedAt.Time.Format(time.DateTime)
+	if pipe.EndedAt != nil {
+		endedAt = pipe.EndedAt.Format(time.DateTime)
 	}
 	print := func(columnName string, value any) error {
 		_, err := fmt.Fprintf(w, "%s %s\n", columnName, value)
 		return err
+	}
+	var pipeErr string
+	if pipe.Error != nil {
+		pipeErr = pipe.Error.Error()
 	}
 	return errors.Join(
 		print("pipeId    ", pipe.PipeID),
 		print("project   ", pipe.Project),
 		print("deliveryId", pipe.DeliveryID),
 		print("config    ", pipe.Config),
-		print("error     ", pipe.Error.String),
+		print("error     ", pipeErr),
 		print("created at", pipe.CreatedAt.Format(time.DateTime)),
 		print("ended at  ", endedAt),
 	)

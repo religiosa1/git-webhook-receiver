@@ -38,8 +38,8 @@ func TestServe_Gitea_AuthorizationHeader(t *testing.T) {
 			t.Fatalf("got %d pipe ids, want 1: %v", len(ids), ids)
 		}
 		rec := waitForPipeline(t, s.ActionsDB, ids[0], 10*time.Second)
-		if rec.Error.Valid {
-			t.Errorf("action recorded an error: %q", rec.Error.String)
+		if rec.Error != nil {
+			t.Errorf("action recorded an error: %q", rec.Error)
 		}
 	})
 

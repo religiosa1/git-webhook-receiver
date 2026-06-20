@@ -85,11 +85,11 @@ func TestServe_GracefulShutdown_LetsInFlightActionFinish(t *testing.T) {
 			if err != nil {
 				t.Fatalf("GetPipelineRecord: %v", err)
 			}
-			if !rec.EndedAt.Valid {
+			if rec.EndedAt == nil {
 				t.Fatalf("pipeline %q has no ended_at — Serve exited before action completed", pipeID)
 			}
-			if rec.Error.Valid {
-				t.Errorf("action recorded an error: %q", rec.Error.String)
+			if rec.Error != nil {
+				t.Errorf("action recorded an error: %q", rec.Error)
 			}
 		})
 	}

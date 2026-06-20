@@ -19,8 +19,8 @@ templ maybeLink(href string) {
 
 templ pipelineRunStatus(item actionsdb.PipeLineRecord) {
 	<span class="pipeline-status">
-		if item.EndedAt.Valid {
-			if item.Error.Valid {
+		if item.EndedAt != nil {
+			if item.Error != nil {
 				<span class="pipeline-status__errored">
 					Errored
 				</span>
@@ -30,7 +30,7 @@ templ pipelineRunStatus(item actionsdb.PipeLineRecord) {
 				</span>
 			}
 			<span class="pipeline-status__duration">
-				Took { item.EndedAt.Time.Sub(item.CreatedAt) }
+				Took { item.EndedAt.Sub(item.CreatedAt) }
 			</span>
 		} else {
 			<span class="pipeline-status__pending">
@@ -58,8 +58,8 @@ templ pipelineItemPreview(item actionsdb.PipeLineRecord, showLink bool) {
 			<span title="project id" class="pipeline-preview__project">{ item.Project }</span>
 			<span class="pipeline-preview__id">@ulidDisplay("pipe id: ", item.PipeID)</span>
 		}
-		if item.Hash.Valid {
-			<span class="pipeline-preview__hash">@hashDisplay("git hash: ", item.Hash.String)</span>
+		if item.Hash != "" {
+			<span class="pipeline-preview__hash">@hashDisplay("git hash: ", item.Hash)</span>
 		}
 		{{ cfg, _ := item.ParseConfigSummary() }}
 		if cfg.Branch != "" || cfg.On != "" {

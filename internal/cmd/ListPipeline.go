@@ -89,15 +89,15 @@ func formatActionRecordsSimple(pipelines []actionsdb.PipeLineRecord) error {
 		createAt := pl.CreatedAt.Format(time.DateTime)
 
 		var endedAt string
-		if pl.EndedAt.Valid {
-			endedAt = pl.EndedAt.Time.Format(time.TimeOnly)
+		if pl.EndedAt != nil {
+			endedAt = pl.EndedAt.Format(time.TimeOnly)
 		} else {
 			endedAt = "..."
 		}
 
 		var result string
-		if pl.Error.Valid {
-			result = pl.Error.String
+		if pl.Error != nil {
+			result = pl.Error.Error()
 		} else {
 			result = "ok"
 		}

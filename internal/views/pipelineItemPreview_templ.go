@@ -97,8 +97,8 @@ func pipelineRunStatus(item actionsdb.PipeLineRecord) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if item.EndedAt.Valid {
-			if item.Error.Valid {
+		if item.EndedAt != nil {
+			if item.Error != nil {
 				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<span class=\"pipeline-status__errored\">Errored</span>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
@@ -114,9 +114,9 @@ func pipelineRunStatus(item actionsdb.PipeLineRecord) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var4 string
-			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(item.EndedAt.Time.Sub(item.CreatedAt))
+			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(item.EndedAt.Sub(item.CreatedAt))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pipelineItemPreview.templ`, Line: 33, Col: 48}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/pipelineItemPreview.templ`, Line: 33, Col: 43}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -249,12 +249,12 @@ func pipelineItemPreview(item actionsdb.PipeLineRecord, showLink bool) templ.Com
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if item.Hash.Valid {
+		if item.Hash != "" {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<span class=\"pipeline-preview__hash\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = hashDisplay("git hash: ", item.Hash.String).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = hashDisplay("git hash: ", item.Hash).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

@@ -96,8 +96,8 @@ func TestServe_GitHubPush_OutputWithinLimit(t *testing.T) {
 	ids := postGitHubWebhook(t, s)
 
 	rec := waitForPipeline(t, s.ActionsDB, ids[0], 10*time.Second)
-	if rec.Error.Valid {
-		t.Fatalf("pipeline failed unexpectedly: %s", rec.Error.String)
+	if rec.Error != nil {
+		t.Fatalf("pipeline failed unexpectedly: %s", rec.Error)
 	}
 
 	got := getPipelineOutput(t, s.ActionsDB, ids[0])
@@ -111,11 +111,11 @@ func TestServe_GitHubPush_ActionFails(t *testing.T) {
 		s := startServer(t, WithScript("exit 1"))
 		ids := postGitHubWebhook(t, s)
 		rec := waitForPipeline(t, s.ActionsDB, ids[0], 10*time.Second)
-		if !rec.Error.Valid {
+		if rec.Error == nil {
 			t.Fatal("want error recorded, got none")
 		}
-		if !strings.Contains(rec.Error.String, "exit status 1") {
-			t.Errorf("error = %q, want it to contain %q", rec.Error.String, "exit status 1")
+		if !strings.Contains(rec.Error.Error(), "exit status 1") {
+			t.Errorf("error = %q, want it to contain %q", rec.Error, "exit status 1")
 		}
 	})
 
@@ -125,11 +125,11 @@ func TestServe_GitHubPush_ActionFails(t *testing.T) {
 		s := startServer(t, WithScript("nonexistent_command_xyz"))
 		ids := postGitHubWebhook(t, s)
 		rec := waitForPipeline(t, s.ActionsDB, ids[0], 10*time.Second)
-		if !rec.Error.Valid {
+		if rec.Error == nil {
 			t.Fatal("want error recorded, got none")
 		}
-		if !strings.Contains(rec.Error.String, "exit status 127") {
-			t.Errorf("error = %q, want it to contain %q", rec.Error.String, "exit status 127")
+		if !strings.Contains(rec.Error.Error(), "exit status 127") {
+			t.Errorf("error = %q, want it to contain %q", rec.Error, "exit status 127")
 		}
 		got := getPipelineOutput(t, s.ActionsDB, ids[0])
 		if !strings.Contains(got, "nonexistent_command_xyz") {
@@ -141,7 +141,7 @@ func TestServe_GitHubPush_ActionFails(t *testing.T) {
 		s := startServer(t, WithScript("echo 'oops' >&2; exit 1"))
 		ids := postGitHubWebhook(t, s)
 		rec := waitForPipeline(t, s.ActionsDB, ids[0], 10*time.Second)
-		if !rec.Error.Valid {
+		if rec.Error == nil {
 			t.Fatal("want error recorded, got none")
 		}
 		got := getPipelineOutput(t, s.ActionsDB, ids[0])
@@ -163,11 +163,11 @@ func TestServe_GitHubPush_OutputTooLarge(t *testing.T) {
 	ids := postGitHubWebhook(t, s)
 
 	rec := waitForPipeline(t, s.ActionsDB, ids[0], 10*time.Second)
-	if !rec.Error.Valid {
+	if rec.Error == nil {
 		t.Fatal("want pipeline to fail with output-too-large error, but no error recorded")
 	}
-	if !strings.Contains(rec.Error.String, errOutputTooLarge) {
-		t.Errorf("error = %q, want it to contain %q", rec.Error.String, errOutputTooLarge)
+	if !strings.Contains(rec.Error.Error(), errOutputTooLarge) {
+		t.Errorf("error = %q, want it to contain %q", rec.Error, errOutputTooLarge)
 	}
 
 	got := getPipelineOutput(t, s.ActionsDB, ids[0])

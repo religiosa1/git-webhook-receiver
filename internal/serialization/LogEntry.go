@@ -1,6 +1,7 @@
 package serialization
 
 import (
+	"database/sql"
 	"log/slog"
 	"time"
 
@@ -8,14 +9,21 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/models"
 )
 
+func nullStringPtr(ns sql.NullString) *string {
+	if !ns.Valid {
+		return nil
+	}
+	return &ns.String
+}
+
 type PrettyLogEntry struct {
-	Level      string     `json:"level"`
-	Project    NullString `json:"project"`
-	DeliveryID NullString `json:"deliveryId"`
-	PipeID     NullString `json:"pipeId"`
-	Message    string     `json:"message"`
-	Data       JSONData   `json:"data"`
-	TS         time.Time  `json:"ts"`
+	Level      string    `json:"level"`
+	Project    *string   `json:"project"`
+	DeliveryID *string   `json:"deliveryId"`
+	PipeID     *string   `json:"pipeId"`
+	Message    string    `json:"message"`
+	Data       JSONData  `json:"data"`
+	TS         time.Time `json:"ts"`
 }
 
 func LogEntry(e logsdb.LogEntry) PrettyLogEntry {
@@ -35,9 +43,9 @@ func LogEntry(e logsdb.LogEntry) PrettyLogEntry {
 
 	return PrettyLogEntry{
 		Level:      level,
-		Project:    NullString{e.Project},
-		DeliveryID: NullString{e.DeliveryID},
-		PipeID:     NullString{e.PipeID},
+		Project:    nullStringPtr(e.Project),
+		DeliveryID: nullStringPtr(e.DeliveryID),
+		PipeID:     nullStringPtr(e.PipeID),
 		Message:    e.Message,
 		Data:       data,
 		TS:         e.TS,

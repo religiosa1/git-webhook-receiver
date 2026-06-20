@@ -33,32 +33,42 @@ type pipelineRecordDTO struct {
 }
 
 func (r pipelineRecordDTO) ToModel() PipeLineRecord {
+	var pipeErr error
+	if r.Error.Valid {
+		pipeErr = errors.New(r.Error.String)
+	}
+	var endedAt *time.Time
+	if r.EndedAt.Valid {
+		t := time.UnixMilli(r.EndedAt.Int64).UTC()
+		endedAt = &t
+	}
 	return PipeLineRecord{
 		ID:         r.ID,
 		PipeID:     r.PipeID,
 		Project:    r.Project,
 		DeliveryID: r.DeliveryID,
-		Hash:       r.Hash,
+		Hash:       r.Hash.String,
 		Config:     r.Config,
-		Error:      r.Error,
+		Error:      pipeErr,
 		CreatedAt:  time.UnixMilli(r.CreatedAt).UTC(),
-		EndedAt: sql.NullTime{
-			Valid: r.EndedAt.Valid,
-			Time:  time.UnixMilli(r.EndedAt.Int64).UTC(),
-		},
+		EndedAt:    endedAt,
 	}
 }
 
+// PipeLineRecord is the domain representation of a pipeline run. Error is nil
+// when the pipeline didn't error out; a non-nil Error (even with an empty
+// message) means the pipeline failed. EndedAt is nil while the pipeline is
+// still running.
 type PipeLineRecord struct {
 	ID         int64
 	PipeID     string
 	Project    string
 	DeliveryID string
-	Hash       sql.NullString
+	Hash       string
 	Config     json.RawMessage
-	Error      sql.NullString
+	Error      error
 	CreatedAt  time.Time
-	EndedAt    sql.NullTime
+	EndedAt    *time.Time
 }
 
 type PipeLineConfigSummary struct {

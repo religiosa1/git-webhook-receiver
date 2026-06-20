@@ -118,15 +118,15 @@ func PipelineItem(model PipelineItemViewModel) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			if model.Record.Hash.Valid {
+			if model.Record.Hash != "" {
 				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<dt>Commit hash</dt><dd><code class=\"pipeline-meta__hash\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var6 string
-				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(model.Record.Hash.String)
+				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(model.Record.Hash)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/PipelineItem.templ`, Line: 34, Col: 68}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/PipelineItem.templ`, Line: 34, Col: 61}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 				if templ_7745c5c3_Err != nil {
@@ -160,7 +160,7 @@ func PipelineItem(model PipelineItemViewModel) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			if model.Record.Error.Valid {
+			if model.Record.Error != nil {
 				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<div class=\"pipeline-page-error\"><code class=\"error-output\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
@@ -174,9 +174,9 @@ func PipelineItem(model PipelineItemViewModel) templ.Component {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var8 string
-				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(model.Record.Error.String)
+				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(model.Record.Error.Error())
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/PipelineItem.templ`, Line: 43, Col: 90}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/views/PipelineItem.templ`, Line: 43, Col: 91}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 				if templ_7745c5c3_Err != nil {
