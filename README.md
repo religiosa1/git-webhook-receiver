@@ -105,6 +105,14 @@ Gitlab doesn't support payload signature, as per this [issue](https://gitlab.com
     Can be insecure on plain http connections on gitea 1.14 or older because
     of [this issue](https://github.com/go-gitea/gitea/issues/11755)
 
+### Project name restrictions
+
+As project name is directly accessible in the url in `/projects/:proj_name` for
+example, there are some restrictions applied on top of it, so it makes the url
+easier to follow and we don't introduce any concerns. The project can contain
+only letters and chars '\_', '-', '.', can't start or contain two or more
+consecutive . in the name.
+
 ## Installation
 
 ### Build from source

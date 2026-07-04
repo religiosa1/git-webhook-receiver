@@ -217,22 +217,27 @@ func validateAndSetDefaultConfigActions(projectName string, actions []Action, gl
 	return actions, nil
 }
 
+// isValidProjectName checks if a name of a project is valid.
+// As we're using project names directly in the url `/projects/:NAME` we
+// shouldn't just allow anything here. Restricting to letters and some chars,
+// but no consecutive ".." or "." chars so mux won't go crazy.
 func isValidProjectName(s string) error {
 	if len(s) == 0 {
 		return fmt.Errorf("project name can't be empty")
 	}
 
-	if s[0] == '_' {
-		return fmt.Errorf("name can't start with '_' symbol")
+	switch s[0] {
+	case '.':
+		return fmt.Errorf("name can't start with '.' symbol")
 	}
 
 	var lastRune rune
 	for _, r := range s {
-		if r == '_' && lastRune == '_' {
-			return fmt.Errorf("name can't contain two or more consecutive '_' chars")
+		if r == '.' && r == lastRune {
+			return fmt.Errorf("name can't contain two or more consecutive '.' chars")
 		}
-		if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '-' && r != '_' {
-			return fmt.Errorf("name can only contain chars from range [a-Z0-9_-]")
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '-' && r != '_' && r != '.' {
+			return fmt.Errorf("name can only contain chars from range [a-Z0-9._-]")
 		}
 		lastRune = r
 	}

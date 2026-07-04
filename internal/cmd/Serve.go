@@ -209,22 +209,14 @@ func runServer(ctx context.Context, srv *http.Server, sslConfig config.SslConfig
 	network, address := config.ParseAddr(srv.Addr)
 
 	if network == "unix" {
-		// remove stale socket file if present, silently erroring otherwise
+		// Remove a stale socket left by a previous hard crash (SIGKILL); on
+		// graceful shutdown net.UnixListener unlinks the socket file itself.
 		_ = os.Remove(address)
 	}
 
 	ln, err := net.Listen(network, address)
 	if err != nil {
 		return fmt.Errorf("failed to listen on %s: %w", srv.Addr, err)
-	}
-
-	if network == "unix" {
-		defer func() {
-			err := os.Remove(address)
-			if err != nil {
-				logger.Error("error removing unix socket path", slog.Any("error", err), slog.String("addr", srv.Addr))
-			}
-		}()
 	}
 
 	errCh := make(chan error, 1)
