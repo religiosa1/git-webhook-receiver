@@ -1,13 +1,14 @@
 package middleware
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/cryptoutils"
 )
 
-func WithBasicAuth(expectedUsername string, expectedPassword string) Middleware {
+func WithBasicAuth(expectedUsername string, expectedPassword string, realm string) Middleware {
 	if expectedUsername == "" || expectedPassword == "" {
 		return noopHandler
 	}
@@ -24,7 +25,8 @@ func WithBasicAuth(expectedUsername string, expectedPassword string) Middleware 
 					logger.Info("Basic auth required", slog.String("url", r.RequestURI), slog.String("method", r.Method), slog.String("remoteAddr", r.RemoteAddr))
 				}
 			} else {
-				if userNameComparer.Eq(username) && passwordComparer.Eq(password) {
+				// always do both, to make user enumeration harder
+				if userOk, passOk := userNameComparer.Eq(username), passwordComparer.Eq(password); userOk && passOk {
 					next.ServeHTTP(w, r)
 					return
 				}
@@ -32,7 +34,7 @@ func WithBasicAuth(expectedUsername string, expectedPassword string) Middleware 
 					logger.Info("Basic auth failed", slog.String("url", r.RequestURI), slog.String("method", r.Method), slog.String("remoteAddr", r.RemoteAddr))
 				}
 			}
-			w.Header().Set("WWW-Authenticate", `Basic realm="restricted", charset="UTF-8"`)
+			w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm=%q, charset="UTF-8"`, realm))
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		})
 	}

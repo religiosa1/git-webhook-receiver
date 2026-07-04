@@ -11,6 +11,7 @@ disable_ui: false # Disable Web UI
 disable_api: false # Disable Inspection HTTP API
 auth_user: "admin" # Basic auth user for the inspection API and Web UI.
 auth_password: "" # Basic auth password for the inspection API and Web UI. Empty string disables basicauth
+auth_realm: "Git Webhook Receiver" # Basic auth realm shown in the browser credentials prompt
 # SSL config: (optional, but recommended, unless you're using a reverse proxy)
 ssl:
   cert_file_path: "./your/certfile/path/fullchain.pem"

@@ -29,6 +29,7 @@ type Config struct {
 	DisableAPI              bool               `yaml:"disable_api" env:"DISABLE_API"`
 	AuthUser                string             `yaml:"auth_user" env:"AUTH_USER" env-default:"admin"`
 	AuthPassword            Secret             `yaml:"auth_password" env:"AUTH_PASSWORD"`
+	AuthRealm               string             `yaml:"auth_realm" env:"AUTH_REALM" env-default:"Git Webhook Receiver"`
 	LogLevel                string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
 	LogType                 string             `yaml:"log_type" env:"LOG_TYPE" env-default:"json"`
 	LogsDBFile              string             `yaml:"logs_db_file" env:"LOGS_DB_FILE" env-default:"logs.sqlite3"`
