@@ -21,7 +21,9 @@ projects:
     repo: "username/reponame" # REQUIRED repository full name, as displayed in the URL
     # please notice, it may be safer to keep secret and authorization tokens
     # in env variables, depending on your application deployment and setup
-    secret: "YourSecretGoesHere" # your secret, used to sign the payload and validate it
+    # Generate one with `openssl rand -base64 18`
+    secret: "YourSecretGoesHere" # your secret, used to sign the payload and validate it.
+    # Please notice, github doesn't support this kind of auth, it's only for gitea/gitlab
     authorization: "JghYTd" # post authorization header contents, to authorize the incoming request
     actions:
       # defaults to "push", use "*" to handle any event, or use a specific one, e.g. "release"
@@ -35,7 +37,7 @@ projects:
         # To run a script:
         script: |
           git fetch && git reset --hard origin/master
-          npm ci
+          npm ci --ignore-scripts
           npm run build
         # or to execute a script or program:
         # run: ["node", "--version"]

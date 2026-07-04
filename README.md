@@ -54,7 +54,7 @@ projects:
         cwd: "/var/www/default"
         script: |
           git fetch && git reset --hard origin/main
-          npm ci
+          npm ci --ignore-scripts
           npm run build
   my_other_project:
     repo: "username/reponame2"
@@ -161,7 +161,7 @@ Example:
 ```yaml
 script: |
   git fetch && git reset --hard origin/master
-  npm ci
+  npm ci --ignore-scripts
   npm run build
 ```
 

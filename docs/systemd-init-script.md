@@ -11,7 +11,7 @@ sudo systemctl edit --full --force git-webhook-receiver.service
 # or edit `/etc/systemd/system/git-webhook-receiver.service`
 ```
 
-```
+```ini
 [Unit]
 Description=Git webhook receiver
 Documentation=https://github.com/religiosa1/git-webhook-receiver
@@ -24,7 +24,9 @@ ExecStart=/usr/local/bin/git-webhook-receiver -c /etc/git-webhook-receiver.yaml
 Restart=on-failure
 # Optional, e.g. for storing DB there
 WorkingDirectory=/var/data/git-webhook-receiver
-
+# If you're using a unix socket, so systemd creates a /run/git-webhook-receiver,
+# then in config set `addr: unix:///run/git-webhook-receiver/git-webhook-receiver.sock`
+RuntimeDirectory=git-webhook-receiver
 # Extra security stuff, just to make sure your actions won't mess anything up:
 
 # setting user/group to www-data, assuming that's what your httpd uses and you
@@ -35,7 +37,7 @@ Group=www-data
 PrivateTmp=yes # to isolate tmp, so actions don't see your regular /tmp
 ProtectSystem=strict # file system access is readonly
 # explicitely give access to the required folders (adjust to your needs)
-ReadWritePaths=/var/www /var/run +/
+ReadWritePaths=/var/www
 
 [Install]
 WantedBy=multi-user.target
