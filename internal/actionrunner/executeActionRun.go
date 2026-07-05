@@ -8,11 +8,18 @@ import (
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
 )
 
-func executeActionRun(ctx context.Context, action config.Action, sysProcAttr *syscall.SysProcAttr, output io.Writer) error {
+func executeActionRun(
+	ctx context.Context,
+	action config.Action,
+	env []string,
+	sysProcAttr *syscall.SysProcAttr,
+	output io.Writer,
+) error {
 	cmd := newCmd(ctx, action.Run[0], action.Run[1:], sysProcAttr, action.GracefulShutdown)
 	if action.Cwd != "" {
 		cmd.Dir = action.Cwd
 	}
+	cmd.Env = env
 	cmd.Stdout = output
 	cmd.Stderr = output
 	return cmd.Run()

@@ -14,14 +14,20 @@ import (
 	"mvdan.cc/sh/v3/syntax"
 )
 
-func executeActionScript(ctx context.Context, action config.Action, sysProcAttr *syscall.SysProcAttr, output io.Writer) error {
+func executeActionScript(
+	ctx context.Context,
+	action config.Action,
+	env []string,
+	sysProcAttr *syscall.SysProcAttr,
+	output io.Writer,
+) error {
 	script, err := syntax.NewParser().Parse(strings.NewReader(action.Script), "")
 	if err != nil {
 		return fmt.Errorf("error parsing actions's script: %w", err)
 	}
 
 	runner, err := interp.New(
-		interp.ExecHandlers(execHandler(sysProcAttr, action.GracefulShutdown)),
+		interp.ExecHandlers(execHandler(env, sysProcAttr, action.GracefulShutdown)),
 		interp.StdIO(nil, output, output),
 		interp.Dir(action.Cwd),
 	)
@@ -31,7 +37,11 @@ func executeActionScript(ctx context.Context, action config.Action, sysProcAttr 
 	return runner.Run(ctx, script)
 }
 
-func execHandler(sysProcAttr *syscall.SysProcAttr, gracefulKillTimeout time.Duration) func(next interp.ExecHandlerFunc) interp.ExecHandlerFunc {
+func execHandler(
+	env []string,
+	sysProcAttr *syscall.SysProcAttr,
+	gracefulKillTimeout time.Duration,
+) func(next interp.ExecHandlerFunc) interp.ExecHandlerFunc {
 	return func(next interp.ExecHandlerFunc) interp.ExecHandlerFunc {
 		return func(ctx context.Context, args []string) error {
 			hc := interp.HandlerCtx(ctx)
@@ -45,6 +55,7 @@ func execHandler(sysProcAttr *syscall.SysProcAttr, gracefulKillTimeout time.Dura
 			// command name (args[0]) instead of the resolved path in process listings.
 			cmd.Args = args
 			cmd.Dir = hc.Dir
+			cmd.Env = env
 			cmd.Stdin = hc.Stdin
 			cmd.Stdout = hc.Stdout
 			cmd.Stderr = hc.Stderr

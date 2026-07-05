@@ -26,9 +26,10 @@ func TestHelperProcessUnix(t *testing.T) {
 func TestExecHandlerSetpgid(t *testing.T) {
 	sysProcAttr := &syscall.SysProcAttr{Setpgid: true}
 	var stdout, stderr bytes.Buffer
-	runner := newExecHandlerRunner(t, sysProcAttr, &stdout, &stderr)
+	script, env := helperCmd(t, "TestHelperProcessUnix", "print_pgid")
+	runner := newExecHandlerRunner(t, sysProcAttr, env, &stdout, &stderr)
 
-	err := runScript(t, runner, context.Background(), helperCmd(t, "TestHelperProcessUnix", "print_pgid"))
+	err := runScript(t, runner, context.Background(), script)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

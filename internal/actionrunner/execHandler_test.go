@@ -35,10 +35,10 @@ func TestHelperProcess(t *testing.T) {
 	}
 }
 
-func newExecHandlerRunner(t *testing.T, sysProcAttr *syscall.SysProcAttr, stdout, stderr io.Writer) *interp.Runner {
+func newExecHandlerRunner(t *testing.T, sysProcAttr *syscall.SysProcAttr, env []string, stdout, stderr io.Writer) *interp.Runner {
 	t.Helper()
 	runner, err := interp.New(
-		interp.ExecHandlers(execHandler(sysProcAttr, 0)),
+		interp.ExecHandlers(execHandler(env, sysProcAttr, 0)),
 		interp.StdIO(nil, stdout, stderr),
 	)
 	if err != nil {
@@ -56,24 +56,27 @@ func runScript(t *testing.T, runner *interp.Runner, ctx context.Context, script 
 	return runner.Run(ctx, parsed)
 }
 
-// helperCmd sets GO_TEST_HELPER_CMD on the parent process (restored via t.Cleanup)
-// and returns a shell command invoking the test binary as a subprocess helper.
-// The subprocess inherits the env var because execHandler leaves cmd.Env nil.
-func helperCmd(t *testing.T, helperFunc, cmd string) string {
+// helperCmd returns a shell command invoking the test binary as a subprocess
+// helper, plus the env that must be supplied to the runner so the subprocess
+// sees GO_TEST_HELPER_CMD. execHandler isolates the child environment, so the
+// var must be passed explicitly rather than inherited from the parent process.
+func helperCmd(t *testing.T, helperFunc, cmd string) (script string, env []string) {
 	t.Helper()
 	exe, err := os.Executable()
 	if err != nil {
 		t.Fatalf("os.Executable: %v", err)
 	}
-	t.Setenv("GO_TEST_HELPER_CMD", cmd)
-	return fmt.Sprintf("%s -test.run=%s -test.v=false", exe, helperFunc)
+	script = fmt.Sprintf("%s -test.run=%s -test.v=false", exe, helperFunc)
+	env = []string{"GO_TEST_HELPER_CMD=" + cmd}
+	return script, env
 }
 
 func TestExecHandlerExitZero(t *testing.T) {
 	var out bytes.Buffer
-	runner := newExecHandlerRunner(t, nil, &out, &out)
+	script, env := helperCmd(t, "TestHelperProcess", "exit0")
+	runner := newExecHandlerRunner(t, nil, env, &out, &out)
 
-	err := runScript(t, runner, context.Background(), helperCmd(t, "TestHelperProcess", "exit0"))
+	err := runScript(t, runner, context.Background(), script)
 	if err != nil {
 		t.Fatalf("expected nil, got: %v", err)
 	}
@@ -81,9 +84,10 @@ func TestExecHandlerExitZero(t *testing.T) {
 
 func TestExecHandlerNonZeroExit(t *testing.T) {
 	var out bytes.Buffer
-	runner := newExecHandlerRunner(t, nil, &out, &out)
+	script, env := helperCmd(t, "TestHelperProcess", "exit42")
+	runner := newExecHandlerRunner(t, nil, env, &out, &out)
 
-	err := runScript(t, runner, context.Background(), helperCmd(t, "TestHelperProcess", "exit42"))
+	err := runScript(t, runner, context.Background(), script)
 
 	var status interp.ExitStatus
 	if !errors.As(err, &status) {
@@ -96,7 +100,7 @@ func TestExecHandlerNonZeroExit(t *testing.T) {
 
 func TestExecHandlerCommandNotFound(t *testing.T) {
 	var out bytes.Buffer
-	runner := newExecHandlerRunner(t, nil, &out, &out)
+	runner := newExecHandlerRunner(t, nil, nil, &out, &out)
 
 	err := runScript(t, runner, context.Background(), "/nonexistent-command-xyz123")
 
@@ -111,12 +115,13 @@ func TestExecHandlerCommandNotFound(t *testing.T) {
 
 func TestExecHandlerContextCancellation(t *testing.T) {
 	var out bytes.Buffer
-	runner := newExecHandlerRunner(t, nil, &out, &out)
+	script, env := helperCmd(t, "TestHelperProcess", "sleep")
+	runner := newExecHandlerRunner(t, nil, env, &out, &out)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
 
-	err := runScript(t, runner, ctx, helperCmd(t, "TestHelperProcess", "sleep"))
+	err := runScript(t, runner, ctx, script)
 
 	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("expected context.DeadlineExceeded, got: %v", err)

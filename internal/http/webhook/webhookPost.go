@@ -32,8 +32,7 @@ func (h Webhook) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	req.Body = http.MaxBytesReader(w, req.Body, maxBodySize)
 	// setting noop-closer body, so we can read it multiple times
 	payload, err := io.ReadAll(req.Body)
-	var maxBytesErr *http.MaxBytesError
-	if errors.As(err, &maxBytesErr) {
+	if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
 		w.WriteHeader(http.StatusRequestEntityTooLarge)
 		return
 	}
@@ -94,6 +93,8 @@ func (h Webhook) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			ActionDesc: actionDesc,
 			DeliveryID: webhookInfo.DeliveryID,
 			Hash:       webhookInfo.Hash,
+			Branch:     webhookInfo.Branch,
+			Event:      webhookInfo.Event,
 		}
 		select {
 		case h.ActionsCh <- args:
@@ -150,7 +151,9 @@ func getProjectsActionsForWebhookPost(
 				PipeID:  ulid.Make().String(),
 				Project: projectName,
 			},
-			Config: action,
+			GitProvider: project.GitProvider,
+			Repo:        project.Repo,
+			Config:      action,
 		})
 	}
 	return actions

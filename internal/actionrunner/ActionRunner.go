@@ -18,6 +18,8 @@ type ActionArgs struct {
 	ActionDesc ActionDescriptor
 	DeliveryID string
 	Hash       string
+	Event      string
+	Branch     string
 }
 
 type ActionRunner struct {
@@ -137,13 +139,14 @@ func (r *ActionRunner) executeAction(
 	actionCtx, cancelAction := context.WithTimeout(ctx, actionDesc.Config.Timeout)
 	defer cancelAction()
 
+	env := createEnv(args)
 	var actionErr error
 	if len(actionDesc.Config.Run) > 0 {
 		logger.Debug("Running the command", slog.Any("command", actionDesc.Config.Run))
-		actionErr = executeActionRun(actionCtx, actionDesc.Config, sysProcAttr, outputWriter)
+		actionErr = executeActionRun(actionCtx, actionDesc.Config, env, sysProcAttr, outputWriter)
 	} else {
 		logger.Debug("Running the script", slog.String("script", actionDesc.Config.Script))
-		actionErr = executeActionScript(actionCtx, actionDesc.Config, sysProcAttr, outputWriter)
+		actionErr = executeActionScript(actionCtx, actionDesc.Config, env, sysProcAttr, outputWriter)
 	}
 
 	if outputWriter.overflowed {

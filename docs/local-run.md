@@ -29,11 +29,11 @@ go run .
 And try out sending a payload:
 
 ```sh
-curl -s -X 'POST' \
+curl -fs -X 'POST' \
   'http://localhost:9090/projects/test' \
   -H 'X-GitHub-Event:push' \
   -H 'X-GitHub-Delivery:blah' \
-  -H 'Content-Type:application/json' --data '{
+  --json '{
   "ref": "refs/heads/master",
   "after": "92bcfadb4199556415be69b9c31c0dc72343fea2",
   "repository": {
