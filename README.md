@@ -56,6 +56,17 @@ projects:
           git fetch && git reset --hard origin/main
           npm ci --ignore-scripts
           npm run build
+      - branch: master # fancy clone to temp dir
+        with_temp_dir: true
+        cwd: "/var/www/fancy-clone"
+        environment:
+          - GIT_TOKEN=github_pat_blahblah
+        script: |
+          git clone --depth 1 https://${GIT_TOKEN}@github.com/${GIT_REPO} "$TMPDIR"
+          cd "$TMPDIR"
+          npm ci --ignore-scripts
+          npm run build
+          cp -r dist/* "$CWD"
   my_other_project:
     repo: "username/reponame2"
     secret: "YourSecretGoesHere"
@@ -65,19 +76,6 @@ projects:
     actions:
       - cwd: "/var/www/backend" # Anything besides `script` or `run` is optional
         run: ["sh", "./build.sh"]
-  fancy_clone: # cloning on push
-    repo: "username/reponame3"
-    secret: "VerySecret"
-    with_temp_dir: true
-    cwd: "/var/www/fancy-clone"
-    environment:
-      - GIT_TOKEN=github_pat_blahblah
-    script: |
-      git clone --depth 1 https://${GIT_TOKEN}@github.com/${GIT_REPO} "$TMPDIR"
-      cd "$TMPDIR"
-      npm ci --ignore-scripts
-      npm run build
-      cp -r dist/* "$CWD"
 ```
 
 Please refer to the [config file example](./config.example.yml) in this repo, to
