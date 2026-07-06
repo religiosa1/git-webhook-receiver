@@ -395,8 +395,12 @@ p {
 	color: var(--color-success);
 }
 
-.secret-display_empty {
+.secret-display_na {
 	color: var(--text-muted);
+}
+
+.secret-display_unset {
+	color: var(--color-error);
 }
 
 ol {

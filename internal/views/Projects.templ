@@ -3,6 +3,7 @@ package views
 import (
 	"fmt"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
+	"github.com/religiosa1/git-webhook-receiver/internal/whreceiver"
 	"net/url"
 	"strings"
 )
@@ -41,6 +42,7 @@ templ Projects(model ProjectsViewModel) {
 }
 
 templ projectPreview(name string, conf config.Project) {
+	{{ caps := whreceiver.Capabilities(conf) }}
 	<div class="project-preview">
 		<a href={ MakePublicURL(ctx, fmt.Sprintf("/pipelines?project=%s", url.QueryEscape(name))) }>
 			<h3 class="project-preview__name">{ name }</h3>
@@ -54,10 +56,10 @@ templ projectPreview(name string, conf config.Project) {
 			</span>
 		</p>
 		<p>
-			@secretDisplay("authorization", conf.Authorization)
+			@secretDisplay("authorization", conf.Authorization, caps.CanAuthorize)
 		</p>
 		<p>
-			@secretDisplay("signature", conf.Secret)
+			@secretDisplay("signature", conf.Secret, caps.CanVerifySignature)
 		</p>
 		<h4>Actions</h4>
 		<ol>
@@ -70,11 +72,17 @@ templ projectPreview(name string, conf config.Project) {
 	</div>
 }
 
-templ secretDisplay(secretName string, value config.Secret) {
+templ secretDisplay(secretName string, value config.Secret, supported bool) {
 	{{ isEmpty := value.IsZero() }}
-	<span class={ "secret-display", templ.KV("secret-display_empty", isEmpty) }>
-		{ secretName }: 
-		if isEmpty {
+	<span
+		class={ "secret-display",
+			templ.KV("secret-display_na", !supported),
+			templ.KV("secret-display_unset", supported && isEmpty) }
+	>
+		{ secretName }:
+		if !supported {
+			n/a
+		} else if isEmpty {
 			unset
 		} else {
 			set

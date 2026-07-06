@@ -29,6 +29,7 @@ func (rcvr GitlabReceiver) Authorize(req WebhookPostRequest, auth string) (bool,
 }
 
 // https://gitlab.com/gitlab-org/gitlab/-/issues/19367
+
 func (rcvr GitlabReceiver) VerifySignature(req WebhookPostRequest, secret string) (bool, error) {
 	return false, ErrSignNotSupported
 }

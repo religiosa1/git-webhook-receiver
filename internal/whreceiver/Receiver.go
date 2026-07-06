@@ -52,3 +52,19 @@ func New(project config.Project) Receiver {
 
 	return receiver
 }
+
+// Capabilities returns the receiver capabilities for a project's provider.
+// Unlike New it does not panic on an unknown provider, returning zero
+// capabilities instead, so it's safe to call from views.
+func Capabilities(project config.Project) ReceiverCapabilities {
+	switch project.GitProvider {
+	case "gitea":
+		return GiteaReceiver{project}.GetCapabilities()
+	case "github":
+		return GithubReceiver{project}.GetCapabilities()
+	case "gitlab":
+		return GitlabReceiver{project}.GetCapabilities()
+	default:
+		return ReceiverCapabilities{}
+	}
+}
