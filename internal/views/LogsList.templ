@@ -133,14 +133,21 @@ templ logEntryRow(entry logsdb.LogEntry) {
 					<span class="log-ctx__pipe">{ entry.PipeID.String }</span>
 				}
 				if entry.Data != "" && entry.Data != "null" {
-					<details>
+					<details class="log-entry__data-toggle">
 						<summary>data</summary>
-						<pre class="log-entry__data">{ entry.Data }</pre>
 					</details>
 				}
 			</div>
 		</td>
 	</tr>
+	if entry.Data != "" && entry.Data != "null" {
+		<!-- actual toggling is performed in css  -->
+		<tr class="log-entry__data-row">
+			<td colspan="4">
+				<pre class="log-entry__data">{ entry.Data }</pre>
+			</td>
+		</tr>
+	}
 }
 
 func logLevelName(level slog.Level) string {

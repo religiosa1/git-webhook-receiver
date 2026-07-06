@@ -1,25 +1,25 @@
 /* === Design Tokens === */
 :root {
-	--bg-primary:     #f7f4eb;
-	--bg-secondary:   #ebe8df;
-	--bg-header:      #eee9de;
-	--bg-code:        #1a1a1a;
+	--bg-primary: #f7f4eb;
+	--bg-secondary: #ebe8df;
+	--bg-header: #eee9de;
+	--bg-code: #1a1a1a;
 
-	--text-primary:   #111111;
+	--text-primary: #111111;
 	--text-secondary: #414141;
-	--text-muted:     #737373;
+	--text-muted: #737373;
 
-	--border:         #414141;
-	--border-muted:   #c1c1c1;
+	--border: #414141;
+	--border-muted: #c1c1c1;
 
-	--accent:         #f35815;
-	--accent-hover:   #b83a05;
+	--accent: #f35815;
+	--accent-hover: #b83a05;
 
-	--color-success:  #13862e;
-	--color-error:    #d92038;
-	--color-warn:     #f35815;
-	--color-info:     #0b6ec5;
-	--color-debug:    #737373;
+	--color-success: #13862e;
+	--color-error: #d92038;
+	--color-warn: #f35815;
+	--color-info: #0b6ec5;
+	--color-debug: #737373;
 
 	--font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 	--font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -36,29 +36,31 @@
 
 @media (prefers-color-scheme: dark) {
 	:root {
-		--bg-primary:     #111111;
-		--bg-secondary:   #1a1a1a;
-		--bg-header:      #0a0a0a;
+		--bg-primary: #111111;
+		--bg-secondary: #1a1a1a;
+		--bg-header: #0a0a0a;
 
-		--text-primary:   #e1e1e1;
+		--text-primary: #e1e1e1;
 		--text-secondary: #a1a1a1;
-		--text-muted:     #616161;
+		--text-muted: #616161;
 
-		--border-muted:   #2b2b2b;
+		--border-muted: #2b2b2b;
 
-		--accent:         #fd812d;
-		--accent-hover:   #f35815;
+		--accent: #fd812d;
+		--accent-hover: #f35815;
 
-		--color-success:  #27b648;
-		--color-error:    #ff7082;
-		--color-warn:     #fd812d;
-		--color-info:     #47b7f8;
-		--color-debug:    #616161;
+		--color-success: #27b648;
+		--color-error: #ff7082;
+		--color-warn: #fd812d;
+		--color-info: #47b7f8;
+		--color-debug: #616161;
 	}
 }
 
 /* === Reset === */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
 	box-sizing: border-box;
 }
 
@@ -67,7 +69,8 @@ html {
 	scrollbar-gutter: stable;
 }
 
-html, body {
+html,
+body {
 	margin: 0;
 	padding: 0;
 	min-height: 100vh;
@@ -246,10 +249,18 @@ p {
 	table-layout: fixed;
 }
 
-.logs-table th:nth-child(1) { width: 11rem; }
-.logs-table th:nth-child(2) { width: 5rem; }
-.logs-table th:nth-child(3) { /* message: fills remaining */ }
-.logs-table th:nth-child(4) { width: 22rem; }
+.logs-table th:nth-child(1) {
+	width: 11rem;
+}
+.logs-table th:nth-child(2) {
+	width: 5rem;
+}
+.logs-table th:nth-child(3) {
+	/* message: fills remaining */
+}
+.logs-table th:nth-child(4) {
+	width: 22rem;
+}
 
 .logs-table th {
 	font-family: var(--font-mono);
@@ -290,10 +301,18 @@ p {
 	text-transform: uppercase;
 }
 
-.log-entry--debug .log-entry__level { color: var(--color-debug); }
-.log-entry--info  .log-entry__level { color: var(--color-info); }
-.log-entry--warn  .log-entry__level { color: var(--color-warn); }
-.log-entry--error .log-entry__level { color: var(--color-error); }
+.log-entry--debug .log-entry__level {
+	color: var(--color-debug);
+}
+.log-entry--info .log-entry__level {
+	color: var(--color-info);
+}
+.log-entry--warn .log-entry__level {
+	color: var(--color-warn);
+}
+.log-entry--error .log-entry__level {
+	color: var(--color-error);
+}
 
 .log-entry__message {
 	color: var(--text-primary);
@@ -322,15 +341,23 @@ p {
 	white-space: nowrap;
 }
 
+.log-entry__data-row {
+	display: none;
+}
+
+.log-entry:has(.log-entry__data-toggle[open]) + .log-entry__data-row {
+	display: table-row;
+}
+
 .log-entry__data {
-	margin: var(--space-2) 0 0;
+	margin: 0;
 	padding: var(--space-2);
 	background: var(--bg-code);
 	color: #e1e1e1;
 	font-family: var(--font-mono);
 	font-size: 0.75rem;
-	overflow-x: auto;
-	white-space: pre;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
 	border: none;
 }
 
@@ -527,7 +554,10 @@ h5 {
 	color: var(--text-primary);
 	cursor: pointer;
 	text-decoration: none;
-	transition: background 0.1s, color 0.1s, border-color 0.1s;
+	transition:
+		background 0.1s,
+		color 0.1s,
+		border-color 0.1s;
 	line-height: 1.6;
 }
 .btn:hover {
