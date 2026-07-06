@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
+	"github.com/religiosa1/git-webhook-receiver/internal/version"
 )
 
 type baseViewModel struct {
@@ -14,6 +15,7 @@ type baseViewModel struct {
 	HasPipelinePages bool
 	PublicURL        string
 	CurrentPath      string
+	Version          string
 }
 
 type viewModelContextKey string
@@ -52,6 +54,7 @@ func WithBaseViewModel(cfg config.Config) func(http.Handler) http.Handler {
 				HasPipelinePages: cfg.ActionsDBFile != "",
 				PublicURL:        cfg.PublicURL,
 				CurrentPath:      currentPath,
+				Version:          version.String(),
 			}
 			ctx := context.WithValue(r.Context(), baseViewModelContextKey, model)
 			next.ServeHTTP(w, r.WithContext(ctx))

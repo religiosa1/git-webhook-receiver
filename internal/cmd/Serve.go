@@ -179,7 +179,7 @@ func Serve(cfg config.Config) {
 
 	server := &http.Server{
 		Addr:    cfg.Addr,
-		Handler: mux,
+		Handler: middleware.WithVersion()(mux),
 	}
 	if err := runServer(srvCtx, server, cfg.Ssl, logger); err != nil {
 		logger.Error("Error running the server", slog.Any("error", err))

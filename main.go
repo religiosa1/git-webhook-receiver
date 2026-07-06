@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 	"os"
-	"runtime/debug"
 
 	"github.com/alecthomas/kong"
 	"github.com/religiosa1/git-webhook-receiver/internal/cmd"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
+	"github.com/religiosa1/git-webhook-receiver/internal/version"
 )
 
 var CLI struct {
@@ -59,29 +59,5 @@ func getEnvConfigPath(configPath string) string {
 }
 
 func showVersion() {
-	info, ok := debug.ReadBuildInfo()
-	if !ok {
-		fmt.Println("Build information not available")
-		return
-	}
-
-	version := info.Main.Version
-	if version == "(devel)" {
-		var commit string
-		var dirty bool
-		for _, setting := range info.Settings {
-			if setting.Key == "vcs.revision" {
-				commit = setting.Value
-			}
-			if setting.Key == "vcs.modified" {
-				dirty = setting.Value == "true"
-			}
-		}
-		version += " " + commit
-		if dirty {
-			version += " dirty"
-		}
-	}
-
-	fmt.Printf("%s\n", version)
+	fmt.Printf("%s\n", version.String())
 }
