@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 	"sync"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
@@ -182,8 +183,36 @@ func (r *ActionRunner) executeAction(
 	actionCtx, cancelAction := context.WithTimeout(ctx, actionDesc.Config.Timeout)
 	defer cancelAction()
 
+	// tmpDir is the runner-managed temporary directory exposed to the action as
+	// $TMPDIR. We create and remove it here (rather than let the action mktemp
+	// its own) so cleanup is guaranteed even when the action times out or is
+	// killed -- an in-script `trap ... EXIT` does not fire on context cancel.
+	var tmpDir string
+	if actionDesc.Config.WithTempDir {
+		tmpDir, err = os.MkdirTemp("", "git-webhook-receiver-*")
+		if err != nil {
+			logger.Error("Error creating temporary directory for action", slog.Any("error", err))
+			actionErr = pipelineError(fmt.Errorf("error creating temporary directory for action: %w", err))
+			return
+		}
+		defer func() {
+			if err := os.RemoveAll(tmpDir); err != nil {
+				logger.Error("Error removing action's temporary directory", slog.String("dir", tmpDir), slog.Any("error", err))
+			}
+		}()
+		// MkdirTemp makes a 0700 dir owned by the receiver's user. When the
+		// action runs as another user, hand ownership over so it can write --
+		// the 0700 mode still keeps the (possibly credential-bearing) contents
+		// private to that single user.
+		if err := chownActionDir(tmpDir, sysProcAttr); err != nil {
+			logger.Error("Error setting ownership of action's temporary directory", slog.Any("error", err))
+			actionErr = pipelineError(fmt.Errorf("error setting ownership of action's temporary directory: %w", err))
+			return
+		}
+	}
+
 	outputWriter := &overflowWriter{Writer: rawOutput}
-	env, err := createEnv(args)
+	env, err := createEnv(args, tmpDir)
 	if err != nil {
 		logger.Error("Error building the action environment", slog.Any("error", err))
 		actionErr = pipelineError(fmt.Errorf("error building action environment: %w", err))

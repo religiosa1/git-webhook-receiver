@@ -52,6 +52,12 @@ projects:
         # user from which action will be run, requires the elevated permissions, default to empty string
         user: www-data
         cwd: "/var/www/yourproject" # root dir in which action will be run, defaults to empty
+        # create a fresh 0700 temp dir for this action, exposed as $TMPDIR,
+        # removed once the action finishes (even on timeout/cancel, unlike an
+        # in-script `trap EXIT`). Handy for clone-on-push deploys. When `user`
+        # is set the dir is chowned to that user. `cwd` is also exposed as $CWD.
+        # Defaults to false.
+        with_temp_dir: false
         # extra environment variables injected into the action, on top of the
         # built-in (GIT_*, PROJECT_NAME, ...) and passed-through (HOME/USER/PATH)
         # ones, which they may override. Each VALUE supports shell-style env

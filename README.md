@@ -65,6 +65,19 @@ projects:
     actions:
       - cwd: "/var/www/backend" # Anything besides `script` or `run` is optional
         run: ["sh", "./build.sh"]
+  fancy_clone: # cloning on push
+    repo: "username/reponame3"
+    secret: "VerySecret"
+    with_temp_dir: true
+    cwd: "/var/www/fancy-clone"
+    environment:
+      - GIT_TOKEN=github_pat_blahblah
+    script: |
+      git clone --depth 1 https://${GIT_TOKEN}@github.com/${GIT_REPO} "$TMPDIR"
+      cd "$TMPDIR"
+      npm ci --ignore-scripts
+      npm run build
+      cp -r dist/* "$CWD"
 ```
 
 Please refer to the [config file example](./config.example.yml) in this repo, to
@@ -221,6 +234,35 @@ Extra env variables are supplied to the action:
 - `GIT_COMMIT` git commit sha, as supplied by provider in the payload
 - `GIT_BRANCH` git branch as supplied in the payload
 - `GIT_EVENT` git event as supplied in the payload
+- `CWD` the action's `cwd`, as specified in config (empty if unset)
+- `TMPDIR` a managed temporary directory, only when `with_temp_dir` is set (see below)
+
+#### Temporary directory
+
+Set `with_temp_dir: true` on an action to have the service create a fresh
+temporary directory before the action runs and expose its path as `$TMPDIR`.
+The directory is removed once the action finishes — including on timeout or
+cancellation, where an in-script `trap ... EXIT` would _not_ fire. This is the
+recommended way to do clone-on-push style deploys without leaking the working
+tree (which may contain credentials baked into the clone URL).
+
+The directory is created with `0700` permissions. When the action runs as a
+different `user`, ownership is handed to that user, so the contents stay
+private to the single user the action runs as:
+
+```yaml
+actions:
+  - on: push
+    with_temp_dir: true
+    cwd: "/var/www/app"
+    environment:
+      - GIT_TOKEN=${GIT_TOKEN:?must be set in the receiver env}
+    script: |
+      git clone --depth 1 https://${GIT_TOKEN}@github.com/${GIT_REPO} "$TMPDIR"
+      cd "$TMPDIR"
+      npm ci --ignore-scripts && npm run build
+      cp -r dist/* "$CWD"
+```
 
 #### Custom environment variables
 

@@ -17,10 +17,14 @@ var passthroughEnv = []string{"PATH", "HOME", "USER"}
 // createEnv creates an environment for the action runner, where each entry is in
 // the form of "key=value".
 //
+// tmpDir, when non-empty, is the runner-managed temporary directory exposed to
+// the action as $TMPDIR (see WithTempDir); empty means the action didn't request
+// one. CWD mirrors the action's `cwd` config, keeping a single source of truth.
+//
 // The action's config `environment` entries are interpolated and appended last,
 // so they may override any built-in or passed-through variable (for a duplicate
 // key os/exec uses the last value in the slice).
-func createEnv(args ActionArgs) ([]string, error) {
+func createEnv(args ActionArgs, tmpDir string) ([]string, error) {
 	env := []string{
 		fmt.Sprintf("PROJECT_NAME=%s", args.ActionDesc.Project),
 		fmt.Sprintf("ACTION_IDX=%d", args.ActionDesc.Index),
@@ -32,6 +36,10 @@ func createEnv(args ActionArgs) ([]string, error) {
 		fmt.Sprintf("GIT_REPO=%s", args.ActionDesc.Repo),
 		fmt.Sprintf("GIT_BRANCH=%s", args.Branch),
 		fmt.Sprintf("GIT_EVENT=%s", args.Event),
+		fmt.Sprintf("CWD=%s", args.ActionDesc.Config.Cwd),
+	}
+	if tmpDir != "" {
+		env = append(env, fmt.Sprintf("TMPDIR=%s", tmpDir))
 	}
 	for _, key := range passthroughEnv {
 		if val, ok := os.LookupEnv(key); ok {

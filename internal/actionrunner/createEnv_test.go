@@ -39,7 +39,7 @@ func envValue(env []string, key string) (string, bool) {
 }
 
 func TestCreateEnvBuiltins(t *testing.T) {
-	env, err := createEnv(makeArgs(nil))
+	env, err := createEnv(makeArgs(nil), "")
 	if err != nil {
 		t.Fatalf("createEnv returned error: %v", err)
 	}
@@ -59,6 +59,36 @@ func TestCreateEnvBuiltins(t *testing.T) {
 	}
 }
 
+func TestCreateEnvCwdAndTmpDir(t *testing.T) {
+	args := makeArgs([]string{"CLONE_TARGET=${TMPDIR}", "DEST=${CWD}"})
+	args.ActionDesc.Config.Cwd = "/var/www/app"
+
+	env, err := createEnv(args, "/tmp/git-webhook-receiver-xyz")
+	if err != nil {
+		t.Fatalf("createEnv returned error: %v", err)
+	}
+	cases := map[string]string{
+		"CWD":          "/var/www/app",
+		"TMPDIR":       "/tmp/git-webhook-receiver-xyz",
+		"CLONE_TARGET": "/tmp/git-webhook-receiver-xyz", // user entries can reference $TMPDIR
+		"DEST":         "/var/www/app",                  // ...and $CWD
+	}
+	for k, v := range cases {
+		if got, ok := envValue(env, k); !ok || got != v {
+			t.Errorf("env[%q] = %q, %v; want %q", k, got, ok, v)
+		}
+	}
+
+	// No temp dir requested -> TMPDIR must be absent, not empty.
+	env, err = createEnv(makeArgs(nil), "")
+	if err != nil {
+		t.Fatalf("createEnv returned error: %v", err)
+	}
+	if _, ok := envValue(env, "TMPDIR"); ok {
+		t.Error("TMPDIR present when no temp dir was requested")
+	}
+}
+
 func TestCreateEnvInterpolation(t *testing.T) {
 	t.Setenv("MY_TOKEN", "s3cr3t")
 
@@ -67,7 +97,7 @@ func TestCreateEnvInterpolation(t *testing.T) {
 		"WITH_DEFAULT=${MISSING:-fallback}",
 		"REPLACE=${MY_TOKEN:+present}",
 		"REF_BUILTIN=${GIT_COMMIT}",
-	}))
+	}), "")
 	if err != nil {
 		t.Fatalf("createEnv returned error: %v", err)
 	}
@@ -86,7 +116,7 @@ func TestCreateEnvInterpolation(t *testing.T) {
 }
 
 func TestCreateEnvOverridesBuiltin(t *testing.T) {
-	env, err := createEnv(makeArgs([]string{"GIT_COMMIT=overridden"}))
+	env, err := createEnv(makeArgs([]string{"GIT_COMMIT=overridden"}), "")
 	if err != nil {
 		t.Fatalf("createEnv returned error: %v", err)
 	}
@@ -110,7 +140,7 @@ func TestCreateEnvCascadingReferences(t *testing.T) {
 		"CHILD=${ROOT}/child", // project references root
 		"LEAF=${CHILD}/leaf",  // action references project
 		"ROOT=overridden",     // action overrides root
-	}))
+	}), "")
 	if err != nil {
 		t.Fatalf("createEnv returned error: %v", err)
 	}
@@ -127,7 +157,7 @@ func TestCreateEnvCascadingReferences(t *testing.T) {
 }
 
 func TestCreateEnvUnsetRequiredErrors(t *testing.T) {
-	_, err := createEnv(makeArgs([]string{"X=${DEFINITELY_MISSING_VAR:?is required}"}))
+	_, err := createEnv(makeArgs([]string{"X=${DEFINITELY_MISSING_VAR:?is required}"}), "")
 	if err == nil {
 		t.Fatal("expected error for unset required variable, got nil")
 	}
@@ -137,7 +167,7 @@ func TestCreateEnvUnsetRequiredErrors(t *testing.T) {
 }
 
 func TestCreateEnvNoCommandSubstitution(t *testing.T) {
-	_, err := createEnv(makeArgs([]string{"X=$(echo pwned)"}))
+	_, err := createEnv(makeArgs([]string{"X=$(echo pwned)"}), "")
 	if err == nil {
 		t.Fatal("expected error for command substitution, got nil")
 	}

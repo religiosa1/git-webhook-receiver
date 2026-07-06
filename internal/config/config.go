@@ -68,6 +68,7 @@ type Action struct {
 	On               string        `yaml:"on" env-default:"push" json:"on,omitempty"`
 	Branch           string        `yaml:"branch" env-default:"master" json:"branch,omitempty"`
 	Cwd              string        `yaml:"cwd" json:"cwd,omitempty"`
+	WithTempDir      bool          `yaml:"with_temp_dir" json:"withTempDir,omitempty"`
 	User             string        `yaml:"user" json:"user,omitempty"`
 	Script           string        `yaml:"script" json:"script,omitempty"`
 	Run              []string      `yaml:"run" json:"run,omitempty"`
