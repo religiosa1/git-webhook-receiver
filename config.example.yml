@@ -23,6 +23,10 @@ ssl:
 # entries are masked (like secrets) in logs, the API and the Web UI.
 # environment:
 #   - "REGISTRY=registry.example.com"
+# root-level user: OS user every action runs as, unless a project or action
+# overrides it (layered root -> project -> action). Empty = the receiver's user.
+# Not supported on windows.
+# user: deploy
 projects:
   your_project_name:
     git_provider: github # "github" (default) | "gitea" | "gitlab"
@@ -37,6 +41,9 @@ projects:
     # for this project's actions (may reference/override root entries).
     # environment:
     #   - "IMAGE=${REGISTRY}/${PROJECT_NAME}"
+    # project-level user: overrides the root user for this project's actions,
+    # itself overridable per action below.
+    # user: www-data
     actions:
       # defaults to "push", use "*" to handle any event, or use a specific one, e.g. "release"
       - on: push

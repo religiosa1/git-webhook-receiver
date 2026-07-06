@@ -185,6 +185,24 @@ run the script.
 Please notice, that `user` param is not supported on windows and your script
 will always run from the same user, that launches the service.
 
+`user` may be declared at three levels — config root,
+project and action — forming a **root → project → action** hierarchy. A more
+specific level overrides the one above it; an empty value inherits the parent.
+This lets you set a single base user for every action and override it per
+project or per action.
+
+```yaml
+user: deploy # base user for every action
+projects:
+  my_project:
+    repo: "user/repo"
+    user: www-data # overrides the root for this project's actions
+    actions:
+      - on: push
+        user: root # overrides the project for this single action
+        script: ./deploy.sh
+```
+
 ### Environment supplied to actions
 
 In both cases of `run` and `script` actions, the actual environment of the
@@ -235,11 +253,11 @@ not at the start of the service.
 
 ##### Environment hierarchy
 
-`environment` may be declared at three levels — config root, project and
-action — forming a hierarchy that is applied **root → project → action**. Each
-level is layered on top of the previous one: a child level can reference
-variables defined by its parents (and by preceding entries on the same level),
-and, thanks to last-wins precedence, override them.
+Like the `user` field, `environment` may be declared at three levels — config
+root, project and action — forming a hierarchy that is applied **root → project
+→ action**. Each level is layered on top of the previous one: a child level can
+reference variables defined by its parents (and by preceding entries on the
+same level), and, thanks to last-wins precedence, override them.
 
 ```yaml
 environment:

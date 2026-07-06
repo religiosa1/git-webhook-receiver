@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/user"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -681,6 +683,48 @@ projects:
 	for i := range want {
 		if got[i] != want[i] {
 			t.Errorf("merged env[%d] = %q; want %q (full: %v)", i, got[i], want[i], got)
+		}
+	}
+}
+
+func TestUserHierarchyOverride(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("user field is not supported on windows")
+	}
+	// user.Lookup is applied to the resolved value, so every non-empty user in
+	// the fixture must be a real OS user; the current one is the only portable
+	// choice, so we assert precedence using it plus empty (inherit) levels.
+	me, err := user.Current()
+	if err != nil {
+		t.Fatalf("cannot determine current user: %s", err)
+	}
+
+	cfg := loadMockConfig(t, fmt.Sprintf(`
+user: %[1]q
+projects:
+  inherits:
+    repo: "username/reponame"
+    actions:
+      - run: ["node", "--version"] # inherits root -> me
+  proj-override:
+    repo: "username/reponame"
+    user: %[1]q
+    actions:
+      - run: ["node", "--version"]  # inherits project -> me
+      - run: ["node", "--version"]
+        user: ""                    # explicit empty still inherits project -> me
+  action-override:
+    repo: "username/reponame"
+    actions:
+      - run: ["node", "--version"]
+        user: %[1]q                 # action wins -> me
+`, me.Username))
+
+	for name, project := range cfg.Projects {
+		for i, action := range project.Actions {
+			if action.User != me.Username {
+				t.Errorf("project %q action %d user = %q; want %q", name, i, action.User, me.Username)
+			}
 		}
 	}
 }
