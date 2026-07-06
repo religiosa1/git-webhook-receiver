@@ -139,7 +139,11 @@ func (r *ActionRunner) executeAction(
 	actionCtx, cancelAction := context.WithTimeout(ctx, actionDesc.Config.Timeout)
 	defer cancelAction()
 
-	env := createEnv(args)
+	env, err := createEnv(args)
+	if err != nil {
+		logger.Error("Error building the action environment", slog.Any("error", err))
+		return
+	}
 	var actionErr error
 	if len(actionDesc.Config.Run) > 0 {
 		logger.Debug("Running the command", slog.Any("command", actionDesc.Config.Run))

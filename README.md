@@ -204,6 +204,65 @@ Extra env variables are supplied to the action:
 - `GIT_BRANCH` git branch as supplied in the payload
 - `GIT_EVENT` git event as supplied in the payload
 
+#### Custom environment variables
+
+An action may declare an `environment` list of `KEY=VALUE` entries. They are
+applied _on top_ of the built-in and passed-through variables above, so an entry
+can override any of them (including `PATH`/`HOME`/`USER` or the `GIT_*` ones).
+
+Each `VALUE` is subject to shell-style env interpolation, resolved against this
+receiver process's environment (the same environment that is otherwise stripped
+from actions) — this is the intended way to explicitly re-expose a selected
+process variable to an action:
+
+```yaml
+actions:
+  - on: push
+    environment:
+      - "DEPLOY_TOKEN=${DEPLOY_TOKEN:?must be set in the receiver env}"
+      - "NODE_ENV=production"
+      - "CACHE_DIR=${HOME}/.cache/myproject"
+    script: ./deploy.sh
+```
+
+Supported operators (Docker-Compose-like): `${VAR}`, `${VAR:-default}`,
+`${VAR-default}`, `${VAR:?err}`, `${VAR?err}`, `${VAR:+replacement}`,
+`${VAR+replacement}`. Only parameter expansion is performed — command
+substitution `$(...)` is rejected and globbing is disabled.
+
+Variable substitution error check is happening during the action call time,
+not at the start of the service.
+
+##### Environment hierarchy
+
+`environment` may be declared at three levels — config root, project and
+action — forming a hierarchy that is applied **root → project → action**. Each
+level is layered on top of the previous one: a child level can reference
+variables defined by its parents (and by preceding entries on the same level),
+and, thanks to last-wins precedence, override them.
+
+```yaml
+environment:
+  - "REGISTRY=registry.example.com"
+projects:
+  my_project:
+    repo: "user/repo"
+    environment:
+      - "IMAGE=${REGISTRY}/${PROJECT_NAME}" # references root + built-in
+    actions:
+      - on: push
+        environment:
+          - "IMAGE=${IMAGE}:latest" # references, then overrides, the project value
+        run: ["./deploy.sh"]
+```
+
+##### Masking
+
+Environment entries may hold credentials, so — like `secret`/`authorization`
+tokens — both their keys and values are **masked** everywhere they would
+otherwise be shown: the config debug log, the inspection API and the Web UI. The
+actual values are only ever passed to the action process itself.
+
 ## Inspection HTTP API
 
 By default, the app exposes inspection HTTP endpoints, unless

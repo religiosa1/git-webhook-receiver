@@ -16,6 +16,13 @@ auth_realm: "Git Webhook Receiver" # Basic auth realm shown in the browser crede
 ssl:
   cert_file_path: "./your/certfile/path/fullchain.pem"
   key_file_path: "/your/keyfile/path/privkey.pem"
+# root-level environment: the base of the env hierarchy applied to every
+# action of every project. Layered root -> project -> action, later levels may
+# reference and override earlier ones. Same "KEY=VALUE" + interpolation rules as
+# the per-action `environment` documented below. For security, environment
+# entries are masked (like secrets) in logs, the API and the Web UI.
+# environment:
+#   - "REGISTRY=registry.example.com"
 projects:
   your_project_name:
     git_provider: github # "github" (default) | "gitea" | "gitlab"
@@ -26,6 +33,10 @@ projects:
     secret: "YourSecretGoesHere" # your secret, used to sign the payload and validate it.
     # Please notice, github doesn't support this kind of auth, it's only for gitea/gitlab
     authorization: "JghYTd" # post authorization header contents, to authorize the incoming request
+    # project-level environment: layered on top of the root env, forms the base
+    # for this project's actions (may reference/override root entries).
+    # environment:
+    #   - "IMAGE=${REGISTRY}/${PROJECT_NAME}"
     actions:
       # defaults to "push", use "*" to handle any event, or use a specific one, e.g. "release"
       - on: push
@@ -34,6 +45,16 @@ projects:
         # user from which action will be run, requires the elevated permissions, default to empty string
         user: www-data
         cwd: "/var/www/yourproject" # root dir in which action will be run, defaults to empty
+        # extra environment variables injected into the action, on top of the
+        # built-in (GIT_*, PROJECT_NAME, ...) and passed-through (HOME/USER/PATH)
+        # ones, which they may override. Each VALUE supports shell-style env
+        # interpolation resolved against this receiver process's environment:
+        #   ${VAR}  ${VAR:-default}  ${VAR-default}  ${VAR:?err}  ${VAR?err}
+        #   ${VAR:+replacement}  ${VAR+replacement}
+        # environment:
+        #   - "DEPLOY_TOKEN=${DEPLOY_TOKEN:?must be set in the receiver env}"
+        #   - "NODE_ENV=production"
+        #   - "CACHE_DIR=${HOME}/.cache/myproject"
         # each action MUST have either a `script` or `run` field (but not both):
         # To run a script:
         script: |

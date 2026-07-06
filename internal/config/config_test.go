@@ -258,6 +258,48 @@ func TestConfigProjectNameValidation(t *testing.T) {
 	}
 }
 
+func TestConfigEnvironmentValidation(t *testing.T) {
+	prelude := func(envYAML string) string {
+		return `
+projects:
+  test-proj:
+    git_provider: gitea
+    repo: "username/reponame"
+    actions:
+      - on: push
+        run: ["node", "--version"]
+        environment:
+` + envYAML
+	}
+
+	t.Run("valid KEY=VALUE entries pass", func(t *testing.T) {
+		configFileName := tmpConfigFile(t, prelude(
+			"          - \"FOO=bar\"\n"+
+				"          - \"TOKEN=${SOME_VAR:-default}\"\n"))
+		if _, err := config.Load(configFileName); err != nil {
+			t.Errorf("false positive on valid environment: %s", err)
+		}
+	})
+
+	badEntries := []struct {
+		desc  string
+		entry string
+	}{
+		{"missing '='", `- "NOEQUALS"`},
+		{"empty key", `- "=value"`},
+		{"key starting with a digit", `- "1BAD=value"`},
+		{"key with invalid char", `- "BA-D=value"`},
+	}
+	for _, tt := range badEntries {
+		t.Run(tt.desc, func(t *testing.T) {
+			configFileName := tmpConfigFile(t, prelude("          "+tt.entry+"\n"))
+			if _, err := config.Load(configFileName); err == nil {
+				t.Errorf("validation wasn't triggered for %s", tt.desc)
+			}
+		})
+	}
+}
+
 func TestDefaultMaxActionsStored(t *testing.T) {
 	baseCfg := `
 host: test.example.com
@@ -605,22 +647,70 @@ func TestSslValidation(t *testing.T) {
 	}
 }
 
+func TestEnvironmentHierarchyMerge(t *testing.T) {
+	cfg := loadMockConfig(t, `
+environment:
+  - "ROOT=root-val"
+  - "SHARED=from-root"
+projects:
+  test-proj:
+    git_provider: gitea
+    repo: "username/reponame"
+    environment:
+      - "PROJECT=proj-val"
+      - "SHARED=from-project"
+    actions:
+      - run: ["node", "--version"]
+        environment:
+          - "ACTION=action-val"
+          - "SHARED=from-action"
+`)
+
+	got := cfg.Projects["test-proj"].Actions[0].Environment
+	want := config.EnvList{
+		// root
+		"ROOT=root-val", "SHARED=from-root",
+		// project
+		"PROJECT=proj-val", "SHARED=from-project",
+		// action
+		"ACTION=action-val", "SHARED=from-action",
+	}
+	if len(got) != len(want) {
+		t.Fatalf("merged env = %v; want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("merged env[%d] = %q; want %q (full: %v)", i, got[i], want[i], got)
+		}
+	}
+}
+
 func TestSensitiveDataMasking(t *testing.T) {
 	makeTestCfg := func() config.Config {
 		cfg := config.Config{
 			Projects: make(map[string]config.Project),
 		}
 		cfg.AuthPassword = "t3stPa55w0rd"
+		cfg.Environment = config.EnvList{"ROOT_TOKEN=r00tEnvS3cr3t"}
 		cfg.Projects["proj1"] = config.Project{
 			Authorization: "B3ar3rT0k3nV4lu3",
+			Environment:   config.EnvList{"PROJ_TOKEN=pr0jEnvS3cr3t"},
 		}
 		cfg.Projects["proj2"] = config.Project{
 			Secret: "wh00kS3cr3tV4lu3",
+			Actions: []config.Action{
+				{Environment: config.EnvList{"ACTION_TOKEN=acti0nEnvS3cr3t"}},
+			},
 		}
 		return cfg
 	}
 
-	passwords := []string{"t3stPa55w0rd", "B3ar3rT0k3nV4lu3", "wh00kS3cr3tV4lu3"}
+	passwords := []string{
+		"t3stPa55w0rd", "B3ar3rT0k3nV4lu3", "wh00kS3cr3tV4lu3",
+		"r00tEnvS3cr3t", "pr0jEnvS3cr3t", "acti0nEnvS3cr3t",
+		// env keys are masked too, so they must not appear either
+		"ROOT_TOKEN", "PROJ_TOKEN", "ACTION_TOKEN",
+	}
 
 	t.Run("text handler masks sensitive data", func(t *testing.T) {
 		cfg := makeTestCfg()

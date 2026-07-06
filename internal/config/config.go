@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os/user"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -23,24 +24,28 @@ const (
 )
 
 type Config struct {
-	Addr                    string             `yaml:"addr" env:"ADDR" env-default:"localhost:9090"`
-	PublicURL               string             `yaml:"public_url" env:"PUBLIC_URL"`
-	DisableUI               bool               `yaml:"disable_ui" env:"DISABLE_UI"`
-	DisableAPI              bool               `yaml:"disable_api" env:"DISABLE_API"`
-	AuthUser                string             `yaml:"auth_user" env:"AUTH_USER" env-default:"admin"`
-	AuthPassword            Secret             `yaml:"auth_password" env:"AUTH_PASSWORD"`
-	AuthRealm               string             `yaml:"auth_realm" env:"AUTH_REALM" env-default:"Git Webhook Receiver"`
-	LogLevel                string             `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
-	LogType                 string             `yaml:"log_type" env:"LOG_TYPE" env-default:"json"`
-	LogsDBFile              string             `yaml:"logs_db_file" env:"LOGS_DB_FILE" env-default:"logs.sqlite3"`
-	ActionsDBFile           string             `yaml:"actions_db_file" env:"ACTIONS_DB_FILE" env-default:"actions.sqlite3"`
-	MaxActionsStored        int                `yaml:"max_actions_stored" env:"MAX_ACTIONS_STORED" env-default:"1000"` // the same as DefaultMaxActionsStored
-	MaxOutputBytes          int                `yaml:"max_output_bytes" env:"MAX_OUTPUT_BYTES" env-default:"1048576"`  // the same as DefaultMaxOutputBytes
-	MaxConcurrentActions    int                `yaml:"max_concurrent_actions" env:"MAX_CONCURRENT_ACTIONS" env-default:"8"`
-	ActionsTimeout          time.Duration      `yaml:"actions_timeout" env:"ACTIONS_TIMEOUT" env-default:"10m"`
-	ActionsGracefulShutdown time.Duration      `yaml:"actions_graceful_shutdown" env:"ACTIONS_GRACEFUL_SHUTDOWN" env-default:"15s"`
-	Ssl                     SslConfig          `yaml:"ssl" env-prefix:"SSL__"`
-	Projects                map[string]Project `yaml:"projects" env-required:"true"`
+	Addr                    string        `yaml:"addr" env:"ADDR" env-default:"localhost:9090"`
+	PublicURL               string        `yaml:"public_url" env:"PUBLIC_URL"`
+	DisableUI               bool          `yaml:"disable_ui" env:"DISABLE_UI"`
+	DisableAPI              bool          `yaml:"disable_api" env:"DISABLE_API"`
+	AuthUser                string        `yaml:"auth_user" env:"AUTH_USER" env-default:"admin"`
+	AuthPassword            Secret        `yaml:"auth_password" env:"AUTH_PASSWORD"`
+	AuthRealm               string        `yaml:"auth_realm" env:"AUTH_REALM" env-default:"Git Webhook Receiver"`
+	LogLevel                string        `yaml:"log_level" env:"LOG_LEVEL" env-default:"info"`
+	LogType                 string        `yaml:"log_type" env:"LOG_TYPE" env-default:"json"`
+	LogsDBFile              string        `yaml:"logs_db_file" env:"LOGS_DB_FILE" env-default:"logs.sqlite3"`
+	ActionsDBFile           string        `yaml:"actions_db_file" env:"ACTIONS_DB_FILE" env-default:"actions.sqlite3"`
+	MaxActionsStored        int           `yaml:"max_actions_stored" env:"MAX_ACTIONS_STORED" env-default:"1000"` // the same as DefaultMaxActionsStored
+	MaxOutputBytes          int           `yaml:"max_output_bytes" env:"MAX_OUTPUT_BYTES" env-default:"1048576"`  // the same as DefaultMaxOutputBytes
+	MaxConcurrentActions    int           `yaml:"max_concurrent_actions" env:"MAX_CONCURRENT_ACTIONS" env-default:"8"`
+	ActionsTimeout          time.Duration `yaml:"actions_timeout" env:"ACTIONS_TIMEOUT" env-default:"10m"`
+	ActionsGracefulShutdown time.Duration `yaml:"actions_graceful_shutdown" env:"ACTIONS_GRACEFUL_SHUTDOWN" env-default:"15s"`
+	Ssl                     SslConfig     `yaml:"ssl" env-prefix:"SSL__"`
+	// Environment is the root of the environment hierarchy injected into every
+	// action: root -> project -> action, each level layered (and interpolated)
+	// on top of the previous one. See [EnvList] and the action runner's createEnv.
+	Environment EnvList            `yaml:"environment"`
+	Projects    map[string]Project `yaml:"projects" env-required:"true"`
 }
 
 type SslConfig struct {
@@ -52,20 +57,31 @@ type SslConfig struct {
 // tag can be set through the env variables. See [applyEnvToProjectAndActions]
 
 type Project struct {
-	GitProvider   string   `yaml:"git_provider" env-default:"github"`
-	Repo          string   `yaml:"repo" env-required:"true"`
-	Authorization Secret   `yaml:"authorization" env:"AUTH" json:"authorization,omitzero"`
-	Secret        Secret   `yaml:"secret" env:"SECRET" json:"secret,omitzero"`
-	Actions       []Action `yaml:"actions" env-required:"true"`
+	GitProvider   string `yaml:"git_provider" env-default:"github"`
+	Repo          string `yaml:"repo" env-required:"true"`
+	Authorization Secret `yaml:"authorization" env:"AUTH" json:"authorization,omitzero"`
+	Secret        Secret `yaml:"secret" env:"SECRET" json:"secret,omitzero"`
+	// Environment is layered on top of the root environment and, in turn, forms
+	// the base for each of this project's actions. See [EnvList].
+	Environment EnvList  `yaml:"environment" json:"environment,omitempty"`
+	Actions     []Action `yaml:"actions" env-required:"true"`
 }
 
 type Action struct {
-	On               string        `yaml:"on" env-default:"push" json:"on,omitempty"`
-	Branch           string        `yaml:"branch" env-default:"master" json:"branch,omitempty"`
-	Cwd              string        `yaml:"cwd" json:"cwd,omitempty"`
-	User             string        `yaml:"user" json:"user,omitempty"`
-	Script           string        `yaml:"script" json:"script,omitempty"`
-	Run              []string      `yaml:"run" json:"run,omitempty"`
+	On     string   `yaml:"on" env-default:"push" json:"on,omitempty"`
+	Branch string   `yaml:"branch" env-default:"master" json:"branch,omitempty"`
+	Cwd    string   `yaml:"cwd" json:"cwd,omitempty"`
+	User   string   `yaml:"user" json:"user,omitempty"`
+	Script string   `yaml:"script" json:"script,omitempty"`
+	Run    []string `yaml:"run" json:"run,omitempty"`
+	// Environment is a list of "KEY=VALUE" entries injected into the action's
+	// environment on top of the built-in and passed-through variables (so it may
+	// override them). By config parse time it holds the whole flattened
+	// root -> project -> action chain. Each VALUE is subject to shell-style env
+	// interpolation (${VAR}, ${VAR:-default}, ...) resolved against the
+	// receiver's process environment plus preceding entries. See [EnvList] and
+	// the action runner's createEnv.
+	Environment      EnvList       `yaml:"environment" json:"environment,omitempty"`
 	Timeout          time.Duration `yaml:"timeout"`
 	GracefulShutdown time.Duration `yaml:"graceful_shutdown"`
 }
@@ -110,10 +126,14 @@ func Load(configPath string) (Config, error) {
 		return cfg, fmt.Errorf("'max_concurrent_actions' must be a positive integer")
 	}
 
+	if err := validateEnvEntries(cfg.Environment); err != nil {
+		return cfg, fmt.Errorf("root environment: %w", err)
+	}
+
 	projectsWithDefaults, err := validateAndSetDefaultsConfigProjects(cfg.Projects, globalDefaults{
 		Timeout:          cfg.ActionsTimeout,
 		GracefulShutdown: cfg.ActionsGracefulShutdown,
-	})
+	}, cfg.Environment)
 	if err != nil {
 		return cfg, fmt.Errorf("configs projects validation failed: %w", err)
 	}
@@ -146,7 +166,7 @@ type globalDefaults struct {
 	GracefulShutdown time.Duration
 }
 
-func validateAndSetDefaultsConfigProjects(projects map[string]Project, global globalDefaults) (map[string]Project, error) {
+func validateAndSetDefaultsConfigProjects(projects map[string]Project, global globalDefaults, rootEnv EnvList) (map[string]Project, error) {
 	for projectName, project := range projects {
 		if err := setDefaultAndCheckRequired(&project); err != nil {
 			return nil, fmt.Errorf("project %q has issue with its fields: %w", projectName, err)
@@ -154,6 +174,10 @@ func validateAndSetDefaultsConfigProjects(projects map[string]Project, global gl
 
 		if err := isValidProjectName(projectName); err != nil {
 			return nil, fmt.Errorf("bad project name %q: %w", projectName, err)
+		}
+
+		if err := validateEnvEntries(project.Environment); err != nil {
+			return nil, fmt.Errorf("project %q environment: %w", projectName, err)
 		}
 
 		if len(project.Actions) == 0 {
@@ -164,7 +188,10 @@ func validateAndSetDefaultsConfigProjects(projects map[string]Project, global gl
 			)
 		}
 
-		actionsWithDefaults, err := validateAndSetDefaultConfigActions(projectName, project.Actions, global)
+		// The action's base env is the root layered with this project's own
+		// entries; each action then appends its own on top (see below).
+		projectEnv := slices.Concat(rootEnv, project.Environment)
+		actionsWithDefaults, err := validateAndSetDefaultConfigActions(projectName, project.Actions, global, projectEnv)
 		if err != nil {
 			return nil, fmt.Errorf("action validation failed: %w", err)
 		}
@@ -174,7 +201,7 @@ func validateAndSetDefaultsConfigProjects(projects map[string]Project, global gl
 	return projects, nil
 }
 
-func validateAndSetDefaultConfigActions(projectName string, actions []Action, global globalDefaults) ([]Action, error) {
+func validateAndSetDefaultConfigActions(projectName string, actions []Action, global globalDefaults, projectEnv EnvList) ([]Action, error) {
 	for i, action := range actions {
 		wrapActionErr := func(err error) error {
 			return fmt.Errorf(
@@ -196,6 +223,10 @@ func validateAndSetDefaultConfigActions(projectName string, actions []Action, gl
 			return nil, wrapActionErr(fmt.Errorf("has both 'script' and 'run' simultaneously, you must use one"))
 		}
 
+		if err := validateEnvEntries(action.Environment); err != nil {
+			return nil, wrapActionErr(err)
+		}
+
 		if runtime.GOOS != "windows" && action.User != "" {
 			if _, err := user.Lookup(action.User); err != nil {
 				return nil, wrapActionErr(fmt.Errorf("has a user field = %q, but this user can't be found: %w", action.User, err))
@@ -213,9 +244,46 @@ func validateAndSetDefaultConfigActions(projectName string, actions []Action, gl
 			return nil, wrapActionErr(fmt.Errorf("'graceful_shutdown' cannot be a negative value"))
 		}
 
+		// Flatten the hierarchy: root -> project -> action. Sequential
+		// interpolation and last-wins overriding happen in the action runner.
+		action.Environment = slices.Concat(projectEnv, action.Environment)
+
 		actions[i] = action
 	}
 	return actions, nil
+}
+
+// validateEnvEntries checks that each action `environment` entry has the
+// "KEY=VALUE" shape with a POSIX-conformant KEY. The VALUE itself is only
+// resolved at run time (it depends on the process environment), so we don't
+// interpolate here -- see the action runner's createEnv.
+func validateEnvEntries(entries []string) error {
+	for _, entry := range entries {
+		key, _, found := strings.Cut(entry, "=")
+		if !found {
+			return fmt.Errorf("invalid environment entry %q: expected \"KEY=VALUE\" form", entry)
+		}
+		if err := isValidEnvKey(key); err != nil {
+			return fmt.Errorf("invalid environment entry %q: %w", entry, err)
+		}
+	}
+	return nil
+}
+
+// isValidEnvKey enforces the POSIX name convention for env variables:
+// a leading letter or underscore followed by letters, digits or underscores.
+func isValidEnvKey(key string) error {
+	if key == "" {
+		return fmt.Errorf("env key can't be empty")
+	}
+	for i, r := range key {
+		isDigit := r >= '0' && r <= '9'
+		isAlpha := (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '_'
+		if !isAlpha && (!isDigit || i <= 0) {
+			return fmt.Errorf("env key %q can only contain [A-Za-z0-9_] and can't start with a digit", key)
+		}
+	}
+	return nil
 }
 
 // isValidProjectName checks if a name of a project is valid.
