@@ -94,6 +94,21 @@ func (r *ActionRunner) listen(ctx context.Context, actionArgsStream <-chan Actio
 	}
 }
 
+// ErrPipeline marks a failure of the runner's own machinery
+// (tmp file, process attrs, environment) as opposed to a failure
+// of the user's action itself.
+//
+// The sentinel is only inspectable via errors.Is while the error is a live
+// chain in this process. Once actionsdb persists it, the error is flattened to
+// its message string and reloaded as a plain errors.New, so errors.Is against a
+// record read back from the DB will not match. Downstream consumers that read
+// stored records treat the message as opaque text.
+var ErrPipeline = errors.New("pipeline error")
+
+func pipelineError(err error) error {
+	return fmt.Errorf("%w: %w", ErrPipeline, err)
+}
+
 //------------------------------------------------------------------------------
 // Private parts
 
@@ -105,30 +120,58 @@ func (r *ActionRunner) executeAction(
 	logger := args.Logger
 	logger.Info("Running action", slog.Int("action_index", actionDesc.Index))
 
-	if r.actionsDB != nil {
-		err := r.actionsDB.CreateRecord(actionDesc.PipeID, actionDesc.Project, args.DeliveryID, args.Hash, actionDesc.Config)
-		if err != nil {
-			logger.Error("Error creating pipeline record in the db", slog.Any("error", err))
-			return
-		}
-	}
+	// actionErr is a potential error of action run
+	var actionErr error
 
+	// Creating tmpOutputMgr first, so we close it last in defer, error is captured in actionErr
 	rawOutput, err := r.tmpOutputMgr.Create(actionDesc.PipeID)
 	if err != nil {
 		logger.Error("Error creating temporary file to capture action's output", slog.Any("error", err))
+		actionErr = pipelineError(fmt.Errorf("error creating a temporary file to capture action output: %w", err))
+	} else {
+		defer func() {
+			err := r.tmpOutputMgr.Close(actionDesc.PipeID)
+			if err != nil {
+				logger.Error("Error closing action output", slog.Any("error", err))
+			}
+		}()
+	}
+	if r.actionsDB != nil {
+		err := r.actionsDB.CreateRecord(actionDesc.PipeID, actionDesc.Project, args.DeliveryID, args.Hash, actionDesc.Config)
+		if err != nil {
+			logger.Error("Error creating pipeline record in the db", slog.Any("error", errors.Join(err, actionErr)))
+			return
+		}
+		defer func() {
+			var outputForDB []byte
+			// rawOutput == nil means we failed to create a tmp file in the first place
+			if rawOutput != nil {
+				outputReader, err := r.tmpOutputMgr.Drain(actionDesc.PipeID)
+				if err != nil {
+					logger.Error("Error obtaining output reader", slog.Any("error", err))
+				} else {
+					outputForDB, err = io.ReadAll(outputReader)
+					if err != nil {
+						logger.Error("Error reading the action output", slog.Any("error", err))
+					}
+				}
+			}
+			err = r.actionsDB.CloseRecord(actionDesc.PipeID, actionErr, outputForDB)
+			if err != nil {
+				logger.Error("Error closing action's db record", slog.Any("error", err))
+				return
+			}
+		}()
+	}
+	// Checking tmpOutputMgr was actually created before proceeding
+	if rawOutput == nil {
 		return
 	}
-	outputWriter := &overflowWriter{Writer: rawOutput}
-	defer func() {
-		err := r.tmpOutputMgr.Close(actionDesc.PipeID)
-		if err != nil {
-			logger.Error("Error closing action output", slog.Any("error", err))
-		}
-	}()
 
 	sysProcAttr, err := getSysProcAttr(actionDesc.Config.User)
 	if err != nil {
 		logger.Error("Error creating process attributes for action", slog.Any("error", err))
+		actionErr = pipelineError(fmt.Errorf("error creating process attributes for action: %w", err))
 		return
 	}
 
@@ -139,12 +182,13 @@ func (r *ActionRunner) executeAction(
 	actionCtx, cancelAction := context.WithTimeout(ctx, actionDesc.Config.Timeout)
 	defer cancelAction()
 
+	outputWriter := &overflowWriter{Writer: rawOutput}
 	env, err := createEnv(args)
 	if err != nil {
 		logger.Error("Error building the action environment", slog.Any("error", err))
+		actionErr = pipelineError(fmt.Errorf("error building action environment: %w", err))
 		return
 	}
-	var actionErr error
 	if len(actionDesc.Config.Run) > 0 {
 		logger.Debug("Running the command", slog.Any("command", actionDesc.Config.Run))
 		actionErr = executeActionRun(actionCtx, actionDesc.Config, env, sysProcAttr, outputWriter)
@@ -152,7 +196,6 @@ func (r *ActionRunner) executeAction(
 		logger.Debug("Running the script", slog.String("script", actionDesc.Config.Script))
 		actionErr = executeActionScript(actionCtx, actionDesc.Config, env, sysProcAttr, outputWriter)
 	}
-
 	if outputWriter.overflowed {
 		actionErr = fmt.Errorf("action output exceeded the maximum allowed size: %w", tmpoutput.ErrOutputTooLarge)
 	}
@@ -161,23 +204,5 @@ func (r *ActionRunner) executeAction(
 		logger.Error("Error while running the action", slog.Any("error", actionErr))
 	} else {
 		logger.Info("Action successfully finished")
-	}
-
-	if r.actionsDB != nil {
-		var outputForDB []byte
-		outputReader, err := r.tmpOutputMgr.Drain(actionDesc.PipeID)
-		if err != nil {
-			logger.Error("Error obtaining output reader", slog.Any("error", err))
-		} else {
-			outputForDB, err = io.ReadAll(outputReader)
-			if err != nil {
-				logger.Error("Error reading the action output", slog.Any("error", err))
-			}
-		}
-		err = r.actionsDB.CloseRecord(actionDesc.PipeID, actionErr, outputForDB)
-		if err != nil {
-			logger.Error("Error closing action's db record", slog.Any("error", err))
-			return
-		}
 	}
 }
