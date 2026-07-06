@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"mvdan.cc/sh/v3/expand"
 	"mvdan.cc/sh/v3/interp"
 	"mvdan.cc/sh/v3/syntax"
 )
@@ -38,7 +39,8 @@ func TestHelperProcess(t *testing.T) {
 func newExecHandlerRunner(t *testing.T, sysProcAttr *syscall.SysProcAttr, env []string, stdout, stderr io.Writer) *interp.Runner {
 	t.Helper()
 	runner, err := interp.New(
-		interp.ExecHandlers(execHandler(env, sysProcAttr, 0)),
+		interp.Env(expand.ListEnviron(env...)),
+		interp.ExecHandlers(execHandler(sysProcAttr, 0)),
 		interp.StdIO(nil, stdout, stderr),
 	)
 	if err != nil {

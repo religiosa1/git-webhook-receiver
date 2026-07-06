@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
+	"mvdan.cc/sh/v3/expand"
 	"mvdan.cc/sh/v3/interp"
 	"mvdan.cc/sh/v3/syntax"
 )
@@ -27,7 +28,8 @@ func executeActionScript(
 	}
 
 	runner, err := interp.New(
-		interp.ExecHandlers(execHandler(env, sysProcAttr, action.GracefulShutdown)),
+		interp.Env(expand.ListEnviron(env...)),
+		interp.ExecHandlers(execHandler(sysProcAttr, action.GracefulShutdown)),
 		interp.StdIO(nil, output, output),
 		interp.Dir(action.Cwd),
 	)
@@ -38,7 +40,6 @@ func executeActionScript(
 }
 
 func execHandler(
-	env []string,
 	sysProcAttr *syscall.SysProcAttr,
 	gracefulKillTimeout time.Duration,
 ) func(next interp.ExecHandlerFunc) interp.ExecHandlerFunc {
@@ -55,7 +56,7 @@ func execHandler(
 			// command name (args[0]) instead of the resolved path in process listings.
 			cmd.Args = args
 			cmd.Dir = hc.Dir
-			cmd.Env = env
+			cmd.Env = execEnv(hc.Env)
 			cmd.Stdin = hc.Stdin
 			cmd.Stdout = hc.Stdout
 			cmd.Stderr = hc.Stderr
@@ -82,4 +83,17 @@ func execHandler(
 			}
 		}
 	}
+}
+
+// execEnv flattens the interpreter's environment into a "key=value" list
+// suitable for exec.Cmd.Env, forwarding only exported string variables. It
+// mirrors the unexported interp.execEnv used by the library's default handler.
+func execEnv(env expand.Environ) []string {
+	list := make([]string, 0, 64)
+	for name, vr := range env.Each {
+		if vr.Exported && vr.Kind == expand.String {
+			list = append(list, name+"="+vr.String())
+		}
+	}
+	return list
 }
