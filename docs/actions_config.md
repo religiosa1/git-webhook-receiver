@@ -8,6 +8,23 @@ array of args, or a `script` field, where script is [mvdan/sh](https://github.co
 shell interpreter. It's supports a lot of features, please, refer to its
 documentation for extra details.
 
+Scripts run by default with `set -eo pipefail`, which means any failed command
+will abort script execution (see
+[this](https://gist.github.com/mohanpedala/1e2ff5661761d3abd0385e8223e16425)
+for explanation). This mirrors Github Actions behavior. If you want, you can
+opt out in your script with
+
+```sh
+set +e
+set +o pipefail
+```
+
+Echo output of script commands is disabled, so we don't accidentally leak
+secrets in the logs. If you want, you can opt-in for that with `set -x` in your
+script.
+
+## CWD
+
 You can optionally supply the `cwd` param, to specify the root dir
 for execution to the action.
 

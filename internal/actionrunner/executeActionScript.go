@@ -32,6 +32,7 @@ func executeActionScript(
 		interp.ExecHandlers(execHandler(sysProcAttr, action.GracefulShutdown)),
 		interp.StdIO(nil, output, output),
 		interp.Dir(action.Cwd),
+		interp.Params("-e", "-o", "pipefail"),
 	)
 	if err != nil {
 		return err
