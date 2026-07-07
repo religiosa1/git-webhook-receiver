@@ -4,8 +4,37 @@ A small service that listens for incoming webhook HTTP POST requests from a Git
 provider (Gitea, GitHub, GitLab) for one or more projects and runs a given
 script in response to matching webhook events.
 
-Its intended use is to run CI/CD scripts on a server, but it can be used to
+Its intended use is to run CD scripts on a server, but it can be used to
 execute arbitrary actions on Git events.
+
+- **Simplistic model** - you get a git webhook hit - you just run some code or
+  a shell script as your action.
+- **Lightweight** - single binary, ~20MiB memory footprint, SQLite for storage.
+- **Only for git** - ease of configuration for git specifically, allows you to
+  easily select the git event or branch you're interested in. Git commit hash,
+  branch, repo automatically injected into your actions' environment.
+- **Inspection** - Web UI, REST API, and CLI subcommands to view pipeline
+  status, output and logs.
+- **Secure by default** - payload signature verification (`secret`) and/or
+  `Authorization` header checks per project. Secrets masked, environment of
+  actions stripped. Optional basic-auth for ease of closed deployment.
+- **Persistence** - actions' outcome, output and logs are stored in WAL sqlite
+  databases. You can opt out. Optional automatic pruning of old records.
+- **Process control** - concurrency limit, per-action and global timeouts,
+  graceful shutdown, and output size caps.
+- **Deployment** - listens on TCP or a Unix socket, with optional built-in SSL
+  or reverse-proxy setup.
+
+The core part here is "simplistic" and "lightweight". It doesn't provide any
+docker isolation for the build pipeline, with the idea you rely on systemd for
+security and can always manually wrap your script with bubblewrap or podman if
+you need an extra isolation layer.
+
+For a feature-rich CI-CD runner look at [Woodpecker](https://github.com/woodpecker-ci/woodpecker)
+or [Dokploy](https://github.com/dokploy/dokploy). For a general "action on a
+webhook hit" service, not tied to git look at [adnanh/webhook](https://github.com/adnanh/webhook)
+
+## How to use it?
 
 In a nutshell:
 
@@ -212,7 +241,7 @@ You can find the full documentation for endpoints and params they accept
 
 You can also enable BasicAuth for the API either in the config:
 
-```
+```yaml
 auth_password: "mysecret"
 ```
 
