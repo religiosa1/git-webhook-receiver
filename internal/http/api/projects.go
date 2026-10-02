@@ -14,7 +14,7 @@ type ListProjects struct {
 }
 
 func (h ListProjects) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	logger := middleware.GetLogger(req.Context())
+	logger := middleware.LoggerFromContext(req.Context())
 
 	w.Header().Set("Content-Type", "application/json")
 	err := json.NewEncoder(w).Encode(h.Projects)
@@ -28,7 +28,7 @@ type GetProject struct {
 }
 
 func (h GetProject) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	logger := middleware.GetLogger(req.Context())
+	logger := middleware.LoggerFromContext(req.Context())
 
 	w.Header().Set("Content-Type", "application/json")
 	err := json.NewEncoder(w).Encode(h.Project)

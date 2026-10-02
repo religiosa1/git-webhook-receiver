@@ -34,7 +34,7 @@ func parseLogsFilterQuery(queryParams url.Values) logsdb.GetEntryFilteredQuery {
 }
 
 func (s GetLogs) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	logger := middleware.GetLogger(req.Context())
+	logger := middleware.LoggerFromContext(req.Context())
 	if s.DB == nil {
 		logger.Error("logs page accessed, while no logs db is provided")
 		w.WriteHeader(http.StatusNotFound)

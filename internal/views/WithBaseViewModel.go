@@ -18,19 +18,17 @@ type baseViewModel struct {
 	Version          string
 }
 
-type viewModelContextKey string
+type viewModelContextKey struct{}
 
-var baseViewModelContextKey viewModelContextKey = "baseViewModelContext"
-
-func GetBaseViewModel(ctx context.Context) baseViewModel {
-	if model, ok := ctx.Value(baseViewModelContextKey).(baseViewModel); ok {
+func BaseViewModelFromContext(ctx context.Context) baseViewModel {
+	if model, ok := ctx.Value(viewModelContextKey{}).(baseViewModel); ok {
 		return model
 	}
 	return baseViewModel{}
 }
 
 func MakePublicURL(ctx context.Context, relative string) string {
-	publicURL := GetBaseViewModel(ctx).PublicURL
+	publicURL := BaseViewModelFromContext(ctx).PublicURL
 	if publicURL == "" {
 		publicURL = "/"
 	}
@@ -56,7 +54,7 @@ func WithBaseViewModel(cfg config.Config) func(http.Handler) http.Handler {
 				CurrentPath:      currentPath,
 				Version:          version.String(),
 			}
-			ctx := context.WithValue(r.Context(), baseViewModelContextKey, model)
+			ctx := context.WithValue(r.Context(), viewModelContextKey{}, model)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

@@ -81,7 +81,7 @@ func Load(configPath string) (Config, error) {
 	var cfg Config
 
 	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
-		return cfg, fmt.Errorf("error loading configuration %s: %w", configPath, err)
+		return cfg, fmt.Errorf("error loading configuration %q: %w", configPath, err)
 	}
 	applyEnvToProjectAndActions(&cfg)
 

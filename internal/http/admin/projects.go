@@ -16,7 +16,7 @@ type ListProjects struct {
 }
 
 func (l ListProjects) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	logger := middleware.GetLogger(req.Context())
+	logger := middleware.LoggerFromContext(req.Context())
 	viewModel := views.ProjectsViewModel{
 		Projects: l.Projects,
 	}

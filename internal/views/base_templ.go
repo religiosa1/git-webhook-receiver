@@ -31,7 +31,7 @@ func headerNavLink(text, path string) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		currentPath := GetBaseViewModel(ctx).CurrentPath
+		currentPath := BaseViewModelFromContext(ctx).CurrentPath
 		isCurrent := currentPath == path || strings.HasPrefix(currentPath, path+"/")
 		var templ_7745c5c3_Var2 = []any{"main-nav__link", templ.KV("main-nav__link_current", isCurrent)}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var2...)
@@ -116,7 +116,7 @@ func base(title string) templ.Component {
 			templ_7745c5c3_Var6 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		model := GetBaseViewModel(ctx)
+		model := BaseViewModelFromContext(ctx)
 		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<!doctype html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err

@@ -4,7 +4,7 @@ import "strings"
 
 templ headerNavLink(text, path string) {
 	{{
-		currentPath := GetBaseViewModel(ctx).CurrentPath
+		currentPath := BaseViewModelFromContext(ctx).CurrentPath
 		isCurrent := currentPath == path || strings.HasPrefix(currentPath, path+"/")
 	}}
 	<a
@@ -19,7 +19,7 @@ templ headerNavLink(text, path string) {
 }
 
 templ base(title string) {
-	{{ model := GetBaseViewModel(ctx) }}
+	{{ model := BaseViewModelFromContext(ctx) }}
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>

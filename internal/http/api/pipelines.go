@@ -18,7 +18,7 @@ type ListPipelines struct {
 }
 
 func (h ListPipelines) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	logger := middleware.GetLogger(req.Context())
+	logger := middleware.LoggerFromContext(req.Context())
 	queryParams := req.URL.Query()
 
 	if h.DB == nil {

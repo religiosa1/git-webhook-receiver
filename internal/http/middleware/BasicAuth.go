@@ -18,12 +18,10 @@ func WithBasicAuth(expectedUsername string, expectedPassword string, realm strin
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			logger := GetLogger(r.Context())
+			logger := LoggerFromContext(r.Context())
 			username, password, ok := r.BasicAuth()
 			if !ok {
-				if logger != nil {
-					logger.Info("Basic auth required", slog.String("url", r.RequestURI), slog.String("method", r.Method), slog.String("remoteAddr", r.RemoteAddr))
-				}
+				logger.Info("Basic auth required", slog.String("url", r.RequestURI), slog.String("method", r.Method), slog.String("remoteAddr", r.RemoteAddr))
 			} else {
 				// always do both, to make user enumeration harder
 				if userOk, passOk := userNameComparer.Eq(username), passwordComparer.Eq(password); userOk && passOk {

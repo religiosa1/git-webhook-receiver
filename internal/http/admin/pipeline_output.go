@@ -15,7 +15,7 @@ type GetPipelineOutput struct {
 
 func (s GetPipelineOutput) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	pipeID := req.PathValue("pipeId")
-	logger := middleware.GetLogger(req.Context()).With(slog.String("pipe_id", pipeID))
+	logger := middleware.LoggerFromContext(req.Context()).With(slog.String("pipe_id", pipeID))
 	if s.DB == nil {
 		logger.Error("pipeline output page accessed, while no actions db is provided")
 		w.WriteHeader(http.StatusNotFound)

@@ -28,7 +28,7 @@ type Webhook struct {
 }
 
 func (h Webhook) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	logger := middleware.GetLogger(req.Context())
+	logger := middleware.LoggerFromContext(req.Context())
 	req.Body = http.MaxBytesReader(w, req.Body, maxBodySize)
 	// setting noop-closer body, so we can read it multiple times
 	payload, err := io.ReadAll(req.Body)

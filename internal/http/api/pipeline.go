@@ -18,7 +18,7 @@ type GetPipeline struct {
 }
 
 func (h GetPipeline) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	logger := middleware.GetLogger(req.Context())
+	logger := middleware.LoggerFromContext(req.Context())
 	pipeID := req.PathValue("pipeId")
 
 	if h.DB == nil {

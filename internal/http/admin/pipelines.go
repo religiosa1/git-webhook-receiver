@@ -18,7 +18,7 @@ type ListPipelines struct {
 }
 
 func (s ListPipelines) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	logger := middleware.GetLogger(req.Context())
+	logger := middleware.LoggerFromContext(req.Context())
 	if s.DB == nil {
 		logger.Error("pipelines page accessed, while no actions db is provided")
 		w.WriteHeader(http.StatusNotFound)

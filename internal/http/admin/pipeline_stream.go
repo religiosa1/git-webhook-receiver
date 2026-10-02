@@ -23,7 +23,7 @@ type GetPipelineOutputStream struct {
 
 func (s GetPipelineOutputStream) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	pipeID := req.PathValue("pipeId")
-	logger := middleware.GetLogger(req.Context()).With(slog.String("pipe_id", pipeID))
+	logger := middleware.LoggerFromContext(req.Context()).With(slog.String("pipe_id", pipeID))
 	if s.DB == nil {
 		http.Error(w, "Not Found", http.StatusNotFound)
 		return

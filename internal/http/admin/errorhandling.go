@@ -36,7 +36,7 @@ func renderErr(w http.ResponseWriter, req *http.Request, err error) error {
 	case http.StatusBadRequest:
 		errView = views.BadRequest(err)
 	default:
-		requestID := middleware.GetRequestID(req.Context())
+		requestID := middleware.RequestIDFromContext(req.Context())
 		errView = views.InternalError(requestID)
 	}
 	return errView.Render(req.Context(), w)

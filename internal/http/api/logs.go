@@ -18,7 +18,7 @@ type GetLogs struct {
 }
 
 func (h GetLogs) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	logger := middleware.GetLogger(req.Context())
+	logger := middleware.LoggerFromContext(req.Context())
 	w.Header().Set("Content-Type", "application/json")
 	if h.DB == nil {
 		logger.Error("logs endpoint accessed, while no logs db is provided")

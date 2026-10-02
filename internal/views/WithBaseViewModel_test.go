@@ -71,7 +71,7 @@ func TestCurrentPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := getBaseViewModelContext(t, tt.publicURL, tt.requestPath)
-			got := views.GetBaseViewModel(ctx).CurrentPath
+			got := views.BaseViewModelFromContext(ctx).CurrentPath
 			if got != tt.want {
 				t.Errorf("Unexpected CurrentPath value, want %q, got %q", tt.want, got)
 			}

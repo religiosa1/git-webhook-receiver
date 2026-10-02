@@ -10,11 +10,11 @@ import (
 	"github.com/oklog/ulid/v2"
 )
 
-type loggingContextKey string
+type loggingContextKey int
 
 const (
-	loggingContextLogger    = loggingContextKey("logging_context.logger")
-	loggingContextRequestID = loggingContextKey("logging_context.request_id")
+	loggingContextLogger loggingContextKey = iota
+	loggingContextRequestID
 )
 
 func WithLogger(logger *slog.Logger) Middleware {
@@ -68,7 +68,7 @@ func (rw *responseWriter) Unwrap() http.ResponseWriter {
 	return rw.ResponseWriter
 }
 
-func GetLogger(ctx context.Context) *slog.Logger {
+func LoggerFromContext(ctx context.Context) *slog.Logger {
 	logger, ok := ctx.Value(loggingContextLogger).(*slog.Logger)
 	if !ok {
 		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -76,7 +76,7 @@ func GetLogger(ctx context.Context) *slog.Logger {
 	return logger
 }
 
-func GetRequestID(ctx context.Context) string {
+func RequestIDFromContext(ctx context.Context) string {
 	requestID, ok := ctx.Value(loggingContextRequestID).(string)
 	if !ok {
 		return ""
