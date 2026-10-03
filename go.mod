@@ -6,6 +6,7 @@ require (
 	github.com/PuerkitoBio/goquery v1.12.0
 	github.com/a-h/templ v0.3.1020
 	github.com/alecthomas/kong v1.15.0
+	github.com/google/go-cmp v0.7.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/mattn/go-sqlite3 v1.14.42

@@ -6,8 +6,13 @@ import (
 	"os"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/religiosa1/git-webhook-receiver/internal/logsdb"
 )
+
+// IDs are assigned by the db
+var ignoreID = cmpopts.IgnoreFields(logsdb.LogEntry{}, "ID")
 
 var testEntry = logsdb.LogEntry{
 	Level:      slog.LevelInfo,
@@ -58,7 +63,9 @@ func TestLogDb(t *testing.T) {
 			t.Errorf("Unexpected number of entries in the db, want 1, got %d", l)
 		}
 
-		CompareEntries(t, testEntry, entries.Items[0])
+		if diff := cmp.Diff(testEntry, entries.Items[0], ignoreID); diff != "" {
+			t.Error(diff)
+		}
 	})
 
 	t.Run("Db can be opened repeatedly", func(t *testing.T) {
@@ -90,7 +97,9 @@ func TestLogDb(t *testing.T) {
 			t.Errorf("Unexpected number of entries in the db, want 1, got %d", l)
 		}
 
-		CompareEntries(t, testEntry, entries.Items[0])
+		if diff := cmp.Diff(testEntry, entries.Items[0], ignoreID); diff != "" {
+			t.Error(diff)
+		}
 	})
 
 	t.Run("Allows to retrieve entries with pagination", func(t *testing.T) {
@@ -120,8 +129,12 @@ func TestLogDb(t *testing.T) {
 			t.Errorf("Unexpected number of entries in the db, want 2, got %d", l)
 		}
 		// Should be in descending order
-		CompareEntries(t, testEntry3, page1.Items[0])
-		CompareEntries(t, testEntry2, page1.Items[1])
+		if diff := cmp.Diff(testEntry3, page1.Items[0], ignoreID); diff != "" {
+			t.Error(diff)
+		}
+		if diff := cmp.Diff(testEntry2, page1.Items[1], ignoreID); diff != "" {
+			t.Error(diff)
+		}
 
 		if page1.Cursor == nil {
 			t.Fatalf("Expected to received next page cursor, received nil")
@@ -134,7 +147,9 @@ func TestLogDb(t *testing.T) {
 		if l := len(page2.Items); l != 1 {
 			t.Errorf("Unexpected number of entries in the db, want 1, got %d", l)
 		}
-		CompareEntries(t, testEntry, page2.Items[0])
+		if diff := cmp.Diff(testEntry, page2.Items[0], ignoreID); diff != "" {
+			t.Error(diff)
+		}
 	})
 }
 
@@ -178,7 +193,9 @@ func TestLogDbFiltering(t *testing.T) {
 		if l := len(s1.Items); l != 1 {
 			t.Errorf("Unexpected number of entries returned, want 1, got %d", l)
 		}
-		CompareEntries(t, projectEntry, s1.Items[0])
+		if diff := cmp.Diff(projectEntry, s1.Items[0], ignoreID); diff != "" {
+			t.Error(diff)
+		}
 
 		s2, err := db.GetEntryFiltered(logsdb.GetEntryFilteredQuery{DeliveryID: "delivery-search"})
 		if err != nil {
@@ -187,7 +204,9 @@ func TestLogDbFiltering(t *testing.T) {
 		if l := len(s2.Items); l != 1 {
 			t.Errorf("Unexpected number of entries returned, want 1, got %d", l)
 		}
-		CompareEntries(t, deliveryEntry, s2.Items[0])
+		if diff := cmp.Diff(deliveryEntry, s2.Items[0], ignoreID); diff != "" {
+			t.Error(diff)
+		}
 
 		s3, err := db.GetEntryFiltered(logsdb.GetEntryFilteredQuery{PipeID: "pipe-search"})
 		if err != nil {
@@ -196,7 +215,9 @@ func TestLogDbFiltering(t *testing.T) {
 		if l := len(s3.Items); l != 1 {
 			t.Errorf("Unexpected number of entries returned, want 1, got %d", l)
 		}
-		CompareEntries(t, pipeEntry, s3.Items[0])
+		if diff := cmp.Diff(pipeEntry, s3.Items[0], ignoreID); diff != "" {
+			t.Error(diff)
+		}
 
 		s4, err := db.GetEntryFiltered(logsdb.GetEntryFilteredQuery{Message: "message-search"})
 		if err != nil {
@@ -205,7 +226,9 @@ func TestLogDbFiltering(t *testing.T) {
 		if l := len(s4.Items); l != 1 {
 			t.Errorf("Unexpected number of entries returned, want 1, got %d", l)
 		}
-		CompareEntries(t, messageEntry, s4.Items[0])
+		if diff := cmp.Diff(messageEntry, s4.Items[0], ignoreID); diff != "" {
+			t.Error(diff)
+		}
 	})
 
 	t.Run("All of filtering conditions must match", func(t *testing.T) {
@@ -247,7 +270,9 @@ func TestLogDbFiltering(t *testing.T) {
 		if l := len(s1.Items); l != 1 {
 			t.Errorf("Unexpected number of entries returned, want 1, got %d", l)
 		}
-		CompareEntries(t, entryAB, s1.Items[0])
+		if diff := cmp.Diff(entryAB, s1.Items[0], ignoreID); diff != "" {
+			t.Error(diff)
+		}
 	})
 
 	t.Run("Any of the log levels can match", func(t *testing.T) {
@@ -285,36 +310,11 @@ func TestLogDbFiltering(t *testing.T) {
 			t.Errorf("Unexpected number of entries returned, want 2, got %d", l)
 		}
 		// Must be in reversed order
-		CompareEntries(t, entryB, s1.Items[0])
-		CompareEntries(t, entryA, s1.Items[1])
+		if diff := cmp.Diff(entryB, s1.Items[0], ignoreID); diff != "" {
+			t.Error(diff)
+		}
+		if diff := cmp.Diff(entryA, s1.Items[1], ignoreID); diff != "" {
+			t.Error(diff)
+		}
 	})
-}
-
-func CompareEntries(t *testing.T, want logsdb.LogEntry, got logsdb.LogEntry) bool {
-	t.Helper()
-	if want.Level != got.Level {
-		t.Errorf("Wrong level value, want %d got %d", want.Level, got.Level)
-		return false
-	}
-	if want.Project != got.Project {
-		t.Errorf("Wrong Project, want %v got %v", want.Project, got.Project)
-		return false
-	}
-	if want.DeliveryID != got.DeliveryID {
-		t.Errorf("Wrong DeliveryId value, want %v got %v", want.DeliveryID, got.DeliveryID)
-		return false
-	}
-	if want.PipeID != got.PipeID {
-		t.Errorf("Wrong PipeId value, want %v got %v", want.PipeID, got.PipeID)
-		return false
-	}
-	if want.Message != got.Message {
-		t.Errorf("Wrong Message value, want %s got %s", want.Message, got.Message)
-		return false
-	}
-	if want, got := want.Data, got.Data; want != got {
-		t.Errorf("Wrong Data value, want %s got %s", want, got)
-		return false
-	}
-	return true
 }

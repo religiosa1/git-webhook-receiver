@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"reflect"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/oklog/ulid/v2"
 	"github.com/religiosa1/git-webhook-receiver/internal/actionsdb"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
@@ -58,10 +59,13 @@ func TestActionDb(t *testing.T) {
 			Project:    projectName,
 			DeliveryID: deliveryID,
 			Hash:       hash,
+			Config:     actionJSON(t),
+			CreatedAt:  time.Now(),
 		}
 
-		compareRecord(t, want, record)
-		compareAction(t, action, record)
+		if diff := cmp.Diff(want, record, recordCmpOpts); diff != "" {
+			t.Error(diff)
+		}
 	})
 
 	t.Run("Close successful action", func(t *testing.T) {
@@ -91,11 +95,15 @@ func TestActionDb(t *testing.T) {
 			Project:    projectName,
 			DeliveryID: deliveryID,
 			Hash:       hash,
+			Config:     actionJSON(t),
 			Error:      nil,
-			EndedAt:    &time.Time{},
+			CreatedAt:  time.Now(),
+			EndedAt:    new(time.Now()),
 		}
-		compareRecord(t, want, record)
-		compareAction(t, action, record)
+
+		if diff := cmp.Diff(want, record, recordCmpOpts); diff != "" {
+			t.Error(diff)
+		}
 	})
 
 	t.Run("Close errored action", func(t *testing.T) {
@@ -126,11 +134,15 @@ func TestActionDb(t *testing.T) {
 			Project:    projectName,
 			DeliveryID: deliveryID,
 			Hash:       hash,
+			Config:     actionJSON(t),
 			Error:      actionErr,
-			EndedAt:    &time.Time{},
+			CreatedAt:  time.Now(),
+			EndedAt:    new(time.Now()),
 		}
-		compareRecord(t, want, record)
-		compareAction(t, action, record)
+
+		if diff := cmp.Diff(want, record, recordCmpOpts); diff != "" {
+			t.Error(diff)
+		}
 	})
 
 	t.Run("An action can only be closed once", func(t *testing.T) {
@@ -194,10 +206,13 @@ func TestActionDb(t *testing.T) {
 			Project:    projectName,
 			DeliveryID: deliveryID,
 			Hash:       hash,
+			Config:     actionJSON(t),
+			CreatedAt:  time.Now(),
 		}
 
-		compareRecord(t, want, record)
-		compareAction(t, action, record)
+		if diff := cmp.Diff(want, record, recordCmpOpts); diff != "" {
+			t.Error(diff)
+		}
 	})
 }
 
@@ -278,43 +293,25 @@ func TestAutoRemoval(t *testing.T) {
 	}
 }
 
-func compareAction(t *testing.T, action config.Action, record actionsdb.PipeLineRecord) {
-	t.Helper()
-
-	var recordConfig config.Action
-	err := json.Unmarshal(record.Config, &recordConfig)
-	if err != nil {
-		t.Fatalf("failed to unmarshal record config: %v, JSON: %s", err, string(record.Config))
-		return
-	}
-
-	if !reflect.DeepEqual(action, recordConfig) {
-		t.Errorf("record config does not match, want %v, got %v", action, recordConfig)
-	}
+// recordCmpOpts compares records read back from the db: IDs are db-assigned,
+// timestamps are set at write time and errors are restored from their message.
+var recordCmpOpts = cmp.Options{
+	cmpopts.IgnoreFields(actionsdb.PipeLineRecord{}, "ID"),
+	cmpopts.EquateApproxTime(time.Minute),
+	cmp.Comparer(func(a, b error) bool {
+		if a == nil || b == nil {
+			return a == b
+		}
+		return a.Error() == b.Error()
+	}),
 }
 
-func compareRecord(t *testing.T, want actionsdb.PipeLineRecord, got actionsdb.PipeLineRecord) {
+// actionJSON is the action config as it's stored in the db
+func actionJSON(t *testing.T) json.RawMessage {
 	t.Helper()
-
-	if want.PipeID != got.PipeID {
-		t.Errorf("Bad pipeId: want %s, got %s,", want.PipeID, got.PipeID)
+	data, err := json.Marshal(action)
+	if err != nil {
+		t.Fatalf("failed to marshal action: %s", err)
 	}
-	if want.Project != got.Project {
-		t.Errorf("Bad project: want %s, got %s,", want.Project, got.Project)
-	}
-	if want.DeliveryID != got.DeliveryID {
-		t.Errorf("Bad deliveryId, want %s, got %s", want.DeliveryID, got.DeliveryID)
-	}
-	if want.Hash != got.Hash {
-		t.Errorf("Bad hash, want %v, got %v", want.Hash, got.Hash)
-	}
-	if (want.Error == nil) != (got.Error == nil) || (want.Error != nil && want.Error.Error() != got.Error.Error()) {
-		t.Errorf("Unexpected error value in created record: want %v, got %v", want.Error, got.Error)
-	}
-	if got.CreatedAt.IsZero() {
-		t.Errorf("Unexpected empty created date: want %s, got %s", want.CreatedAt, got.CreatedAt)
-	}
-	if (want.EndedAt == nil) != (got.EndedAt == nil) {
-		t.Errorf("Unexpected emptiness of ended date: want %t, got %t", want.EndedAt != nil, got.EndedAt != nil)
-	}
+	return data
 }

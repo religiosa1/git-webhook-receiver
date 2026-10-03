@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
 )
 
@@ -677,13 +678,8 @@ projects:
 		// action
 		"ACTION=action-val", "SHARED=from-action",
 	}
-	if len(got) != len(want) {
-		t.Fatalf("merged env = %v; want %v", got, want)
-	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Errorf("merged env[%d] = %q; want %q (full: %v)", i, got[i], want[i], got)
-		}
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("merged env mismatch (-want +got):\n%s", diff)
 	}
 }
 

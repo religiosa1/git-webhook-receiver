@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/religiosa1/git-webhook-receiver/internal/config"
 	"github.com/religiosa1/git-webhook-receiver/internal/requestmock"
 	"github.com/religiosa1/git-webhook-receiver/internal/whreceiver"
@@ -113,7 +114,9 @@ func TestReceivers(t *testing.T) {
 				t.Error(err)
 			}
 
-			CompareWebhookPostInfo(t, tt.postInfo, *got)
+			if diff := cmp.Diff(tt.postInfo, *got); diff != "" {
+				t.Error(diff)
+			}
 		})
 
 		if capabilities.CanAuthorize {
@@ -214,20 +217,4 @@ func MakeWebhookPostRequest(requestMock requestmock.RequestMock) (req whreceiver
 		req.Headers.Set(key, value)
 	}
 	return req
-}
-
-func CompareWebhookPostInfo(t *testing.T, want whreceiver.WebhookPostInfo, got whreceiver.WebhookPostInfo) {
-	t.Helper()
-	if want, got := want.DeliveryID, got.DeliveryID; want != got {
-		t.Errorf("Unexpected DeliveryID value, want %q, got %q", want, got)
-	}
-	if want, got := want.Branch, got.Branch; want != got {
-		t.Errorf("Unexpected Branch value, want %q, got %q", want, got)
-	}
-	if want, got := want.Event, got.Event; want != got {
-		t.Errorf("Unexpected Event value, want %q, got %q", want, got)
-	}
-	if want, got := want.Hash, got.Hash; want != got {
-		t.Errorf("Unexpected Hash value, want %q, got %q", want, got)
-	}
 }
